@@ -133,7 +133,7 @@ export function AudienceFiltersPanel({
                       onClick={() => toggleArrayFilter('cities', city)}
                       className={cn(
                         'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors border',
-                        filters.cities.length === 0 || filters.cities.includes(city)
+                        filters.cities.includes(city)
                           ? 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]'
                           : 'border-border text-muted-foreground hover:bg-accent'
                       )}
@@ -157,7 +157,7 @@ export function AudienceFiltersPanel({
                       onClick={() => toggleArrayFilter('neighborhoods', n)}
                       className={cn(
                         'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors border',
-                        filters.neighborhoods.length === 0 || filters.neighborhoods.includes(n)
+                        filters.neighborhoods.includes(n)
                           ? 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]'
                           : 'border-border text-muted-foreground hover:bg-accent'
                       )}
@@ -181,7 +181,7 @@ export function AudienceFiltersPanel({
                       onClick={() => toggleArrayFilter('zips', z)}
                       className={cn(
                         'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors border',
-                        filters.zips.length === 0 || filters.zips.includes(z)
+                        filters.zips.includes(z)
                           ? 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]'
                           : 'border-border text-muted-foreground hover:bg-accent'
                       )}
@@ -357,10 +357,7 @@ export function AudienceFiltersPanel({
               <div key={type.value} className="flex items-center gap-2">
                 <Checkbox
                   id={`owner-${type.value}`}
-                  checked={
-                    filters.owner_types.length === 0 ||
-                    filters.owner_types.includes(type.value)
-                  }
+                  checked={filters.owner_types.includes(type.value)}
                   onCheckedChange={() => toggleOwnerType(type.value)}
                 />
                 <label htmlFor={`owner-${type.value}`} className="text-sm">

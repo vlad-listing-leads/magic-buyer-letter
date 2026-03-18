@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
@@ -22,8 +23,58 @@ interface LetterPreviewProps {
   bullets: { b1: string; b2: string; b3: string }
   templateStyle: TemplateStyle
   onTemplateChange?: (style: TemplateStyle) => void
+  editable?: boolean
   editedContent?: Partial<LetterContent>
+  onContentChange?: (content: Partial<LetterContent>) => void
   className?: string
+}
+
+/** A span/div that is contentEditable when editable=true. Looks like normal text. */
+function EditableField({
+  value,
+  field,
+  onUpdate,
+  editable,
+  tag: Tag = 'span',
+  className,
+}: {
+  value: string
+  field: keyof LetterContent
+  onUpdate: (field: keyof LetterContent, value: string) => void
+  editable?: boolean
+  tag?: 'span' | 'p' | 'div'
+  className?: string
+}) {
+  const ref = useRef<HTMLElement>(null)
+
+  const handleBlur = useCallback(() => {
+    if (ref.current) {
+      const newValue = ref.current.innerText.trim()
+      if (newValue !== value) {
+        onUpdate(field, newValue)
+      }
+    }
+  }, [value, field, onUpdate])
+
+  if (!editable) {
+    return <Tag className={className}>{value}</Tag>
+  }
+
+  return (
+    <Tag
+      ref={ref as React.RefObject<never>}
+      contentEditable
+      suppressContentEditableWarning
+      onBlur={handleBlur}
+      className={cn(
+        className,
+        'outline-none rounded-sm transition-colors',
+        'focus:bg-white/60 focus:ring-1 focus:ring-[#006AFF]/30',
+      )}
+    >
+      {value}
+    </Tag>
+  )
 }
 
 export function LetterPreview({
@@ -33,7 +84,9 @@ export function LetterPreview({
   bullets,
   templateStyle,
   onTemplateChange,
+  editable = false,
   editedContent,
+  onContentChange,
   className,
 }: LetterPreviewProps) {
   const personalized = property?.personalized_content
@@ -56,6 +109,10 @@ export function LetterPreview({
 
   const ps = editedContent?.ps
     ?? `If you'd also like to know what your home is realistically worth in today's market, I'm happy to put together a complimentary home value report — no cost, no obligation. Just text or call me at ${agent.phone || '(555) 123-4567'}.`
+
+  const handleUpdate = useCallback((field: keyof LetterContent, value: string) => {
+    onContentChange?.({ ...editedContent, [field]: value })
+  }, [editedContent, onContentChange])
 
   const initials = agent.name
     .split(' ')
@@ -87,7 +144,10 @@ export function LetterPreview({
       )}
 
       {/* Letter Card */}
-      <Card className="bg-[#faf8f5] text-stone-900 overflow-hidden">
+      <Card className={cn(
+        'bg-[#faf8f5] text-stone-900 overflow-hidden',
+        editable && 'cursor-text',
+      )}>
         <CardContent className="p-8 space-y-4">
           {/* Hills illustration */}
           <div className="flex justify-center mb-4">
@@ -103,7 +163,15 @@ export function LetterPreview({
             </svg>
           </div>
 
-          <p className="text-sm leading-relaxed">{opening}</p>
+          {/* Opening */}
+          <EditableField
+            value={opening}
+            field="opening"
+            onUpdate={handleUpdate}
+            editable={editable}
+            tag="p"
+            className="text-sm leading-relaxed"
+          />
 
           <p className="text-sm leading-relaxed">
             We&apos;ve looked at everything currently on the market. Nothing has been the right fit.
@@ -119,9 +187,19 @@ export function LetterPreview({
               Here&apos;s what&apos;s important to know about {buyerName || 'my buyers'}:
             </p>
             <ul className="list-disc pl-5 space-y-1 text-sm">
-              <li>{b1}</li>
-              {b2 && <li>{b2}</li>}
-              {b3 && <li>{b3}</li>}
+              <li>
+                <EditableField value={b1} field="bullet_1" onUpdate={handleUpdate} editable={editable} />
+              </li>
+              {b2 && (
+                <li>
+                  <EditableField value={b2} field="bullet_2" onUpdate={handleUpdate} editable={editable} />
+                </li>
+              )}
+              {b3 && (
+                <li>
+                  <EditableField value={b3} field="bullet_3" onUpdate={handleUpdate} editable={editable} />
+                </li>
+              )}
             </ul>
           </div>
 
@@ -137,7 +215,14 @@ export function LetterPreview({
             My personal cell is <strong>{agent.phone || '(555) 123-4567'}</strong>.
           </p>
 
-          <p className="text-sm leading-relaxed">{closing}</p>
+          <EditableField
+            value={closing}
+            field="closing"
+            onUpdate={handleUpdate}
+            editable={editable}
+            tag="p"
+            className="text-sm leading-relaxed"
+          />
 
           {/* Signature block */}
           <div className="flex items-center gap-3 p-3 bg-stone-200/60 rounded-lg">
@@ -154,7 +239,8 @@ export function LetterPreview({
 
           {/* P.S. */}
           <p className="text-xs text-stone-600 mt-4">
-            <strong>p.s.</strong> {ps}
+            <strong>p.s.</strong>{' '}
+            <EditableField value={ps} field="ps" onUpdate={handleUpdate} editable={editable} />
           </p>
         </CardContent>
       </Card>
