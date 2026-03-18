@@ -188,62 +188,75 @@ export async function GET(
 
         send({ step: 'verifying', progress: 70, message: `${hasLobKey ? 'Verified' : 'Passed'} ${verifiedCount} addresses`, count: verifiedCount })
 
-        // Step 4: Generate personalized content via Claude
-        send({ step: 'generating', progress: 75, message: 'Personalizing letters with AI...' })
+        // Step 4: Generate letter template via Claude (ONE call for entire campaign)
+        send({ step: 'generating', progress: 75, message: 'AI is writing your letter...' })
 
-        const { generateLetterContent } = await import('@/lib/services/claude')
+        const { generateLetterTemplate, fillTemplate } = await import('@/lib/services/claude')
+        const area = `${campaign.criteria_city}${campaign.criteria_state ? `, ${campaign.criteria_state}` : ''}`
+
+        const template = await generateLetterTemplate({
+          buyer_name: campaign.buyer_name,
+          area,
+          bullet_1: campaign.bullet_1,
+          bullet_2: campaign.bullet_2,
+          bullet_3: campaign.bullet_3,
+          template_style: campaign.template_style,
+        })
+
+        send({ step: 'generating', progress: 85, message: 'Personalizing letters for each property...' })
+
+        // Get agent info for template variables
+        const { data: agentData } = await admin
+          .from('mbl_agents')
+          .select('name, phone')
+          .eq('id', campaign.agent_id)
+          .single()
+
+        // Fill template per property and update in DB
         const { data: verifiedProps } = await admin
           .from('mbl_properties')
-          .select('*')
+          .select('id, owner_first_name, owner_last_name, address_line1, city, neighborhood')
           .eq('campaign_id', campaign.id)
           .eq('status', 'verified')
 
         let generatedCount = 0
-        const totalVerified = verifiedProps?.length ?? 0
-        const BATCH_SIZE = 5
-
-        // Process in concurrent batches of 5
-        for (let i = 0; i < (verifiedProps?.length ?? 0); i += BATCH_SIZE) {
-          const batch = verifiedProps!.slice(i, i + BATCH_SIZE)
-          const results = await Promise.allSettled(
-            batch.map(prop =>
-              generateLetterContent(
-                {
-                  owner_first_name: prop.owner_first_name ?? 'Homeowner',
-                  owner_last_name: prop.owner_last_name ?? '',
-                  owner_type: prop.owner_type ?? 'unknown',
-                  address: `${prop.address_line1}, ${prop.city}`,
-                  neighborhood: prop.neighborhood,
-                  estimated_value: prop.estimated_value,
-                  years_owned: prop.years_owned,
-                  bedrooms: prop.bedrooms,
-                  sqft: prop.sqft,
-                },
-                {
-                  buyer_name: campaign.buyer_name,
-                  bullet_1: campaign.bullet_1,
-                  bullet_2: campaign.bullet_2,
-                  bullet_3: campaign.bullet_3,
-                  template_style: campaign.template_style,
-                }
-              ).then(async content => {
-                await admin
-                  .from('mbl_properties')
-                  .update({ personalized_content: content, status: 'generated' })
-                  .eq('id', prop.id)
-                return true
-              })
-            )
-          )
-
-          generatedCount += results.filter(r => r.status === 'fulfilled').length
-          send({
-            step: 'generating',
-            progress: 75 + Math.round((generatedCount / totalVerified) * 20),
-            message: `Personalized ${generatedCount} of ${totalVerified} letters`,
-            count: generatedCount,
+        for (const prop of verifiedProps ?? []) {
+          const ownerName = `${prop.owner_first_name ?? 'Homeowner'} ${prop.owner_last_name ?? ''}`.trim()
+          const filled = fillTemplate(template, {
+            owner_name: ownerName,
+            property_address: `${prop.address_line1}, ${prop.city}`,
+            neighborhood: prop.neighborhood || prop.city,
+            buyer_name: campaign.buyer_name,
+            bullet_1: campaign.bullet_1,
+            bullet_2: campaign.bullet_2,
+            bullet_3: campaign.bullet_3,
+            agent_name: agentData?.name ?? '',
+            agent_phone: agentData?.phone ?? '',
           })
+
+          await admin
+            .from('mbl_properties')
+            .update({
+              personalized_content: {
+                opening: filled.opening,
+                bullet_1: campaign.bullet_1,
+                bullet_2: campaign.bullet_2,
+                bullet_3: campaign.bullet_3,
+                closing: filled.closing,
+              },
+              status: 'generated',
+            })
+            .eq('id', prop.id)
+
+          generatedCount++
         }
+
+        send({
+          step: 'generating',
+          progress: 95,
+          message: `Personalized ${generatedCount} letters`,
+          count: generatedCount,
+        })
 
         await admin
           .from('mbl_campaigns')
