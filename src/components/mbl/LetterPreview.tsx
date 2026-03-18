@@ -68,8 +68,9 @@ function EditableField({
       onBlur={handleBlur}
       className={cn(
         className,
-        'outline-none rounded-sm transition-colors',
-        'focus:bg-white/60 focus:ring-1 focus:ring-[#006AFF]/30',
+        'outline-none rounded-sm px-1 -mx-1 cursor-text transition-colors',
+        'hover:bg-stone-200/50',
+        'focus:bg-white/80 focus:ring-1 focus:ring-[#006AFF]/40',
       )}
     >
       {value}
