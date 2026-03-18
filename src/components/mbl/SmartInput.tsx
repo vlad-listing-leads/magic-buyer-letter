@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { ArrowRight, Mic } from 'lucide-react'
+import { ArrowRight, Mic, MicOff } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { PropertySearchCriteria } from '@/types'
 
 interface ParsedData {

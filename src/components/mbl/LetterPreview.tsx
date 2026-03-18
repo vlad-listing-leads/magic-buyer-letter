@@ -1,22 +1,16 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { Pencil } from 'lucide-react'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
 import { LETTER_TEMPLATES } from '@/lib/templates'
 
 /** Editable content sections of the letter */
 export interface LetterContent {
   opening: string
-  body_1: string
-  body_2: string
   bullet_1: string
   bullet_2: string
   bullet_3: string
-  body_3: string
-  body_4: string
   closing: string
   ps: string
 }
@@ -28,97 +22,8 @@ interface LetterPreviewProps {
   bullets: { b1: string; b2: string; b3: string }
   templateStyle: TemplateStyle
   onTemplateChange?: (style: TemplateStyle) => void
-  editable?: boolean
   editedContent?: Partial<LetterContent>
-  onContentChange?: (content: Partial<LetterContent>) => void
   className?: string
-}
-
-function EditableText({
-  value,
-  onChange,
-  editable,
-  className,
-  multiline = false,
-}: {
-  value: string
-  onChange: (value: string) => void
-  editable?: boolean
-  className?: string
-  multiline?: boolean
-}) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(value)
-  const ref = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    setDraft(value)
-  }, [value])
-
-  useEffect(() => {
-    if (editing && ref.current) {
-      ref.current.focus()
-      ref.current.select()
-      // Auto-resize
-      ref.current.style.height = 'auto'
-      ref.current.style.height = `${ref.current.scrollHeight}px`
-    }
-  }, [editing])
-
-  const handleSave = () => {
-    setEditing(false)
-    if (draft.trim() !== value) {
-      onChange(draft.trim())
-    }
-  }
-
-  if (!editable) {
-    return <span className={className}>{value}</span>
-  }
-
-  if (editing) {
-    return (
-      <textarea
-        ref={ref}
-        value={draft}
-        onChange={(e) => {
-          setDraft(e.target.value)
-          // Auto-resize
-          e.target.style.height = 'auto'
-          e.target.style.height = `${e.target.scrollHeight}px`
-        }}
-        onBlur={handleSave}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !multiline) {
-            e.preventDefault()
-            handleSave()
-          }
-          if (e.key === 'Escape') {
-            setDraft(value)
-            setEditing(false)
-          }
-        }}
-        className={cn(
-          'w-full bg-white/80 border border-[#006AFF]/30 rounded px-1.5 py-0.5 text-sm leading-relaxed resize-none outline-none focus:ring-1 focus:ring-[#006AFF]/50',
-          className
-        )}
-        rows={1}
-      />
-    )
-  }
-
-  return (
-    <span
-      onClick={() => setEditing(true)}
-      className={cn(
-        'cursor-pointer rounded px-1 -mx-1 py-0.5 transition-all',
-        'border border-dashed border-stone-300 hover:border-[#006AFF]/50 hover:bg-[#006AFF]/5',
-        className
-      )}
-    >
-      {value}
-    </span>
-  )
 }
 
 export function LetterPreview({
@@ -128,9 +33,7 @@ export function LetterPreview({
   bullets,
   templateStyle,
   onTemplateChange,
-  editable = false,
   editedContent,
-  onContentChange,
   className,
 }: LetterPreviewProps) {
   const personalized = property?.personalized_content
@@ -139,26 +42,13 @@ export function LetterPreview({
     : '123 Main St, Your City'
   const neighborhood = property?.neighborhood || 'the area'
 
-  // Resolved values: edited > personalized > default
   const opening = editedContent?.opening
     ?? personalized?.opening
     ?? `Your home at ${address} is one of the only properties that my clients, ${buyerName || 'my buyers'}, would seriously consider buying in ${neighborhood}.`
 
-  const body1 = editedContent?.body_1
-    ?? "We've looked at everything currently on the market. Nothing has been the right fit."
-
-  const body2 = editedContent?.body_2
-    ?? "I promised them I'd do everything in my power to help them find a new home. That's why I'm writing to you."
-
   const b1 = editedContent?.bullet_1 ?? personalized?.bullet_1 ?? bullets.b1 ?? 'Pre-approved and ready to buy'
   const b2 = editedContent?.bullet_2 ?? personalized?.bullet_2 ?? bullets.b2 ?? 'Flexible on closing timeline'
   const b3 = editedContent?.bullet_3 ?? personalized?.bullet_3 ?? bullets.b3 ?? 'Love the neighborhood'
-
-  const body3 = editedContent?.body_3
-    ?? 'I want to be upfront: there are no guarantees here.'
-
-  const body4 = editedContent?.body_4
-    ?? "But if the right offer could change your plans, a short conversation is probably worth your time."
 
   const closing = editedContent?.closing
     ?? personalized?.closing
@@ -166,10 +56,6 @@ export function LetterPreview({
 
   const ps = editedContent?.ps
     ?? `If you'd also like to know what your home is realistically worth in today's market, I'm happy to put together a complimentary home value report — no cost, no obligation. Just text or call me at ${agent.phone || '(555) 123-4567'}.`
-
-  const handleChange = (field: keyof LetterContent, value: string) => {
-    onContentChange?.({ ...editedContent, [field]: value })
-  }
 
   const initials = agent.name
     .split(' ')
@@ -217,32 +103,14 @@ export function LetterPreview({
             </svg>
           </div>
 
-          {/* Opening */}
+          <p className="text-sm leading-relaxed">{opening}</p>
+
           <p className="text-sm leading-relaxed">
-            <EditableText
-              value={opening}
-              onChange={(v) => handleChange('opening', v)}
-              editable={editable}
-              multiline
-            />
+            We&apos;ve looked at everything currently on the market. Nothing has been the right fit.
           </p>
 
           <p className="text-sm leading-relaxed">
-            <EditableText
-              value={body1}
-              onChange={(v) => handleChange('body_1', v)}
-              editable={editable}
-              multiline
-            />
-          </p>
-
-          <p className="text-sm leading-relaxed">
-            <EditableText
-              value={body2}
-              onChange={(v) => handleChange('body_2', v)}
-              editable={editable}
-              multiline
-            />
+            I promised them I&apos;d do everything in my power to help them find a new home. That&apos;s why I&apos;m writing to you.
           </p>
 
           {/* Bullets */}
@@ -251,63 +119,25 @@ export function LetterPreview({
               Here&apos;s what&apos;s important to know about {buyerName || 'my buyers'}:
             </p>
             <ul className="list-disc pl-5 space-y-1 text-sm">
-              <li>
-                <EditableText
-                  value={b1}
-                  onChange={(v) => handleChange('bullet_1', v)}
-                  editable={editable}
-                />
-              </li>
-              {b2 && (
-                <li>
-                  <EditableText
-                    value={b2}
-                    onChange={(v) => handleChange('bullet_2', v)}
-                    editable={editable}
-                  />
-                </li>
-              )}
-              {b3 && (
-                <li>
-                  <EditableText
-                    value={b3}
-                    onChange={(v) => handleChange('bullet_3', v)}
-                    editable={editable}
-                  />
-                </li>
-              )}
+              <li>{b1}</li>
+              {b2 && <li>{b2}</li>}
+              {b3 && <li>{b3}</li>}
             </ul>
           </div>
 
           <p className="text-sm leading-relaxed">
-            <EditableText
-              value={body3}
-              onChange={(v) => handleChange('body_3', v)}
-              editable={editable}
-              multiline
-            />
+            I want to be upfront: there are no guarantees here.
           </p>
 
           <p className="text-sm leading-relaxed">
-            <EditableText
-              value={body4}
-              onChange={(v) => handleChange('body_4', v)}
-              editable={editable}
-              multiline
-            />
+            But if the right offer could change your plans, a short conversation is probably worth your time.
           </p>
 
           <p className="text-sm leading-relaxed">
             My personal cell is <strong>{agent.phone || '(555) 123-4567'}</strong>.
           </p>
 
-          <p className="text-sm leading-relaxed">
-            <EditableText
-              value={closing}
-              onChange={(v) => handleChange('closing', v)}
-              editable={editable}
-            />
-          </p>
+          <p className="text-sm leading-relaxed">{closing}</p>
 
           {/* Signature block */}
           <div className="flex items-center gap-3 p-3 bg-stone-200/60 rounded-lg">
@@ -324,21 +154,8 @@ export function LetterPreview({
 
           {/* P.S. */}
           <p className="text-xs text-stone-600 mt-4">
-            <strong>p.s.</strong>{' '}
-            <EditableText
-              value={ps}
-              onChange={(v) => handleChange('ps', v)}
-              editable={editable}
-              multiline
-            />
+            <strong>p.s.</strong> {ps}
           </p>
-
-          {editable && (
-            <div className="flex items-center justify-center gap-1.5 pt-3 text-xs text-stone-400">
-              <Pencil className="h-3 w-3" />
-              <span>Click any dashed section to edit</span>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

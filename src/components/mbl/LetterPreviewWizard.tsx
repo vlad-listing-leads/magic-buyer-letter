@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { LetterPreview } from './LetterPreview'
@@ -36,13 +38,32 @@ export function LetterPreviewWizard({
   const [envelopeType, setEnvelopeType] = useState<'standard' | 'custom'>('standard')
   const [editedContent, setEditedContent] = useState<Partial<LetterContent>>({})
 
+  const personalized = sampleProperty?.personalized_content
+  const address = sampleProperty
+    ? `${sampleProperty.address_line1}, ${sampleProperty.city}`
+    : '123 Main St, Your City'
+  const neighborhood = sampleProperty?.neighborhood || 'the area'
+
+  // Resolved defaults for form fields
+  const currentBullet1 = editedContent.bullet_1 ?? personalized?.bullet_1 ?? bullets.b1 ?? ''
+  const currentBullet2 = editedContent.bullet_2 ?? personalized?.bullet_2 ?? bullets.b2 ?? ''
+  const currentBullet3 = editedContent.bullet_3 ?? personalized?.bullet_3 ?? bullets.b3 ?? ''
+  const currentOpening = editedContent.opening
+    ?? personalized?.opening
+    ?? `Your home at ${address} is one of the only properties that my clients, ${buyerName || 'my buyers'}, would seriously consider buying in ${neighborhood}.`
+  const currentClosing = editedContent.closing ?? personalized?.closing ?? 'I look forward to hearing from you,'
+
+  const updateField = (field: keyof LetterContent, value: string) => {
+    setEditedContent((prev) => ({ ...prev, [field]: value }))
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold">
           Preview what {buyerName || 'your buyer'}&apos;s homeowners will receive
         </h2>
-        <p className="text-muted-foreground">Review and customize your letter</p>
+        <p className="text-muted-foreground">Customize your letter, then preview below</p>
       </div>
 
       {/* Template style selector */}
@@ -56,8 +77,59 @@ export function LetterPreviewWizard({
         </Tabs>
       </div>
 
-      {/* Letter / Envelope tabs */}
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Edit form */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Customize Letter</CardTitle>
+            <CardDescription>Edit the content below — preview updates live</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Opening line</label>
+              <textarea
+                value={currentOpening}
+                onChange={(e) => updateField('opening', e.target.value)}
+                rows={2}
+                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+              />
+            </div>
+
+            <div className="grid gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Bullet 1</label>
+                <Input
+                  value={currentBullet1}
+                  onChange={(e) => updateField('bullet_1', e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Bullet 2</label>
+                <Input
+                  value={currentBullet2}
+                  onChange={(e) => updateField('bullet_2', e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Bullet 3</label>
+                <Input
+                  value={currentBullet3}
+                  onChange={(e) => updateField('bullet_3', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Closing line</label>
+              <Input
+                value={currentClosing}
+                onChange={(e) => updateField('closing', e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Letter / Envelope preview tabs */}
         <Tabs defaultValue="letter">
           <TabsList>
             <TabsTrigger value="letter">Letter Page 1</TabsTrigger>
@@ -71,9 +143,7 @@ export function LetterPreviewWizard({
               buyerName={buyerName}
               bullets={bullets}
               templateStyle={templateStyle}
-              editable
               editedContent={editedContent}
-              onContentChange={setEditedContent}
             />
           </TabsContent>
 

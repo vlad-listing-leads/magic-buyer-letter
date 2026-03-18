@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { Home, PenLine, Mail, Settings } from 'lucide-react'
+import { PenLine, Mail, Settings } from 'lucide-react'
 
 import {
   Sidebar,
@@ -21,9 +21,8 @@ import {
 } from '@/components/ui/sidebar'
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: Home },
+  { href: '/', label: 'Campaigns', icon: Mail },
   { href: '/new', label: 'New Letter', icon: PenLine },
-  { href: '/campaigns', label: 'Campaigns', icon: Mail },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
