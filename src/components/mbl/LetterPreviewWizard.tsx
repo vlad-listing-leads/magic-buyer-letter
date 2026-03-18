@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { LetterPreview } from './LetterPreview'
+import type { LetterContent } from './LetterPreview'
 import { EnvelopeMockup } from './EnvelopeMockup'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
 
@@ -33,6 +34,7 @@ export function LetterPreviewWizard({
     properties.find((p) => p.personalized_content) ?? properties[0] ?? null
 
   const [envelopeType, setEnvelopeType] = useState<'standard' | 'custom'>('standard')
+  const [editedContent, setEditedContent] = useState<Partial<LetterContent>>({})
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -69,6 +71,9 @@ export function LetterPreviewWizard({
               buyerName={buyerName}
               bullets={bullets}
               templateStyle={templateStyle}
+              editable
+              editedContent={editedContent}
+              onContentChange={setEditedContent}
             />
           </TabsContent>
 
@@ -76,7 +81,6 @@ export function LetterPreviewWizard({
             <div className="space-y-4">
               <EnvelopeMockup agent={agent} property={sampleProperty} />
 
-              {/* Envelope type selector */}
               <div className="flex gap-3">
                 <button
                   type="button"
