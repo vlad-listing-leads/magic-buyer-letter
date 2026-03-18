@@ -1,267 +1,391 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
+import Image from 'next/image'
 import { useApiFetch } from '@/hooks/useApiFetch'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
-import type { MblAgent, AgentSetupData } from '@/types'
+import { PageHeader } from '@/components/PageHeader'
+import {
+  ExternalLink,
+  Mail,
+  Phone,
+  Globe,
+  Building2,
+  BadgeCheck,
+  MapPin,
+  FileText,
+  Briefcase,
+  Target,
+  Quote,
+  Palette,
+  Instagram,
+  Facebook,
+  Linkedin,
+  Youtube,
+} from 'lucide-react'
 
-const US_STATES = [
-  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS',
-  'KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY',
-  'NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC',
-]
+interface LLProfile {
+  id: string
+  email: string
+  firstName: string | null
+  lastName: string | null
+  region: string | null
+  role: string
+  fields: Record<string, string>
+}
+
+function ProfileField({
+  icon: Icon,
+  label,
+  value,
+  isLink,
+  isColor,
+}: {
+  icon: React.ElementType
+  label: string
+  value: string | null | undefined
+  isLink?: boolean
+  isColor?: boolean
+}) {
+  return (
+    <div className="flex items-start gap-3 py-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted/70">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] uppercase tracking-wider text-muted-foreground/70 font-medium">
+          {label}
+        </p>
+        {value ? (
+          <div className="flex items-center gap-2 mt-0.5">
+            {isColor && (
+              <div
+                className="h-4 w-4 rounded border border-border/50"
+                style={{ backgroundColor: value }}
+              />
+            )}
+            {isLink ? (
+              <a
+                href={value.startsWith('http') ? value : `https://${value}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline truncate"
+              >
+                {value.replace(/^https?:\/\/(www\.)?/, '')}
+              </a>
+            ) : (
+              <p className="text-sm font-medium truncate">{value}</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground/50 mt-0.5 italic">Not set</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.16 15a6.34 6.34 0 0 0 6.33 6.33 6.34 6.34 0 0 0 6.34-6.33V8.75a8.18 8.18 0 0 0 4.76 1.52v-3.4a4.85 4.85 0 0 1-1-.18z" />
+    </svg>
+  )
+}
 
 export default function SettingsPage() {
   const apiFetch = useApiFetch()
-  const queryClient = useQueryClient()
 
-  const { data: agent, isLoading } = useQuery<MblAgent | null>({
-    queryKey: ['mbl-agent'],
+  const {
+    data: profile,
+    isLoading,
+    error,
+  } = useQuery<LLProfile>({
+    queryKey: ['ll-profile'],
     queryFn: async () => {
-      const res = await apiFetch('/api/mbl/agent')
-      const json = await res.json()
-      return json.data
+      const res = await apiFetch('/api/user/ll-profile')
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        throw new Error(body?.error ?? `Failed to load profile (${res.status})`)
+      }
+      const result = await res.json()
+      return result.data
     },
   })
 
-  const [form, setForm] = useState<AgentSetupData>({
-    name: '',
-    brokerage: '',
-    phone: '',
-    email: '',
-    license_number: '',
-    website: '',
-    address_line1: '',
-    address_line2: '',
-    city: '',
-    state: '',
-    zip: '',
-  })
+  const displayName = profile
+    ? [profile.firstName, profile.lastName].filter(Boolean).join(' ') || profile.email
+    : ''
 
-  useEffect(() => {
-    if (agent) {
-      setForm({
-        name: agent.name,
-        brokerage: agent.brokerage,
-        phone: agent.phone,
-        email: agent.email,
-        license_number: agent.license_number,
-        website: agent.website,
-        address_line1: agent.address_line1,
-        address_line2: agent.address_line2,
-        city: agent.city,
-        state: agent.state,
-        zip: agent.zip,
-      })
-    }
-  }, [agent])
+  const f = profile?.fields ?? {}
 
-  const saveMutation = useMutation({
-    mutationFn: async (data: AgentSetupData) => {
-      const res = await apiFetch('/api/mbl/agent/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-      const json = await res.json()
-      if (!json.success) throw new Error(json.error)
-      return json.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mbl-agent'] })
-      toast.success('Agent profile saved')
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to save profile')
-    },
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    saveMutation.mutate(form)
-  }
-
-  const updateField = (field: keyof AgentSetupData, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }))
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
+  const hasSocialLinks = f.website || f.instagram || f.facebook || f.linkedin || f.youtube || f.tiktok
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Agent Profile</h1>
-        <p className="text-muted-foreground">
-          Your profile appears on every letter you send
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Personal Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Contact Information</CardTitle>
-            <CardDescription>How homeowners will reach you</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Full Name *</label>
-                <Input
-                  value={form.name}
-                  onChange={e => updateField('name', e.target.value)}
-                  placeholder="Jane Smith"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Brokerage</label>
-                <Input
-                  value={form.brokerage}
-                  onChange={e => updateField('brokerage', e.target.value)}
-                  placeholder="Keller Williams Realty"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Phone *</label>
-                <Input
-                  value={form.phone}
-                  onChange={e => updateField('phone', e.target.value)}
-                  placeholder="(555) 123-4567"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Email *</label>
-                <Input
-                  type="email"
-                  value={form.email}
-                  onChange={e => updateField('email', e.target.value)}
-                  placeholder="jane@example.com"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">License #</label>
-                <Input
-                  value={form.license_number}
-                  onChange={e => updateField('license_number', e.target.value)}
-                  placeholder="12345678"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Website</label>
-                <Input
-                  value={form.website}
-                  onChange={e => updateField('website', e.target.value)}
-                  placeholder="www.janesmith.com"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Return Address */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Return Address</CardTitle>
-                <CardDescription>Printed on every letter envelope</CardDescription>
-              </div>
-              {agent && (
-                <Badge variant={agent.address_verified ? 'default' : 'secondary'}>
-                  {agent.address_verified ? (
-                    <><CheckCircle className="mr-1 h-3 w-3" /> Verified</>
-                  ) : (
-                    <><AlertCircle className="mr-1 h-3 w-3" /> Unverified</>
-                  )}
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Address Line 1 *</label>
-              <Input
-                value={form.address_line1}
-                onChange={e => updateField('address_line1', e.target.value)}
-                placeholder="123 Main St"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Address Line 2</label>
-              <Input
-                value={form.address_line2}
-                onChange={e => updateField('address_line2', e.target.value)}
-                placeholder="Suite 100"
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">City *</label>
-                <Input
-                  value={form.city}
-                  onChange={e => updateField('city', e.target.value)}
-                  placeholder="Boston"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">State *</label>
-                <select
-                  value={form.state}
-                  onChange={e => updateField('state', e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  required
-                >
-                  <option value="">Select</option>
-                  {US_STATES.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">ZIP *</label>
-                <Input
-                  value={form.zip}
-                  onChange={e => updateField('zip', e.target.value)}
-                  placeholder="02101"
-                  required
-                  maxLength={10}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end">
+      <PageHeader
+        title="Agent Profile"
+        description="Your profile information from Listing Leads"
+        action={
           <Button
-            type="submit"
-            disabled={saveMutation.isPending}
-            className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-8"
+            className="gap-2"
+            onClick={() => window.open('https://www.listingleads.com/profile', '_blank')}
           >
-            {saveMutation.isPending ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
-            ) : (
-              'Save Profile'
-            )}
+            <ExternalLink className="h-4 w-4" />
+            Edit on Listing Leads
           </Button>
+        }
+      />
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="space-y-4 animate-fade-in">
+          <div className="h-48 rounded-xl bg-muted/40 animate-pulse" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="h-64 rounded-xl bg-muted/40 animate-pulse" />
+            <div className="h-64 rounded-xl bg-muted/40 animate-pulse" />
+          </div>
         </div>
-      </form>
+      )}
+
+      {/* Error */}
+      {error && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => window.open('https://www.listingleads.com/profile', '_blank')}
+            >
+              Go to Listing Leads
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Profile loaded */}
+      {profile && (
+        <div className="space-y-4">
+          {/* Hero card: avatar + name + tagline */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="flex flex-col sm:flex-row items-center gap-5 px-6 py-6">
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  {f.headshot ? (
+                    <Image
+                      src={f.headshot}
+                      alt={displayName}
+                      width={88}
+                      height={88}
+                      className="rounded-full object-cover ring-2 ring-border/50"
+                      style={{ width: 88, height: 88 }}
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-primary text-primary-foreground text-2xl font-semibold ring-2 ring-border/50">
+                      {(profile.firstName?.[0] ?? profile.email[0] ?? 'U').toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Name + tagline */}
+                <div className="text-center sm:text-left flex-1 min-w-0">
+                  <h2 className="text-xl font-semibold truncate">{displayName}</h2>
+                  {f.tagline && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {f.tagline}
+                    </p>
+                  )}
+                  {f.brokerage && (
+                    <div className="flex items-center gap-1.5 mt-2 justify-center sm:justify-start">
+                      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">{f.brokerage}</span>
+                    </div>
+                  )}
+                  {f.specialty && (
+                    <div className="flex items-center gap-1.5 mt-1 justify-center sm:justify-start">
+                      <Target className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">{f.specialty}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Logo */}
+                {f.logo && (
+                  <div className="shrink-0 hidden sm:block">
+                    <Image
+                      src={f.logo}
+                      alt="Brokerage logo"
+                      width={80}
+                      height={48}
+                      className="object-contain opacity-70"
+                      style={{ maxWidth: 80, maxHeight: 48 }}
+                      unoptimized
+                    />
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Short bio */}
+          {f.bio && (
+            <Card>
+              <CardContent className="px-5 py-4">
+                <div className="flex items-start gap-3">
+                  <Quote className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div>
+                    <h3 className="text-xs uppercase tracking-wider text-muted-foreground/70 font-semibold mb-2">
+                      About
+                    </h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {f.bio}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Two-column detail grid */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Contact Information */}
+            <Card>
+              <CardContent className="px-5 py-4">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground/70 font-semibold mb-1">
+                  Contact Information
+                </h3>
+                <div className="divide-y divide-border/50">
+                  <ProfileField icon={Mail} label="Email" value={profile.email} />
+                  <ProfileField icon={Phone} label="Phone" value={f.phone} />
+                  <ProfileField icon={MapPin} label="Office Address" value={f.address} />
+                  <ProfileField icon={MapPin} label="Region" value={profile.region?.toUpperCase()} />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Business Details */}
+            <Card>
+              <CardContent className="px-5 py-4">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground/70 font-semibold mb-1">
+                  Business Details
+                </h3>
+                <div className="divide-y divide-border/50">
+                  <ProfileField icon={Building2} label="Brokerage" value={f.brokerage} />
+                  <ProfileField icon={FileText} label="License Number" value={f.license_number} />
+                  <ProfileField icon={Briefcase} label="Specialty / Niche" value={f.specialty} />
+                  <ProfileField icon={MapPin} label="Service Areas" value={f.service_areas} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Branding */}
+          <Card>
+            <CardContent className="px-5 py-4">
+              <h3 className="text-xs uppercase tracking-wider text-muted-foreground/70 font-semibold mb-1">
+                Branding
+              </h3>
+              <div className="grid gap-0 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border/50">
+                <div className="pr-4">
+                  <ProfileField icon={Palette} label="Brand Color" value={f.brand_color} isColor />
+                </div>
+                <div className="px-4">
+                  <div className="flex items-start gap-3 py-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted/70">
+                      <BadgeCheck className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground/70 font-medium">
+                        Headshot
+                      </p>
+                      {f.headshot ? (
+                        <Image
+                          src={f.headshot}
+                          alt="Headshot"
+                          width={48}
+                          height={48}
+                          className="mt-1.5 rounded-lg object-cover"
+                          style={{ width: 48, height: 48 }}
+                          unoptimized
+                        />
+                      ) : (
+                        <p className="text-sm text-muted-foreground/50 mt-0.5 italic">Not uploaded</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="pl-4">
+                  <div className="flex items-start gap-3 py-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted/70">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground/70 font-medium">
+                        Company Logo
+                      </p>
+                      {f.logo ? (
+                        <Image
+                          src={f.logo}
+                          alt="Logo"
+                          width={80}
+                          height={40}
+                          className="mt-1.5 object-contain"
+                          style={{ maxWidth: 80, maxHeight: 40 }}
+                          unoptimized
+                        />
+                      ) : (
+                        <p className="text-sm text-muted-foreground/50 mt-0.5 italic">Not uploaded</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Social & Web Links */}
+          {hasSocialLinks && (
+            <Card>
+              <CardContent className="px-5 py-4">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground/70 font-semibold mb-1">
+                  Social & Web Links
+                </h3>
+                <div className="grid gap-0 sm:grid-cols-2 divide-y sm:divide-y-0">
+                  <div className="divide-y divide-border/50 sm:pr-4">
+                    <ProfileField icon={Globe} label="Website" value={f.website} isLink />
+                    <ProfileField icon={Instagram} label="Instagram" value={f.instagram} isLink />
+                    <ProfileField icon={Facebook} label="Facebook" value={f.facebook} isLink />
+                  </div>
+                  <div className="divide-y divide-border/50 sm:pl-4 sm:border-l sm:border-border/50">
+                    <ProfileField icon={Linkedin} label="LinkedIn" value={f.linkedin} isLink />
+                    <ProfileField icon={Youtube} label="YouTube" value={f.youtube} isLink />
+                    <ProfileField icon={TikTokIcon} label="TikTok" value={f.tiktok} isLink />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Edit notice */}
+          <div className="flex items-center justify-center gap-2 py-3 text-xs text-muted-foreground/60">
+            <ExternalLink className="h-3 w-3" />
+            <span>
+              To update your profile, visit{' '}
+              <button
+                onClick={() => window.open('https://www.listingleads.com/profile', '_blank')}
+                className="underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                listingleads.com/profile
+              </button>
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
