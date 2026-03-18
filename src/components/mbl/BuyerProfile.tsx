@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+import { ArrowRight, ArrowLeft, CheckCircle, Sparkles } from 'lucide-react'
 import { ChipSelector } from './ChipSelector'
 import { generateBullets } from '@/lib/bullets'
+import { cn } from '@/lib/utils'
 import type {
   BuyerProfileData,
   FinancingType,
@@ -65,92 +67,90 @@ export function BuyerProfile({ buyerName, criteria, onBack, onComplete }: BuyerP
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
+      {/* Header */}
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold">New Magic Buyer Letter</h2>
+        <h1 className="text-3xl font-bold tracking-tight">
+          What should the letter say about {buyerName || 'your buyer'}?
+        </h1>
         <p className="text-muted-foreground">
-          These become the bullet points in your letter
+          Pick what applies — these become bullet points in your letter
         </p>
       </div>
 
-      <div className="max-w-3xl mx-auto grid gap-6 lg:grid-cols-5">
-        {/* Form — left side */}
+      <div className="grid gap-8 lg:grid-cols-5">
+        {/* Selections — left */}
         <div className="lg:col-span-3 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                What should the letter say about {buyerName || 'your buyer'}?
-              </CardTitle>
-              <CardDescription>
-                Select one option from each category
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <ChipSelector
-                label="Financing"
-                options={FINANCING_OPTIONS}
-                value={profile.financing}
-                onChange={(v) =>
-                  setProfile((prev) => ({ ...prev, financing: v as FinancingType | '' }))
-                }
-              />
+          <ChipSelector
+            label="Financing"
+            options={FINANCING_OPTIONS}
+            value={profile.financing}
+            onChange={(v) =>
+              setProfile((prev) => ({ ...prev, financing: v as FinancingType | '' }))
+            }
+          />
 
-              <ChipSelector
-                label="Closing flexibility"
-                options={CLOSING_OPTIONS}
-                value={profile.closing_flexibility}
-                onChange={(v) =>
-                  setProfile((prev) => ({ ...prev, closing_flexibility: v as ClosingFlexibility | '' }))
-                }
-              />
+          <Separator />
 
-              <ChipSelector
-                label="Property condition tolerance"
-                options={CONDITION_OPTIONS}
-                value={profile.condition_tolerance}
-                onChange={(v) =>
-                  setProfile((prev) => ({
-                    ...prev,
-                    condition_tolerance: v as PropertyConditionTolerance | '',
-                  }))
-                }
-              />
+          <ChipSelector
+            label="Closing flexibility"
+            options={CLOSING_OPTIONS}
+            value={profile.closing_flexibility}
+            onChange={(v) =>
+              setProfile((prev) => ({ ...prev, closing_flexibility: v as ClosingFlexibility | '' }))
+            }
+          />
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Anything else?</label>
-                <Input
-                  value={profile.additional_notes}
-                  onChange={(e) =>
-                    setProfile((prev) => ({ ...prev, additional_notes: e.target.value }))
-                  }
-                  placeholder="e.g. relocating from NYC, first-time buyer, growing family"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <Separator />
+
+          <ChipSelector
+            label="Property condition"
+            options={CONDITION_OPTIONS}
+            value={profile.condition_tolerance}
+            onChange={(v) =>
+              setProfile((prev) => ({
+                ...prev,
+                condition_tolerance: v as PropertyConditionTolerance | '',
+              }))
+            }
+          />
+
+          <Separator />
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Anything else?</label>
+            <Input
+              value={profile.additional_notes}
+              onChange={(e) =>
+                setProfile((prev) => ({ ...prev, additional_notes: e.target.value }))
+              }
+              placeholder="e.g. relocating from NYC, first-time buyer, growing family"
+            />
+          </div>
         </div>
 
-        {/* Live preview — right side */}
+        {/* Live bullet preview — right */}
         <div className="lg:col-span-2">
-          <Card className="sticky top-6">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Letter will say:
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="sticky top-6 border-[#006AFF]/20 bg-[#006AFF]/[0.03]">
+            <CardContent className="pt-5 pb-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="h-4 w-4 text-[#006AFF]" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#006AFF]">
+                  Letter preview
+                </span>
+              </div>
               {bullets.length > 0 ? (
                 <ul className="space-y-3">
                   {bullets.map((bullet, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span>{bullet}</span>
+                    <li key={i} className="flex items-start gap-2.5 text-sm">
+                      <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                      <span className="leading-relaxed">{bullet}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Select options to see your letter bullets
+                  Select financing to see your letter bullets
                 </p>
               )}
             </CardContent>
@@ -159,7 +159,7 @@ export function BuyerProfile({ buyerName, criteria, onBack, onComplete }: BuyerP
       </div>
 
       {/* Actions */}
-      <div className="max-w-3xl mx-auto flex items-center justify-between">
+      <div className="flex items-center justify-between pt-2">
         <Button variant="ghost" onClick={onBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
@@ -167,7 +167,12 @@ export function BuyerProfile({ buyerName, criteria, onBack, onComplete }: BuyerP
         <Button
           onClick={handleSubmit}
           disabled={!canContinue}
-          className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-8"
+          className={cn(
+            'px-8 h-11 text-sm font-semibold transition-all',
+            canContinue
+              ? 'bg-[#006AFF] text-white hover:bg-[#0058D4] shadow-lg shadow-[#006AFF]/25'
+              : 'bg-muted text-muted-foreground'
+          )}
           size="lg"
         >
           Generate Letters
