@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useRef, useCallback } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { ArrowRight, Mic, MicOff } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { ArrowRight, Mic, MicOff, User, MapPin, DollarSign, BedDouble, Bath } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { PropertySearchCriteria } from '@/types'
 
@@ -17,17 +18,14 @@ function parseDescription(text: string): ParsedData {
     criteria: {},
   }
 
-  // Extract buyer name — "my buyer Sarah", "my client John and Jane", "buyer named Mike"
   const nameMatch = text.match(/(?:my\s+)?(?:buyer|client|buyers|clients)\s+(?:named?\s+)?([A-Z][a-z]+(?:\s+(?:and|&)\s+[A-Z][a-z]+)?)/i)
   if (nameMatch) parsed.buyer_name = nameMatch[1]
 
-  // Also try standalone name at beginning: "Sarah, $400K..."
   if (!parsed.buyer_name) {
     const leadNameMatch = text.match(/^([A-Z][a-z]+(?:\s+(?:and|&)\s+[A-Z][a-z]+)?)\s*,/)
     if (leadNameMatch) parsed.buyer_name = leadNameMatch[1]
   }
 
-  // Extract price range
   const pricePattern = /\$?([\d,.]+)\s*[kK]\s*(?:[-–to]+\s*\$?([\d,.]+)\s*[kK])?/g
   const priceMatch = pricePattern.exec(text)
   if (priceMatch) {
@@ -37,7 +35,6 @@ function parseDescription(text: string): ParsedData {
       parsed.criteria.price_max = parseFloat(priceMatch[2].replace(/,/g, '')) * 1000
     }
   }
-  // Also try full dollar amounts
   const fullPricePattern = /\$?([\d,]+)\s*(?:[-–to]+\s*\$?([\d,]+))?/g
   if (!priceMatch) {
     const fp = fullPricePattern.exec(text)
@@ -52,26 +49,21 @@ function parseDescription(text: string): ParsedData {
     }
   }
 
-  // Extract bedrooms
   const bedMatch = text.match(/(\d+)\s*[-+]?\s*(?:bed(?:room)?s?|br|bd)/i)
   if (bedMatch) parsed.criteria.beds_min = parseInt(bedMatch[1], 10)
 
-  // Extract bathrooms
   const bathMatch = text.match(/(\d+(?:\.\d+)?)\s*[-+]?\s*(?:bath(?:room)?s?|ba)/i)
   if (bathMatch) parsed.criteria.baths_min = parseFloat(bathMatch[1])
 
-  // Extract area/city/state
   const inMatch = text.match(/\bin\s+([A-Z][a-zA-Z\s]+?)(?:\s*,\s*([A-Z]{2}))?\s*(?:\.|$|between|under|over|around|near)/i)
   if (inMatch) {
     parsed.criteria.city = inMatch[1].trim()
     if (inMatch[2]) parsed.criteria.state = inMatch[2]
   }
 
-  // Extract ZIP
   const zipMatch = text.match(/\b(\d{5})\b/)
   if (zipMatch) parsed.criteria.zip = zipMatch[1]
 
-  // Extract state if not found yet
   if (!parsed.criteria.state) {
     const stateMatch = text.match(/,\s*([A-Z]{2})\b/)
     if (stateMatch) parsed.criteria.state = stateMatch[1]
@@ -80,7 +72,6 @@ function parseDescription(text: string): ParsedData {
   return parsed
 }
 
-// Pre-computed random heights for voice visualizer bars
 const VOICE_BAR_HEIGHTS = [8, 20, 12, 28, 16, 24, 10, 30, 14, 22, 8, 26, 18, 32, 10, 20, 14, 28, 12, 24, 8, 18, 26, 14]
 
 interface SmartInputProps {
@@ -90,6 +81,7 @@ interface SmartInputProps {
 export function SmartInput({ onComplete }: SmartInputProps) {
   const [text, setText] = useState('')
   const [isListening, setIsListening] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const parsed = useMemo(() => parseDescription(text), [text])
 
@@ -118,7 +110,6 @@ export function SmartInput({ onComplete }: SmartInputProps) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRecognition) return
 
-    // Capture whatever text is already in the input as the base
     baseTextRef.current = text
 
     const recognition = new SpeechRecognition()
@@ -128,7 +119,6 @@ export function SmartInput({ onComplete }: SmartInputProps) {
     recognitionRef.current = recognition
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      // Rebuild full transcript from all results every time
       let final = ''
       let interim = ''
       for (let i = 0; i < event.results.length; i++) {
@@ -150,56 +140,109 @@ export function SmartInput({ onComplete }: SmartInputProps) {
     setIsListening(true)
   }, [isListening, text])
 
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold">New Magic Buyer Letter</h2>
-        <p className="text-muted-foreground max-w-lg mx-auto">
-          Describe your buyer in one line
-        </p>
-      </div>
+  // Criteria items for the detection cards
+  const detectedItems = useMemo(() => {
+    const items: { icon: typeof User; label: string; value: string; color: string }[] = []
+    if (parsed.buyer_name) {
+      items.push({ icon: User, label: 'Buyer', value: parsed.buyer_name, color: 'text-violet-400' })
+    }
+    if (parsed.criteria.city) {
+      const loc = `${parsed.criteria.city}${parsed.criteria.state ? `, ${parsed.criteria.state}` : ''}`
+      items.push({ icon: MapPin, label: 'Area', value: loc, color: 'text-emerald-400' })
+    }
+    if (parsed.criteria.zip) {
+      items.push({ icon: MapPin, label: 'ZIP', value: parsed.criteria.zip, color: 'text-emerald-400' })
+    }
+    if (parsed.criteria.price_min) {
+      const price = `$${(parsed.criteria.price_min / 1000).toFixed(0)}K${parsed.criteria.price_max ? `–$${(parsed.criteria.price_max / 1000).toFixed(0)}K` : '+'}`
+      items.push({ icon: DollarSign, label: 'Price', value: price, color: 'text-amber-400' })
+    }
+    if (parsed.criteria.beds_min) {
+      items.push({ icon: BedDouble, label: 'Beds', value: `${parsed.criteria.beds_min}+`, color: 'text-blue-400' })
+    }
+    if (parsed.criteria.baths_min) {
+      items.push({ icon: Bath, label: 'Baths', value: `${parsed.criteria.baths_min}+`, color: 'text-blue-400' })
+    }
+    return items
+  }, [parsed])
 
-      {/* Single-line input with inline buttons */}
-      <div className="max-w-2xl mx-auto">
-        <div className="relative flex items-center">
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Sarah, $400-600K, 3 bed 2 bath, Newton, pre-approved"
-            className="w-full h-14 pl-4 pr-24 rounded-xl border border-border bg-background text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#006AFF]/50 focus:border-[#006AFF]"
-            autoFocus
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+      <div className="w-full max-w-2xl space-y-8">
+        {/* Hero heading */}
+        <div className="text-center space-y-3">
+          <h1 className="text-3xl font-bold tracking-tight">
+            Describe your buyer
+          </h1>
+          <p className="text-muted-foreground text-base">
+            One sentence is all it takes. We&apos;ll handle the rest.
+          </p>
+        </div>
+
+        {/* Input with glow effect */}
+        <div className="relative">
+          {/* Glow */}
+          <div
+            className={cn(
+              'absolute -inset-1 rounded-2xl bg-[#006AFF]/20 blur-xl transition-opacity duration-500',
+              isFocused || text ? 'opacity-100' : 'opacity-0'
+            )}
           />
-          <div className="absolute right-2 flex items-center gap-1">
-            <button
-              type="button"
-              onClick={toggleVoice}
+
+          <div className="relative">
+            <input
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder="Sarah, $400-600K, 3 bed 2 bath, Newton, pre-approved"
               className={cn(
-                'p-2 rounded-lg transition-colors',
-                isListening
-                  ? 'bg-red-500/10 text-red-500 animate-pulse'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                'w-full h-16 pl-5 pr-28 rounded-2xl border-2 bg-background text-lg',
+                'placeholder:text-muted-foreground/50',
+                'focus:outline-none transition-colors duration-200',
+                isFocused || text
+                  ? 'border-[#006AFF]/50'
+                  : 'border-border'
               )}
-              title={isListening ? 'Stop listening' : 'Voice input'}
-            >
-              {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-            </button>
-            <button
-              type="button"
-              onClick={handleContinue}
-              disabled={!text.trim()}
-              className="flex items-center gap-1 px-3 py-2 rounded-lg bg-[#006AFF] text-white text-sm font-medium hover:bg-[#0058D4] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-              <ArrowRight className="h-4 w-4" />
-            </button>
+              autoFocus
+            />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={toggleVoice}
+                className={cn(
+                  'p-2.5 rounded-xl transition-all',
+                  isListening
+                    ? 'bg-red-500/10 text-red-500 animate-pulse'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                )}
+                title={isListening ? 'Stop listening' : 'Voice input'}
+              >
+                {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              </button>
+              <button
+                type="button"
+                onClick={handleContinue}
+                disabled={!text.trim()}
+                className={cn(
+                  'flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all',
+                  text.trim()
+                    ? 'bg-[#006AFF] text-white hover:bg-[#0058D4] shadow-lg shadow-[#006AFF]/25'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
+                )}
+              >
+                Next
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Voice visualizer */}
         {isListening && (
-          <div className="flex flex-col items-center gap-3 mt-4">
+          <div className="flex flex-col items-center gap-3">
             <div className="flex items-end justify-center gap-[3px] h-8">
               {VOICE_BAR_HEIGHTS.map((maxH, i) => (
                 <div
@@ -235,39 +278,36 @@ export function SmartInput({ onComplete }: SmartInputProps) {
             `}</style>
           </div>
         )}
-      </div>
 
-      {/* Parsed preview */}
-      {hasCriteria && (
-        <div className="max-w-2xl mx-auto animate-fade-in-up">
-          <p className="text-sm text-muted-foreground mb-2">Include these for best results:</p>
-          <div className="flex flex-wrap gap-2">
-            {parsed.buyer_name && (
-              <Badge variant="secondary">Buyer: {parsed.buyer_name}</Badge>
-            )}
-            {parsed.criteria.city && (
-              <Badge variant="secondary">
-                Area: {parsed.criteria.city}{parsed.criteria.state ? `, ${parsed.criteria.state}` : ''}
-              </Badge>
-            )}
-            {parsed.criteria.zip && (
-              <Badge variant="secondary">ZIP: {parsed.criteria.zip}</Badge>
-            )}
-            {parsed.criteria.price_min && (
-              <Badge variant="secondary">
-                Price: ${(parsed.criteria.price_min / 1000).toFixed(0)}K
-                {parsed.criteria.price_max ? `–$${(parsed.criteria.price_max / 1000).toFixed(0)}K` : '+'}
-              </Badge>
-            )}
-            {parsed.criteria.beds_min && (
-              <Badge variant="secondary">{parsed.criteria.beds_min}+ beds</Badge>
-            )}
-            {parsed.criteria.baths_min && (
-              <Badge variant="secondary">{parsed.criteria.baths_min}+ baths</Badge>
-            )}
+        {/* Detected criteria — appears as cards */}
+        {hasCriteria && (
+          <div className="space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-center">
+              Auto-detected
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {detectedItems.map((item, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border/60 text-sm"
+                  style={{ animationDelay: `${i * 0.05}s` }}
+                >
+                  <item.icon className={cn('h-3.5 w-3.5', item.color)} />
+                  <span className="text-muted-foreground">{item.label}</span>
+                  <span className="font-medium">{item.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Example hint */}
+        {!text && !isListening && (
+          <p className="text-center text-xs text-muted-foreground/60">
+            Try: &ldquo;Sarah and Mike, $400-600K, 3 bed in Newton MA, pre-approved&rdquo;
+          </p>
+        )}
+      </div>
     </div>
   )
 }

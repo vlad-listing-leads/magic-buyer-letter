@@ -195,26 +195,38 @@ function NewLetterWizard() {
 
   const currentStepIndex = STEP_ORDER.indexOf(step)
 
+  const STEP_LABELS: Record<WizardStep, string> = {
+    input: 'Describe',
+    profile: 'Profile',
+    generating: 'Generate',
+    preview: 'Preview',
+    audience: 'Audience',
+    review: 'Review',
+    confirmation: 'Done',
+  }
+
   return (
     <div className="py-4">
-      {/* Step indicators — hide on confirmation */}
-      {step !== 'confirmation' && (
-        <div className="flex items-center justify-center gap-2 mb-8">
-          {STEP_ORDER.filter((s) => s !== 'confirmation').map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
-              <div
-                className={cn(
-                  'h-2 w-2 rounded-full transition-colors',
-                  s === step
-                    ? 'bg-[#006AFF]'
-                    : i < currentStepIndex
-                      ? 'bg-[#006AFF]/50'
-                      : 'bg-muted'
-                )}
-              />
-              {i < STEP_ORDER.length - 2 && <div className="w-8 h-px bg-border" />}
-            </div>
-          ))}
+      {/* Step progress — hide on input (hero) and confirmation */}
+      {step !== 'input' && step !== 'confirmation' && (
+        <div className="flex items-center justify-center gap-1 mb-8">
+          {STEP_ORDER.filter((s) => s !== 'confirmation').map((s, i) => {
+            const isActive = s === step
+            const isDone = i < currentStepIndex
+            return (
+              <div key={s} className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className={cn(
+                      'h-1.5 rounded-full transition-all duration-300',
+                      isActive ? 'w-8 bg-[#006AFF]' : isDone ? 'w-4 bg-[#006AFF]/40' : 'w-4 bg-muted'
+                    )}
+                  />
+                </div>
+                {i < STEP_ORDER.length - 2 && <div className="w-1" />}
+              </div>
+            )
+          })}
         </div>
       )}
 
