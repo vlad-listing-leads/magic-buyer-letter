@@ -86,6 +86,8 @@ interface SmartInputProps {
 
 export function SmartInput({ onComplete }: SmartInputProps) {
   const [text, setText] = useState('')
+  const [isListening, setIsListening] = useState(false)
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
   const parsed = useMemo(() => parseDescription(text), [text])
 
   const hasCriteria = parsed.buyer_name || parsed.criteria.city || parsed.criteria.price_min || parsed.criteria.beds_min
@@ -100,6 +102,47 @@ export function SmartInput({ onComplete }: SmartInputProps) {
       handleContinue()
     }
   }
+
+  const toggleVoice = useCallback(() => {
+    if (isListening) {
+      recognitionRef.current?.stop()
+      setIsListening(false)
+      return
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) return
+
+    const recognition = new SpeechRecognition()
+    recognition.continuous = false
+    recognition.interimResults = true
+    recognition.lang = 'en-US'
+    recognitionRef.current = recognition
+
+    let finalTranscript = ''
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let interim = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript
+        } else {
+          interim = transcript
+        }
+      }
+      setText((prev) => {
+        const base = prev.endsWith(interim) ? prev.slice(0, -interim.length) : prev
+        return finalTranscript || (base + interim)
+      })
+    }
+
+    recognition.onend = () => setIsListening(false)
+    recognition.onerror = () => setIsListening(false)
+
+    recognition.start()
+    setIsListening(true)
+  }, [isListening])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -125,10 +168,16 @@ export function SmartInput({ onComplete }: SmartInputProps) {
           <div className="absolute right-2 flex items-center gap-1">
             <button
               type="button"
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              title="Voice input"
+              onClick={toggleVoice}
+              className={cn(
+                'p-2 rounded-lg transition-colors',
+                isListening
+                  ? 'bg-red-500/10 text-red-500 animate-pulse'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              )}
+              title={isListening ? 'Stop listening' : 'Voice input'}
             >
-              <Mic className="h-5 w-5" />
+              {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
             </button>
             <button
               type="button"
