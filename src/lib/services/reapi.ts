@@ -78,30 +78,35 @@ async function reapiFetch<T>(path: string, body: Record<string, unknown>): Promi
 export async function searchProperties(
   criteria: PropertySearchCriteria
 ): Promise<ReapiPropertyResult[]> {
-  // REAPI only supports location-based search params
   const searchParams: Record<string, unknown> = {
-    size: 25,
+    size: 100,
   }
 
+  // Location params (required by REAPI)
   if (criteria.city) searchParams.city = criteria.city
   if (criteria.state) searchParams.state = criteria.state
   if (criteria.zip) searchParams.zip = criteria.zip
 
+  // Send price/beds/baths/sqft to API for server-side filtering
+  if (criteria.price_min) searchParams.estimatedValueMin = criteria.price_min
+  if (criteria.price_max) searchParams.estimatedValueMax = criteria.price_max
+  if (criteria.beds_min) searchParams.bedroomsMin = criteria.beds_min
+  if (criteria.baths_min) searchParams.bathroomsMin = criteria.baths_min
+  if (criteria.sqft_min) searchParams.squareFeetMin = criteria.sqft_min
+  if (criteria.sqft_max) searchParams.squareFeetMax = criteria.sqft_max
+
+  logger.info({ searchParams }, 'REAPI search params')
+
   const result = await reapiFetch<{ data: ReapiPropertyResult[] }>('/v2/PropertySearch', searchParams)
   let properties = result.data ?? []
 
-  // Log first property's coordinate fields for debugging
-  if (properties.length > 0) {
-    const p = properties[0]
-    logger.info({
-      hasLatitude: p.latitude !== undefined && p.latitude !== null,
-      hasLocation: !!p.location,
-      hasLat: p.lat !== undefined,
-      sampleKeys: Object.keys(p).filter(k => /lat|lng|lon|coord|loc|geo/i.test(k)),
-    }, 'REAPI coordinate fields')
-  }
+  logger.info({
+    returned: properties.length,
+    hasCoords: properties.filter(p => p.latitude || p.location?.latitude || p.lat).length,
+    sampleKeys: properties[0] ? Object.keys(properties[0]).filter(k => /lat|lng|lon|coord|loc|geo/i.test(k)) : [],
+  }, 'REAPI search results')
 
-  // Filter results client-side for price, beds, baths, sqft
+  // Client-side fallback filters (in case API doesn't support some params)
   if (criteria.price_min) {
     properties = properties.filter(p => (p.estimatedValue ?? 0) >= criteria.price_min!)
   }
