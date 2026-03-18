@@ -6,8 +6,14 @@ import { Toaster } from 'sonner'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Magic Buyer Letter',
-  description: 'Send personalized off-market letters to homeowners',
+  title: 'Listing Leads - The Marketing Plan That Will Get You More Listings',
+  description:
+    'Emails, texts, mailers, social posts, and video scripts – written for you every week by professional marketers. Join 46,000+ agents. Just hit send.',
+  icons: {
+    icon: '/favicons/favicon-prod.png',
+    shortcut: '/favicons/favicon-prod.png',
+    apple: '/favicons/favicon-prod.png',
+  },
 }
 
 export default function RootLayout({
