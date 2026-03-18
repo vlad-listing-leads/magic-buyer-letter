@@ -13,7 +13,7 @@ export default function LoginPage() {
   useEffect(() => {
     // In production, auto-redirect to LL SSO
     if (process.env.NODE_ENV === 'production') {
-      const ssoUrl = `${llUrl}/auth/zma-redirect?returnTo=${encodeURIComponent(appUrl)}`
+      const ssoUrl = `${llUrl}/auth/sso-redirect?returnTo=${encodeURIComponent(appUrl)}`
       window.location.href = ssoUrl
     }
   }, [llUrl, appUrl])
@@ -31,7 +31,7 @@ export default function LoginPage() {
         <div className="space-y-3">
           {/* Production: Auto-redirect to LL SSO */}
           <a
-            href={`${llUrl}/auth/zma-redirect?returnTo=${encodeURIComponent(appUrl)}`}
+            href={`${llUrl}/auth/sso-redirect?returnTo=${encodeURIComponent(appUrl)}`}
             className="flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Continue with Listing Leads

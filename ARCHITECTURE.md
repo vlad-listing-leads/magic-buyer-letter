@@ -27,7 +27,7 @@
 │                                                      │
 │  Endpoints:                                          │
 │  ├─ GET /api/auth/cross-app-token → Generate JWT     │
-│  └─ GET /api/auth/zma-redirect   → Validate return   │
+│  └─ GET /api/auth/sso-redirect   → Validate return   │
 └──────────────┬───────────────┬───────────────┬───────┘
                │               │               │
      JWT Token │     JWT Token │     JWT Token │
