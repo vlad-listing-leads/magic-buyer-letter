@@ -136,19 +136,21 @@ function NewLetterWizard() {
     setBuyerProfile(profile)
     setStep('generating')
 
+    // Compute bullets fresh from the profile parameter (state hasn't re-rendered yet)
+    const freshBullets = generateBullets(profile, {
+      min: criteria.price_min,
+      max: criteria.price_max,
+    })
+
     try {
       const payload: CampaignCreateData = {
         buyer_name: buyerName,
         buyer_description: description,
         criteria,
         template_style: templateStyle,
-        bullet_1: bullets.b1,
-        bullet_2: bullets.b2,
-        bullet_3: bullets.b3,
-        financing: profile.financing || undefined,
-        closing_flexibility: profile.closing_flexibility || undefined,
-        condition_tolerance: profile.condition_tolerance || undefined,
-        additional_notes: profile.additional_notes || undefined,
+        bullet_1: freshBullets[0] || 'Serious buyer ready to purchase',
+        bullet_2: freshBullets[1] || '',
+        bullet_3: freshBullets[2] || '',
       }
 
       const res = await apiFetch('/api/mbl/campaigns', {

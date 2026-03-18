@@ -97,10 +97,10 @@ export async function POST(request: NextRequest) {
         bullet_2: data.bullet_2,
         bullet_3: data.bullet_3,
         bullet_4: data.bullet_4 ?? null,
-        financing: data.financing ?? '',
-        closing_flexibility: data.closing_flexibility ?? '',
-        condition_tolerance: data.condition_tolerance ?? '',
-        additional_notes: data.additional_notes ?? '',
+        ...(data.financing ? { financing: data.financing } : {}),
+        ...(data.closing_flexibility ? { closing_flexibility: data.closing_flexibility } : {}),
+        ...(data.condition_tolerance ? { condition_tolerance: data.condition_tolerance } : {}),
+        ...(data.additional_notes ? { additional_notes: data.additional_notes } : {}),
       })
       .select()
       .single()

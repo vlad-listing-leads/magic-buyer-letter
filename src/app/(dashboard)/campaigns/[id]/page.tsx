@@ -239,15 +239,15 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="recipients">
+      <Tabs defaultValue={0} className="flex flex-col gap-4">
         <TabsList>
-          <TabsTrigger value="recipients">Recipients ({properties.length})</TabsTrigger>
-          <TabsTrigger value="tracking">Delivery Tracking</TabsTrigger>
-          <TabsTrigger value="lob">Lob Details</TabsTrigger>
+          <TabsTrigger value={0}>Recipients ({properties.length})</TabsTrigger>
+          <TabsTrigger value={1}>Delivery Tracking</TabsTrigger>
+          <TabsTrigger value={2}>Lob Details</TabsTrigger>
         </TabsList>
 
         {/* Recipients Tab */}
-        <TabsContent value="recipients">
+        <TabsContent value={0}>
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -308,7 +308,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </TabsContent>
 
         {/* Delivery Tracking Tab */}
-        <TabsContent value="tracking">
+        <TabsContent value={1}>
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -364,7 +364,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </TabsContent>
 
         {/* Lob Details Tab */}
-        <TabsContent value="lob">
+        <TabsContent value={2}>
           <Card>
             <CardContent className="pt-6">
               <div className="grid grid-cols-2 gap-y-3 text-sm max-w-md">

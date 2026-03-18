@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { LetterPreview } from './LetterPreview'
 import { EnvelopeMockup } from './EnvelopeMockup'
@@ -44,18 +43,22 @@ export function LetterPreviewWizard({
         <p className="text-muted-foreground">Envelope front + letter page 1</p>
       </div>
 
-      {/* Template tabs */}
-      <div className="flex justify-center">
-        <Tabs
-          value={templateStyle}
-          onValueChange={(v) => onTemplateChange(v as TemplateStyle)}
-        >
-          <TabsList>
-            <TabsTrigger value="warm">Warm + Personal</TabsTrigger>
-            <TabsTrigger value="direct">Straight to the Point</TabsTrigger>
-            <TabsTrigger value="luxury">Luxury</TabsTrigger>
-          </TabsList>
-        </Tabs>
+      {/* Template selector */}
+      <div className="flex justify-center gap-2">
+        {(['warm', 'direct', 'luxury'] as const).map((style) => (
+          <button
+            key={style}
+            type="button"
+            onClick={() => onTemplateChange(style)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              templateStyle === style
+                ? 'bg-[#006AFF] text-white'
+                : 'bg-secondary text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {style === 'warm' ? 'Warm + Personal' : style === 'direct' ? 'Straight to the Point' : 'Luxury'}
+          </button>
+        ))}
       </div>
 
       {/* Two-column preview */}
