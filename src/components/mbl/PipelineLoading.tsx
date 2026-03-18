@@ -15,64 +15,104 @@ const STEPS: { key: PipelineStep; label: string; icon: typeof Search; descriptio
 
 interface PipelineLoadingProps {
   campaignId: string | null
-  eventSource: EventSource | null
   onComplete: (campaignId: string, readyCount: number) => void
   onError: (error: string) => void
 }
 
-export function PipelineLoading({ eventSource, onComplete, onError }: PipelineLoadingProps) {
+export function PipelineLoading({ campaignId, onComplete, onError }: PipelineLoadingProps) {
   const [currentStep, setCurrentStep] = useState<PipelineStep>('searching')
   const [progress, setProgress] = useState(0)
   const [message, setMessage] = useState('Starting pipeline...')
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [error, setError] = useState<string | null>(null)
   const completedRef = useRef(false)
+  const startedRef = useRef(false)
 
   useEffect(() => {
-    if (!eventSource) return
+    if (!campaignId || startedRef.current) return
+    startedRef.current = true
 
-    const handleMessage = (e: MessageEvent) => {
+    const abortController = new AbortController()
+
+    async function runPipeline() {
       try {
-        const event: PipelineEvent = JSON.parse(e.data)
+        const res = await fetch(`/api/mbl/campaigns/${campaignId}/pipeline`, {
+          signal: abortController.signal,
+          credentials: 'same-origin',
+        })
 
-        if (event.step === 'error') {
-          setError(event.error ?? 'Pipeline error')
-          onError(event.error ?? 'Pipeline error')
+        if (!res.ok) {
+          const text = await res.text()
+          setError(text || `Pipeline failed (${res.status})`)
+          onError(text || 'Pipeline failed')
           return
         }
 
-        if (event.step === 'ready' && !completedRef.current) {
-          completedRef.current = true
-          setCurrentStep('ready' as PipelineStep)
-          setProgress(100)
-          setMessage('Pipeline complete!')
-          onComplete(event.campaignId!, event.count!)
+        const reader = res.body?.getReader()
+        if (!reader) {
+          setError('No stream available')
+          onError('No stream available')
           return
         }
 
-        setCurrentStep(event.step)
-        setProgress(event.progress)
-        setMessage(event.message)
-        if (event.count !== undefined) {
-          setCounts(prev => ({ ...prev, [event.step]: event.count! }))
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+
+          // Parse SSE events from buffer
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            try {
+              const event: PipelineEvent = JSON.parse(line.slice(6))
+
+              if (event.step === 'error') {
+                setError(event.error ?? 'Pipeline error')
+                onError(event.error ?? 'Pipeline error')
+                return
+              }
+
+              if (event.step === 'ready' && !completedRef.current) {
+                completedRef.current = true
+                setCurrentStep('ready' as PipelineStep)
+                setProgress(100)
+                setMessage('Pipeline complete!')
+                onComplete(event.campaignId!, event.count!)
+                return
+              }
+
+              setCurrentStep(event.step)
+              setProgress(event.progress)
+              setMessage(event.message)
+              if (event.count !== undefined) {
+                setCounts(prev => ({ ...prev, [event.step]: event.count! }))
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
         }
-      } catch {
-        // Ignore parse errors
+      } catch (err) {
+        if (abortController.signal.aborted) return
+        const msg = err instanceof Error ? err.message : 'Connection lost'
+        setError(msg)
+        onError(msg)
       }
     }
 
-    eventSource.onmessage = handleMessage
-    eventSource.onerror = () => {
-      if (!completedRef.current) {
-        setError('Connection lost')
-        onError('Connection lost')
-      }
-    }
+    runPipeline()
 
     return () => {
-      eventSource.close()
+      abortController.abort()
     }
-  }, [eventSource, onComplete, onError])
+  }, [campaignId, onComplete, onError])
 
   const currentStepIndex = STEPS.findIndex(s => s.key === currentStep)
 

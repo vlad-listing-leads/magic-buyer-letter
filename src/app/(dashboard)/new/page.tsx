@@ -20,7 +20,6 @@ export default function NewLetterPage() {
   const [buyerName, setBuyerName] = useState('')
   const [description, setDescription] = useState('')
   const [criteria, setCriteria] = useState<PropertySearchCriteria>({})
-  const [eventSource, setEventSource] = useState<EventSource | null>(null)
   const [campaignId, setCampaignId] = useState<string | null>(null)
 
   const handleSmartInputComplete = (name: string, desc: string, parsedCriteria: PropertySearchCriteria) => {
@@ -71,9 +70,7 @@ export default function NewLetterPage() {
       const newCampaignId = result.id
       setCampaignId(newCampaignId)
 
-      // 2. Open SSE stream for pipeline progress
-      const es = new EventSource(`/api/mbl/campaigns/${newCampaignId}/pipeline`)
-      setEventSource(es)
+      // Pipeline will start automatically via PipelineLoading component
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to start campaign')
       setStep('details')
@@ -122,7 +119,6 @@ export default function NewLetterPage() {
       {step === 'pipeline' && (
         <PipelineLoading
           campaignId={campaignId}
-          eventSource={eventSource}
           onComplete={handlePipelineComplete}
           onError={handlePipelineError}
         />
