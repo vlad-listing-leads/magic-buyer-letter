@@ -111,12 +111,12 @@ function EditableText({
     <span
       onClick={() => setEditing(true)}
       className={cn(
-        'cursor-pointer rounded px-0.5 -mx-0.5 transition-colors hover:bg-stone-200/80 group/editable inline',
+        'cursor-pointer rounded px-1 -mx-1 py-0.5 transition-all',
+        'border border-dashed border-stone-300 hover:border-[#006AFF]/50 hover:bg-[#006AFF]/5',
         className
       )}
     >
       {value}
-      <Pencil className="inline-block ml-1 h-3 w-3 text-stone-400 opacity-0 group-hover/editable:opacity-100 transition-opacity" />
     </span>
   )
 }
@@ -334,9 +334,10 @@ export function LetterPreview({
           </p>
 
           {editable && (
-            <p className="text-[10px] text-stone-400 text-center pt-2">
-              Click any text to edit
-            </p>
+            <div className="flex items-center justify-center gap-1.5 pt-3 text-xs text-stone-400">
+              <Pencil className="h-3 w-3" />
+              <span>Click any dashed section to edit</span>
+            </div>
           )}
         </CardContent>
       </Card>
