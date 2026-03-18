@@ -15,11 +15,12 @@ const STEPS: { key: PipelineStep; label: string; icon: typeof Search; descriptio
 
 interface PipelineLoadingProps {
   campaignId: string | null
+  buyerName?: string
   onComplete: (campaignId: string, readyCount: number) => void
   onError: (error: string) => void
 }
 
-export function PipelineLoading({ campaignId, onComplete, onError }: PipelineLoadingProps) {
+export function PipelineLoading({ campaignId, buyerName, onComplete, onError }: PipelineLoadingProps) {
   const [currentStep, setCurrentStep] = useState<PipelineStep>('searching')
   const [progress, setProgress] = useState(0)
   const [message, setMessage] = useState('Starting pipeline...')
@@ -119,9 +120,11 @@ export function PipelineLoading({ campaignId, onComplete, onError }: PipelineLoa
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold">Building Your Campaign</h2>
+        <h2 className="text-2xl font-bold">
+          {buyerName ? `Finding homeowners for ${buyerName}` : 'Building Your Campaign'}
+        </h2>
         <p className="text-muted-foreground">
-          This typically takes 1-3 minutes
+          ~30 seconds
         </p>
       </div>
 

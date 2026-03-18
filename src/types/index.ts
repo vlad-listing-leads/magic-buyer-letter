@@ -277,4 +277,55 @@ export interface CampaignCreateData {
   bullet_2: string
   bullet_3: string
   bullet_4?: string
+  financing?: string
+  closing_flexibility?: string
+  condition_tolerance?: string
+  additional_notes?: string
+}
+
+// =============================================================================
+// New Wizard Flow Types
+// =============================================================================
+
+/** Financing type options for buyer profile */
+export type FinancingType = 'pre-approved' | 'cash' | 'fha' | 'va' | 'conventional'
+
+/** Closing flexibility options */
+export type ClosingFlexibility = 'flexible' | 'quick-close' | '30-days' | 'no-rush' | 'rent-back'
+
+/** Property condition tolerance options */
+export type PropertyConditionTolerance = 'minor-updates' | 'as-is' | 'move-in-ready' | 'major-reno'
+
+/** Buyer profile data from Step 2 chip selections */
+export interface BuyerProfileData {
+  financing: FinancingType | ''
+  closing_flexibility: ClosingFlexibility | ''
+  condition_tolerance: PropertyConditionTolerance | ''
+  additional_notes: string
+}
+
+/** Extended wizard step for 7-step flow */
+export type WizardStep =
+  | 'input'
+  | 'profile'
+  | 'generating'
+  | 'preview'
+  | 'audience'
+  | 'review'
+  | 'confirmation'
+
+/** Audience filter state */
+export interface AudienceFilters {
+  cities: string[]
+  neighborhoods: string[]
+  zips: string[]
+  value_min: number | null
+  value_max: number | null
+  sqft_min: number | null
+  sqft_max: number | null
+  beds_min: number | null
+  baths_min: number | null
+  equity_min: number | null
+  years_owned_min: number | null
+  owner_types: OwnerType[]
 }

@@ -126,7 +126,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       })
       .eq('id', id)
 
-    return NextResponse.redirect(new URL(`/campaigns/${id}?sent=${sentCount}`, request.url))
+    return NextResponse.redirect(new URL(`/new?step=confirmation&campaign_id=${id}&sent=${sentCount}`, request.url))
   } catch (err) {
     logger.error({ campaignId: id, err }, 'Send confirmation error')
     return NextResponse.redirect(new URL(`/campaigns/${id}?error=send_failed`, request.url))

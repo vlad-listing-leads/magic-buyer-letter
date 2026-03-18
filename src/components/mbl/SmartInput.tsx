@@ -1,10 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Sparkles, ArrowRight } from 'lucide-react'
+import { ArrowRight, Mic } from 'lucide-react'
 import type { PropertySearchCriteria } from '@/types'
 
 interface ParsedData {
@@ -21,6 +19,12 @@ function parseDescription(text: string): ParsedData {
   // Extract buyer name — "my buyer Sarah", "my client John and Jane", "buyer named Mike"
   const nameMatch = text.match(/(?:my\s+)?(?:buyer|client|buyers|clients)\s+(?:named?\s+)?([A-Z][a-z]+(?:\s+(?:and|&)\s+[A-Z][a-z]+)?)/i)
   if (nameMatch) parsed.buyer_name = nameMatch[1]
+
+  // Also try standalone name at beginning: "Sarah, $400K..."
+  if (!parsed.buyer_name) {
+    const leadNameMatch = text.match(/^([A-Z][a-z]+(?:\s+(?:and|&)\s+[A-Z][a-z]+)?)\s*,/)
+    if (leadNameMatch) parsed.buyer_name = leadNameMatch[1]
+  }
 
   // Extract price range
   const pricePattern = /\$?([\d,.]+)\s*[kK]\s*(?:[-–to]+\s*\$?([\d,.]+)\s*[kK])?/g
@@ -89,35 +93,59 @@ export function SmartInput({ onComplete }: SmartInputProps) {
     onComplete(parsed.buyer_name, text, parsed.criteria)
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && text.trim()) {
+      e.preventDefault()
+      handleContinue()
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#006AFF]/10 text-[#006AFF] text-sm font-medium">
-          <Sparkles className="h-4 w-4" />
-          Smart Input
-        </div>
-        <h2 className="text-2xl font-bold">Describe your buyer</h2>
+        <h2 className="text-2xl font-bold">New Magic Buyer Letter</h2>
         <p className="text-muted-foreground max-w-lg mx-auto">
-          Write a natural description and we&apos;ll extract the search criteria automatically
+          Describe your buyer in one line
         </p>
       </div>
 
-      <Card className="max-w-2xl mx-auto">
-        <CardContent className="pt-6">
-          <textarea
+      {/* Single-line input with inline buttons */}
+      <div className="max-w-2xl mx-auto">
+        <div className="relative flex items-center">
+          <input
+            type="text"
             value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder="My buyer Sarah is looking for a 3-bed home in Newton, MA between $400K-$600K. She loves colonial-style homes with big backyards..."
-            className="w-full min-h-[160px] bg-transparent border-0 text-base resize-none placeholder:text-muted-foreground focus:outline-none"
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Sarah, $400-600K, 3 bed 2 bath, Newton, pre-approved"
+            className="w-full h-14 pl-4 pr-24 rounded-xl border border-border bg-background text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#006AFF]/50 focus:border-[#006AFF]"
             autoFocus
           />
-        </CardContent>
-      </Card>
+          <div className="absolute right-2 flex items-center gap-1">
+            <button
+              type="button"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              title="Voice input"
+            >
+              <Mic className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleContinue}
+              disabled={!text.trim()}
+              className="flex items-center gap-1 px-3 py-2 rounded-lg bg-[#006AFF] text-white text-sm font-medium hover:bg-[#0058D4] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Parsed preview */}
       {hasCriteria && (
         <div className="max-w-2xl mx-auto animate-fade-in-up">
-          <p className="text-sm text-muted-foreground mb-2">Detected criteria:</p>
+          <p className="text-sm text-muted-foreground mb-2">Include these for best results:</p>
           <div className="flex flex-wrap gap-2">
             {parsed.buyer_name && (
               <Badge variant="secondary">Buyer: {parsed.buyer_name}</Badge>
@@ -145,18 +173,6 @@ export function SmartInput({ onComplete }: SmartInputProps) {
           </div>
         </div>
       )}
-
-      <div className="flex justify-center">
-        <Button
-          onClick={handleContinue}
-          disabled={!text.trim()}
-          className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-8"
-          size="lg"
-        >
-          Continue
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
     </div>
   )
 }

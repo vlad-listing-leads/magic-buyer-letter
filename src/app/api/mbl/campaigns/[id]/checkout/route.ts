@@ -36,7 +36,7 @@ export const POST = withErrorHandler(async (request: NextRequest, context) => {
     letterCount: parsed.data.letter_count,
     pricePerLetterCents: campaign.price_per_letter_cents,
     successUrl: `${appUrl}/api/mbl/campaigns/${id}/send-confirmed?session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${appUrl}/campaigns/${id}`,
+    cancelUrl: `${appUrl}/new?step=audience&campaign_id=${id}`,
   })
 
   await admin
