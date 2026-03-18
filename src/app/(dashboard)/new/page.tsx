@@ -66,9 +66,11 @@ export default function NewLetterPage() {
         throw new Error(json.error || 'Failed to create campaign')
       }
 
-      // The response is an SSE stream
-      const es = new EventSource(`/api/mbl/campaigns/stream?body=${encodeURIComponent(JSON.stringify(payload))}`)
-      setEventSource(es)
+      // Campaign created — redirect to it
+      const json = await res.json().catch(() => null)
+      if (json?.data?.id) {
+        router.push(`/campaigns/${json.data.id}`)
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to start campaign')
       setStep('details')
