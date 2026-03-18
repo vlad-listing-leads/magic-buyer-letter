@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Georgia&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <title>Magic Buyer Letter</title>
+  <style>
+    *, *:before, *:after {
+      -webkit-box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+    body {
+      width: 8.5in;
+      height: 11in;
+      margin: 0;
+      padding: 0;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 12pt;
+      line-height: 1.65;
+      color: #1a1a1a;
+    }
+    .page {
+      page-break-after: always;
+      position: relative;
+      width: 8.5in;
+      height: 11in;
+    }
+    .page-content {
+      position: absolute;
+      width: 7.5in;
+      height: 10in;
+      left: 0.5in;
+      top: 0.5in;
+    }
+
+    /* ── Address block (Lob prints over this area) ── */
+    #address-block {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 4in;
+      height: 1.25in;
+    }
+    .return-address {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 8pt;
+      line-height: 1.4;
+      color: #666;
+    }
+
+    /* ── Letter body starts below address block ── */
+    .letter-body {
+      position: absolute;
+      left: 0;
+      top: 1.6in;
+      width: 7.5in;
+    }
+
+    /* ── Header illustration ── */
+    .header-illustration {
+      text-align: center;
+      margin-bottom: 24pt;
+    }
+    .header-illustration svg {
+      width: 2.5in;
+      height: 0.6in;
+    }
+
+    /* ── Typography ── */
+    p {
+      margin: 0 0 10pt 0;
+    }
+    ul {
+      margin: 6pt 0 10pt 0;
+      padding-left: 20pt;
+    }
+    li {
+      margin-bottom: 4pt;
+    }
+    strong {
+      font-weight: bold;
+    }
+
+    /* ── Signature block ── */
+    .signature-block {
+      display: flex;
+      align-items: center;
+      gap: 12pt;
+      margin: 16pt 0;
+      padding: 10pt 14pt;
+      background: #f0ede5;
+      border-radius: 6pt;
+    }
+    .sig-photo {
+      width: 48pt;
+      height: 48pt;
+      border-radius: 50%;
+      background: #2a2a2a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16pt;
+      font-weight: 700;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .sig-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .sig-text {
+      font-family: 'DM Sans', sans-serif;
+      line-height: 1.4;
+      flex: 1;
+    }
+    .sig-name {
+      font-weight: 700;
+      font-size: 11pt;
+    }
+    .sig-detail {
+      font-size: 9.5pt;
+      color: #555;
+    }
+    .sig-website {
+      font-size: 8.5pt;
+      color: #888;
+      margin-top: 1pt;
+    }
+    .sig-logo {
+      max-height: 28pt;
+      max-width: 72pt;
+      object-fit: contain;
+      flex-shrink: 0;
+      opacity: 0.8;
+    }
+    img[src=""] { display: none; }
+
+    /* ── P.S. ── */
+    .ps {
+      font-size: 10.5pt;
+      margin-top: 14pt;
+    }
+
+    /* ── Disclaimer ── */
+    .disclaimer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 7.5in;
+      padding-top: 8pt;
+      border-top: 0.5pt solid #e0e0e0;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 7.5pt;
+      color: #999;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="page-content">
+
+      <!-- Return address (Lob may override with address_placement setting) -->
+      <div id="address-block">
+        <div class="return-address">
+          {{agent_name}}<br>
+          {{agent_brokerage}}<br>
+          {{agent_address_line1}}<br>
+          {{agent_city}}, {{agent_state}} {{agent_zip}}
+        </div>
+      </div>
+
+      <!-- Letter body -->
+      <div class="letter-body">
+
+        <!-- Rolling hills header -->
+        <div class="header-illustration">
+          <svg viewBox="0 0 500 80" xmlns="http://www.w3.org/2000/svg">
+            <rect width="500" height="80" fill="#87CEEB" rx="6"/>
+            <ellipse cx="75" cy="80" rx="120" ry="35" fill="#5B8C3E"/>
+            <ellipse cx="250" cy="80" rx="140" ry="45" fill="#4A7A2E"/>
+            <ellipse cx="425" cy="80" rx="120" ry="30" fill="#6B9E4A"/>
+            <circle cx="100" cy="42" r="12" fill="#3A6A1E"/>
+            <rect x="99" y="42" width="2" height="14" fill="#5A4030"/>
+            <circle cx="118" cy="38" r="14" fill="#4A7A2E"/>
+            <rect x="117" y="38" width="2" height="16" fill="#5A4030"/>
+            <circle cx="375" cy="48" r="10" fill="#3A6A1E"/>
+            <rect x="374" y="48" width="2" height="12" fill="#5A4030"/>
+            <circle cx="398" cy="44" r="13" fill="#4A7A2E"/>
+            <rect x="397" y="44" width="2" height="15" fill="#5A4030"/>
+            <circle cx="220" cy="36" r="9" fill="#3A6A1E"/>
+            <rect x="219" y="36" width="2" height="11" fill="#5A4030"/>
+          </svg>
+        </div>
+
+        <!-- Opening -->
+        <p>Your home at <strong>{{property_address}}</strong> is one of the only properties that my clients, {{buyer_name}}, would seriously consider buying in {{neighborhood}}.</p>
+
+        <!-- Context -->
+        <p>We've looked at everything currently on the market. Nothing has been the right fit.</p>
+
+        <!-- Promise -->
+        <p>I promised them I'd do everything in my power to help them find a new home. That's why I'm writing to you.</p>
+
+        <!-- Buyer bullets -->
+        <p><strong>Here's what's important to know about {{buyer_name}}:</strong></p>
+        <ul>
+          <li>{{bullet_1}}</li>
+          <li>{{bullet_2}}</li>
+          <li>{{bullet_3}}</li>
+        </ul>
+
+        <!-- Honesty bridge -->
+        <p>I want to be upfront: there are no guarantees here.</p>
+
+        <p>But if the right offer could change your plans, a short conversation is probably worth your time.</p>
+
+        <!-- CTA -->
+        <p>My personal cell is <strong>{{agent_phone}}</strong>.</p>
+
+        <p>I look forward to hearing from you,</p>
+
+        <!-- Signature block -->
+        <div class="signature-block">
+          <div class="sig-photo">
+            <img src="{{agent_headshot_url}}" alt="">
+            {{agent_initials}}
+          </div>
+          <div class="sig-text">
+            <div class="sig-name">{{agent_name}}</div>
+            <div class="sig-detail">{{agent_brokerage}}</div>
+            <div class="sig-detail">{{agent_phone}}</div>
+            <div class="sig-website">{{agent_website}}</div>
+          </div>
+          <img class="sig-logo" src="{{agent_logo_url}}" alt="">
+        </div>
+
+        <!-- P.S. -->
+        <p class="ps"><strong>p.s.</strong> If you'd also like to know what your home is realistically worth in today's market, I'm happy to put together a complimentary home value report &mdash; no cost, no obligation. Just text or call me at {{agent_phone}}.</p>
+      </div>
+
+      <!-- Disclaimer -->
+      <div class="disclaimer">
+        If your property is listed with a Real Estate Broker, please disregard. It is not our intention to solicit the offerings or clients of other Real Estate Brokers.
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
