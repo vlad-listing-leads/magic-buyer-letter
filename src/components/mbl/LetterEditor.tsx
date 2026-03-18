@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import {
   EditorRoot,
   EditorContent,
+  StarterKit,
   type JSONContent,
 } from 'novel'
 import { Card, CardContent } from '@/components/ui/card'
@@ -154,6 +155,7 @@ export function LetterEditor({
         <EditorRoot>
           <EditorContent
             initialContent={initialJSON}
+            extensions={[StarterKit]}
             immediatelyRender={false}
             onUpdate={({ editor }) => {
               onContentChange?.(editor.getJSON())

@@ -19,7 +19,7 @@ const campaignCreateSchema = z.object({
     zip: z.string().optional(),
   }),
   template_style: z.enum(['warm', 'direct', 'luxury']),
-  bullet_1: z.string().min(1),
+  bullet_1: z.string().default(''),
   bullet_2: z.string().default(''),
   bullet_3: z.string().default(''),
   bullet_4: z.string().optional(),
