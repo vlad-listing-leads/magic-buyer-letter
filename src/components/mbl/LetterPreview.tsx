@@ -176,18 +176,15 @@ export function LetterPreview({
         editable && 'cursor-text',
       )}>
         <CardContent className="p-8 space-y-4">
-          {/* Hills illustration */}
+          {/* Agent logo */}
           <div className="flex justify-center mb-4">
-            <svg viewBox="0 0 500 80" xmlns="http://www.w3.org/2000/svg" className="w-48 h-12">
-              <rect width="500" height="80" fill="#87CEEB" rx="6"/>
-              <ellipse cx="75" cy="80" rx="120" ry="35" fill="#5B8C3E"/>
-              <ellipse cx="250" cy="80" rx="140" ry="45" fill="#4A7A2E"/>
-              <ellipse cx="425" cy="80" rx="120" ry="30" fill="#6B9E4A"/>
-              <circle cx="100" cy="42" r="12" fill="#3A6A1E"/>
-              <rect x="99" y="42" width="2" height="14" fill="#5A4030"/>
-              <circle cx="375" cy="48" r="10" fill="#3A6A1E"/>
-              <rect x="374" y="48" width="2" height="12" fill="#5A4030"/>
-            </svg>
+            {agent.logo_url ? (
+              <img src={agent.logo_url} alt={agent.name} className="h-12 max-w-[200px] object-contain" />
+            ) : (
+              <div className="h-12 flex items-center text-lg font-bold text-stone-700 tracking-tight">
+                {agent.brokerage || agent.name}
+              </div>
+            )}
           </div>
 
           <EditableField value={opening} field="opening" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
