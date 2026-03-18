@@ -80,28 +80,36 @@ export async function GET(
         // Step 2: Skip trace
         send({ step: 'skip_tracing', progress: 25, message: 'Skip tracing owners...' })
 
-        const { bulkSkipTrace } = await import('@/lib/services/reapi')
-        const propertyIds = properties.map(p => p.id)
-        const skipResults = await bulkSkipTrace(propertyIds)
+        const { skipTraceByAddress } = await import('@/lib/services/reapi')
 
         let skipTracedCount = 0
-        for (const sr of skipResults) {
-          const matchingProp = insertedProps?.find(p =>
-            properties.find(orig => orig.id === sr.propertyId && orig.address.line1 === p.address_line1)
-          )
-          if (matchingProp) {
+        for (const prop of insertedProps ?? []) {
+          const result = await skipTraceByAddress({
+            address: prop.address_line1,
+            city: prop.city,
+            state: prop.state,
+            zip: prop.zip,
+          })
+
+          if (result) {
             await admin
               .from('mbl_properties')
               .update({
-                owner_first_name: sr.owner.firstName,
-                owner_last_name: sr.owner.lastName,
-                owner_mailing_address: sr.owner.mailingAddress,
-                owner_phone: sr.owner.phone,
-                owner_email: sr.owner.email,
+                owner_first_name: result.firstName,
+                owner_last_name: result.lastName,
+                owner_mailing_address: result.mailingAddress,
+                owner_phone: result.phone,
+                owner_email: result.email,
                 status: 'skip_traced',
               })
-              .eq('id', matchingProp.id)
+              .eq('id', prop.id)
             skipTracedCount++
+          }
+
+          // Rate limit
+          if (skipTracedCount % 10 === 0) {
+            send({ step: 'skip_tracing', progress: 25 + Math.round((skipTracedCount / (insertedProps?.length ?? 1)) * 20), message: `Skip traced ${skipTracedCount} owners...`, count: skipTracedCount })
+            await new Promise(resolve => setTimeout(resolve, 500))
           }
         }
 

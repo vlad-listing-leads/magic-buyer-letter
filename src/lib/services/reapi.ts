@@ -4,51 +4,52 @@ import type { PropertySearchCriteria } from '@/types'
 
 const REAPI_BASE_URL = 'https://api.realestateapi.com'
 
+/** Actual REAPI v2 PropertySearch response shape (flat structure) */
 interface ReapiPropertyResult {
   id: string
+  propertyId: string
   address: {
-    line1: string
-    line2: string
+    address: string
+    street: string
     city: string
     state: string
     zip: string
     county: string
   }
-  location: {
-    latitude: number
-    longitude: number
-  }
-  property: {
-    bedrooms: number
-    bathrooms: number
-    sqft: number
-    lotSqft: number
-    yearBuilt: number
-    propertyType: string
-  }
-  valuation: {
-    estimatedValue: number
-    lastSalePrice: number
-    lastSaleDate: string
-    equityPercent: number
-  }
-  ownership: {
-    yearsOwned: number
-    ownerType: string
-    absenteeOwner: boolean
-  }
-  neighborhood: string
+  latitude: number
+  longitude: number
+  bedrooms: number
+  bathrooms: number
+  squareFeet: number
+  lotSquareFeet: number
+  yearBuilt: number
+  propertyType: string
+  estimatedValue: number
+  lastSaleAmount: string
+  lastSaleDate: string
+  equityPercent: number
+  yearsOwned: number
+  ownerOccupied: boolean
+  absenteeOwner: boolean
+  corporateOwned: boolean
+  owner1FirstName: string
+  owner1LastName: string
+  neighborhood: { name: string; id: string } | null
+  // Nested access helpers
+  property?: { bedrooms: number; bathrooms: number; sqft: number; lotSqft: number; yearBuilt: number; propertyType: string }
+  valuation?: { estimatedValue: number; lastSalePrice: number; lastSaleDate: string; equityPercent: number }
+  ownership?: { yearsOwned: number; ownerType: string; absenteeOwner: boolean }
 }
 
 interface ReapiSkipTraceResult {
-  propertyId: string
-  owner: {
+  persons: Array<{
     firstName: string
     lastName: string
-    mailingAddress: string
-    phone: string
-    email: string
-  }
+    fullName: string
+    phones: Array<{ number: string; type: string }> | null
+    emails: Array<{ email: string }> | null
+    address: { address: string } | null
+  }>
 }
 
 async function reapiFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {
@@ -74,6 +75,7 @@ async function reapiFetch<T>(path: string, body: Record<string, unknown>): Promi
 export async function searchProperties(
   criteria: PropertySearchCriteria
 ): Promise<ReapiPropertyResult[]> {
+  // REAPI only supports location-based search params
   const searchParams: Record<string, unknown> = {
     size: 100,
   }
@@ -81,46 +83,68 @@ export async function searchProperties(
   if (criteria.city) searchParams.city = criteria.city
   if (criteria.state) searchParams.state = criteria.state
   if (criteria.zip) searchParams.zip = criteria.zip
-  if (criteria.price_min) searchParams.estimated_value_min = criteria.price_min
-  if (criteria.price_max) searchParams.estimated_value_max = criteria.price_max
-  if (criteria.beds_min) searchParams.bedrooms_min = criteria.beds_min
-  if (criteria.baths_min) searchParams.bathrooms_min = criteria.baths_min
-  if (criteria.sqft_min) searchParams.sqft_min = criteria.sqft_min
-  if (criteria.sqft_max) searchParams.sqft_max = criteria.sqft_max
 
   const result = await reapiFetch<{ data: ReapiPropertyResult[] }>('/v2/PropertySearch', searchParams)
-  return result.data ?? []
-}
+  let properties = result.data ?? []
 
-export async function bulkSkipTrace(
-  propertyIds: string[]
-): Promise<ReapiSkipTraceResult[]> {
-  const results: ReapiSkipTraceResult[] = []
-  const batchSize = 50
-  const delayMs = 1000
-
-  for (let i = 0; i < propertyIds.length; i += batchSize) {
-    const batch = propertyIds.slice(i, i + batchSize)
-
-    const batchResult = await reapiFetch<{ data: ReapiSkipTraceResult[] }>('/v2/BulkSkipTrace', {
-      propertyIds: batch,
-    })
-
-    results.push(...(batchResult.data ?? []))
-
-    // Rate limit between batches
-    if (i + batchSize < propertyIds.length) {
-      await new Promise(resolve => setTimeout(resolve, delayMs))
-    }
+  // Filter results client-side for price, beds, baths, sqft
+  if (criteria.price_min) {
+    properties = properties.filter(p => (p.estimatedValue ?? 0) >= criteria.price_min!)
+  }
+  if (criteria.price_max) {
+    properties = properties.filter(p => (p.estimatedValue ?? Infinity) <= criteria.price_max!)
+  }
+  if (criteria.beds_min) {
+    properties = properties.filter(p => (p.bedrooms ?? 0) >= criteria.beds_min!)
+  }
+  if (criteria.baths_min) {
+    properties = properties.filter(p => (p.bathrooms ?? 0) >= criteria.baths_min!)
+  }
+  if (criteria.sqft_min) {
+    properties = properties.filter(p => (p.squareFeet ?? 0) >= criteria.sqft_min!)
+  }
+  if (criteria.sqft_max) {
+    properties = properties.filter(p => (p.squareFeet ?? Infinity) <= criteria.sqft_max!)
   }
 
-  return results
+  return properties
+}
+
+/** Skip trace a single property by address. Returns owner contact info. */
+export async function skipTraceByAddress(address: {
+  address: string
+  city: string
+  state: string
+  zip: string
+}): Promise<{
+  firstName: string
+  lastName: string
+  phone: string
+  email: string
+  mailingAddress: string
+} | null> {
+  try {
+    const result = await reapiFetch<ReapiSkipTraceResult>('/v2/SkipTrace', address)
+    const person = result.persons?.[0]
+    if (!person) return null
+
+    return {
+      firstName: person.firstName ?? '',
+      lastName: person.lastName ?? '',
+      phone: person.phones?.[0]?.number ?? '',
+      email: person.emails?.[0]?.email ?? '',
+      mailingAddress: person.address?.address ?? '',
+    }
+  } catch (err) {
+    logger.warn({ err, address: address.address }, 'Skip trace failed for address')
+    return null
+  }
 }
 
 export function mapOwnerType(result: ReapiPropertyResult): string {
-  if (result.ownership.absenteeOwner) return 'absentee'
-  if (result.ownership.ownerType === 'investor') return 'investor'
-  if (result.ownership.ownerType === 'corporate') return 'corporate'
+  if (result.corporateOwned) return 'corporate'
+  if (result.absenteeOwner) return 'absentee'
+  if (!result.ownerOccupied) return 'absentee'
   return 'owner'
 }
 
@@ -128,26 +152,26 @@ export function mapPropertyToDb(result: ReapiPropertyResult, campaignId: string)
   return {
     campaign_id: campaignId,
     status: 'found' as const,
-    address_line1: result.address.line1,
-    address_line2: result.address.line2 ?? '',
-    city: result.address.city,
-    state: result.address.state,
-    zip: result.address.zip,
-    county: result.address.county ?? '',
-    neighborhood: result.neighborhood ?? '',
-    latitude: result.location?.latitude ?? null,
-    longitude: result.location?.longitude ?? null,
-    bedrooms: result.property.bedrooms,
-    bathrooms: result.property.bathrooms,
-    sqft: result.property.sqft,
-    lot_sqft: result.property.lotSqft,
-    year_built: result.property.yearBuilt,
-    estimated_value: result.valuation.estimatedValue,
-    last_sale_price: result.valuation.lastSalePrice,
-    last_sale_date: result.valuation.lastSaleDate || null,
-    equity_percent: result.valuation.equityPercent,
-    years_owned: result.ownership.yearsOwned,
-    property_type: result.property.propertyType ?? '',
+    address_line1: result.address?.street ?? result.address?.address ?? '',
+    address_line2: '',
+    city: result.address?.city ?? '',
+    state: result.address?.state ?? '',
+    zip: result.address?.zip ?? '',
+    county: result.address?.county ?? '',
+    neighborhood: result.neighborhood?.name ?? '',
+    latitude: result.latitude ?? null,
+    longitude: result.longitude ?? null,
+    bedrooms: result.bedrooms ?? null,
+    bathrooms: result.bathrooms ?? null,
+    sqft: result.squareFeet ?? null,
+    lot_sqft: result.lotSquareFeet ?? null,
+    year_built: result.yearBuilt ?? null,
+    estimated_value: result.estimatedValue ?? null,
+    last_sale_price: result.lastSaleAmount ? parseInt(result.lastSaleAmount, 10) || null : null,
+    last_sale_date: result.lastSaleDate || null,
+    equity_percent: result.equityPercent ?? null,
+    years_owned: result.yearsOwned ?? null,
+    property_type: result.propertyType ?? '',
     owner_type: mapOwnerType(result),
   }
 }
