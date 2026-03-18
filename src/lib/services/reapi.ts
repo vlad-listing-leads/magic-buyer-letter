@@ -78,35 +78,43 @@ async function reapiFetch<T>(path: string, body: Record<string, unknown>): Promi
 export async function searchProperties(
   criteria: PropertySearchCriteria
 ): Promise<ReapiPropertyResult[]> {
-  // REAPI v2 uses snake_case params
   const searchParams: Record<string, unknown> = {
     size: 100,
-    property_type: 'SFR',
   }
 
-  // Location — REAPI uses zip_codes (array), city, state
-  if (criteria.zip) searchParams.zip_codes = [criteria.zip]
+  // Location params only — REAPI rejects filter params on this plan
   if (criteria.city) searchParams.city = criteria.city
   if (criteria.state) searchParams.state = criteria.state
+  if (criteria.zip) searchParams.zip = criteria.zip
 
-  // Server-side filters (snake_case field names)
-  if (criteria.price_min) searchParams.estimated_value_min = criteria.price_min
-  if (criteria.price_max) searchParams.estimated_value_max = criteria.price_max
-  if (criteria.beds_min) searchParams.bedrooms_min = criteria.beds_min
-  if (criteria.baths_min) searchParams.bathrooms_min = criteria.baths_min
-  if (criteria.sqft_min) searchParams.living_area_min = criteria.sqft_min
-  if (criteria.sqft_max) searchParams.living_area_max = criteria.sqft_max
-
-  logger.info({ searchParams }, 'REAPI search params')
+  logger.info({ searchParams, criteria }, 'REAPI search')
 
   const result = await reapiFetch<{ data: ReapiPropertyResult[] }>('/v2/PropertySearch', searchParams)
-  const properties = result.data ?? []
+  let properties = result.data ?? []
 
-  logger.info({
-    returned: properties.length,
-    hasCoords: properties.filter(p => p.latitude || p.location?.latitude || p.lat).length,
-    sampleKeys: properties[0] ? Object.keys(properties[0]).slice(0, 10) : [],
-  }, 'REAPI search results')
+  logger.info({ returned: properties.length }, 'REAPI raw results')
+
+  // Client-side filtering
+  if (criteria.price_min) {
+    properties = properties.filter(p => (p.estimatedValue ?? 0) >= criteria.price_min!)
+  }
+  if (criteria.price_max) {
+    properties = properties.filter(p => (p.estimatedValue ?? Infinity) <= criteria.price_max!)
+  }
+  if (criteria.beds_min) {
+    properties = properties.filter(p => (p.bedrooms ?? 0) >= criteria.beds_min!)
+  }
+  if (criteria.baths_min) {
+    properties = properties.filter(p => (p.bathrooms ?? 0) >= criteria.baths_min!)
+  }
+  if (criteria.sqft_min) {
+    properties = properties.filter(p => (p.squareFeet ?? 0) >= criteria.sqft_min!)
+  }
+  if (criteria.sqft_max) {
+    properties = properties.filter(p => (p.squareFeet ?? Infinity) <= criteria.sqft_max!)
+  }
+
+  logger.info({ afterFilter: properties.length }, 'REAPI filtered results')
 
   return properties
 }
