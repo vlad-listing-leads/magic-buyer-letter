@@ -32,7 +32,6 @@ function buildSystemPrompt(templateStyle: TemplateStyle): string {
 Write a buyer letter template. Use these EXACT variables (double curly braces) — the app will replace them with real data for each recipient:
 
 Available variables:
-- {{owner_name}} — homeowner's full name
 - {{property_address}} — their property street address + city
 - {{neighborhood}} — their neighborhood name
 - {{buyer_name}} — the buyer's name (already provided)
@@ -40,8 +39,10 @@ Available variables:
 - {{agent_name}} — the agent's name
 - {{agent_phone}} — agent's phone number
 
+Do NOT use owner names — we don't have them. Address the homeowner generically.
+
 Respond with ONLY a JSON object (no markdown, no explanation) with these keys:
-- "opening": 2-3 sentences. Mention {{property_address}} and {{neighborhood}}. Make it feel personal to {{owner_name}}.
+- "opening": 2-3 sentences. Mention {{property_address}} and {{neighborhood}}. Address the homeowner without using their name.
 - "body": 2-3 sentences in the middle of the letter, between the opening and the bullet points. Explain why the agent is writing and what makes the buyer special.
 - "closing": 1-2 sentences after the bullets. Include a call-to-action mentioning {{agent_phone}}.
 
@@ -92,7 +93,7 @@ async function callClaude(systemPrompt: string, userPrompt: string): Promise<Let
   } catch {
     logger.warn({ text }, 'Failed to parse Claude response as JSON')
     return {
-      opening: 'Your home at {{property_address}} caught my eye. My clients, {{buyer_name}}, are specifically looking for a home like yours in {{neighborhood}}.',
+      opening: 'Your home at {{property_address}} caught my eye. My clients, {{buyer_name}}, are specifically looking for a home in {{neighborhood}}.',
       body: "We've been searching for the right property for a while now. Nothing on the market has been the right fit — that's why I'm reaching out directly.",
       closing: "If you'd be open to a conversation, I'd love to tell you more. You can reach me at {{agent_phone}}. I look forward to hearing from you.",
     }

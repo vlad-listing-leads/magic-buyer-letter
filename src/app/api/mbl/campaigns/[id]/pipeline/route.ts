@@ -77,55 +77,20 @@ export async function GET(
 
         send({ step: 'searching', progress: 20, message: `Found ${properties.length} properties`, count: properties.length })
 
-        // Step 2: Skip trace — only for properties missing owner names
-        send({ step: 'skip_tracing', progress: 25, message: 'Checking owner data...' })
-
-        // Count how many already have owner names from PropertySearch
-        const alreadyTraced = (insertedProps ?? []).filter(p => p.owner_first_name).length
-        let skipTracedCount = alreadyTraced
-
-        // Only skip trace properties that don't have owner names
-        const needsTrace = (insertedProps ?? []).filter(p => !p.owner_first_name)
-
-        if (needsTrace.length > 0) {
-          const { skipTraceByAddress } = await import('@/lib/services/reapi')
-
-          for (const prop of needsTrace) {
-            const result = await skipTraceByAddress({
-              address: prop.address_line1,
-              city: prop.city,
-              state: prop.state,
-              zip: prop.zip,
-            })
-
-            if (result) {
-              await admin
-                .from('mbl_properties')
-                .update({
-                  owner_first_name: result.firstName,
-                  owner_last_name: result.lastName,
-                  owner_mailing_address: result.mailingAddress,
-                  owner_phone: result.phone,
-                  owner_email: result.email,
-                  status: 'skip_traced',
-                })
-                .eq('id', prop.id)
-              skipTracedCount++
-            }
-
-            if (skipTracedCount % 10 === 0) {
-              send({ step: 'skip_tracing', progress: 25 + Math.round((skipTracedCount / (insertedProps?.length ?? 1)) * 20), message: `Skip traced ${skipTracedCount} owners...`, count: skipTracedCount })
-              await new Promise(resolve => setTimeout(resolve, 500))
-            }
-          }
-        }
+        // Step 2: Promote all properties to skip_traced (no skip trace API calls)
+        const propCount = insertedProps?.length ?? 0
+        await admin
+          .from('mbl_properties')
+          .update({ status: 'skip_traced' })
+          .eq('campaign_id', campaign.id)
+          .eq('status', 'found')
 
         await admin
           .from('mbl_campaigns')
-          .update({ properties_skip_traced: skipTracedCount, status: 'verifying' })
+          .update({ properties_skip_traced: propCount, status: 'verifying' })
           .eq('id', campaign.id)
 
-        send({ step: 'skip_tracing', progress: 45, message: `${skipTracedCount} owners identified`, count: skipTracedCount })
+        send({ step: 'skip_tracing', progress: 40, message: `${propCount} properties ready`, count: propCount })
 
         // Step 3: Verify addresses via Lob (skip if no key)
         send({ step: 'verifying', progress: 50, message: 'Verifying addresses...' })
@@ -215,15 +180,13 @@ export async function GET(
         // Fill template per property and update in DB
         const { data: verifiedProps } = await admin
           .from('mbl_properties')
-          .select('id, owner_first_name, owner_last_name, address_line1, city, neighborhood')
+          .select('id, address_line1, city, neighborhood')
           .eq('campaign_id', campaign.id)
           .eq('status', 'verified')
 
         let generatedCount = 0
         for (const prop of verifiedProps ?? []) {
-          const ownerName = `${prop.owner_first_name ?? 'Homeowner'} ${prop.owner_last_name ?? ''}`.trim()
           const filled = fillTemplate(template, {
-            owner_name: ownerName,
             property_address: `${prop.address_line1}, ${prop.city}`,
             neighborhood: prop.neighborhood || prop.city,
             buyer_name: campaign.buyer_name,

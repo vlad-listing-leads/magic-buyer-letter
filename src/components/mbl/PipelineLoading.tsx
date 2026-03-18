@@ -7,9 +7,9 @@ import type { PipelineEvent, PipelineStep } from '@/types'
 
 const STEPS: { key: PipelineStep; label: string; icon: typeof Search; description: string }[] = [
   { key: 'searching', label: 'Finding properties', icon: Search, description: 'Searching off-market properties...' },
-  { key: 'skip_tracing', label: 'Skip tracing owners', icon: UserSearch, description: 'Looking up owner contact info...' },
+  { key: 'skip_tracing', label: 'Processing properties', icon: UserSearch, description: 'Preparing property data...' },
   { key: 'verifying', label: 'Verifying addresses', icon: MapPin, description: 'Checking deliverability with Lob...' },
-  { key: 'generating', label: 'Writing letters', icon: Sparkles, description: 'AI personalizing each letter...' },
+  { key: 'generating', label: 'Writing letters', icon: Sparkles, description: 'AI writing your letter template...' },
 ]
 
 interface PipelineLoadingProps {
