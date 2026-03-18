@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('auth-callback')
@@ -8,7 +8,7 @@ const log = createLogger('auth-callback')
  * GET /api/auth/callback
  *
  * Supabase auth callback — verifies OTP token and sets session cookies.
- * Used by both LL SSO flow and standard email auth.
+ * Uses response-based cookie setting to ensure cookies survive the redirect.
  */
 export async function GET(request: NextRequest) {
   const tokenHash = request.nextUrl.searchParams.get('token_hash')
@@ -16,9 +16,29 @@ export async function GET(request: NextRequest) {
   const next = request.nextUrl.searchParams.get('next') || '/'
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3010'
+  const redirectUrl = new URL(next, appUrl)
+
+  // Create redirect response first so cookies can be attached to it
+  const response = NextResponse.redirect(redirectUrl)
 
   if (tokenHash && type) {
-    const supabase = await createServerSupabaseClient()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options)
+            })
+          },
+        },
+      }
+    )
+
     const { error } = await supabase.auth.verifyOtp({
       type,
       token_hash: tokenHash,
@@ -30,5 +50,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(new URL(next, appUrl))
+  return response
 }
