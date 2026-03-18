@@ -79,7 +79,7 @@ export async function searchProperties(
   criteria: PropertySearchCriteria
 ): Promise<ReapiPropertyResult[]> {
   const searchParams: Record<string, unknown> = {
-    size: 100,
+    size: 500,
   }
 
   // Location params only — REAPI rejects filter params on this plan
