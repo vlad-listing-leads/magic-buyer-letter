@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { ArrowRight, ArrowLeft, CheckCircle, Sparkles, User, MapPin, DollarSign, BedDouble, Bath, Pencil } from 'lucide-react'
+import { ArrowRight, ArrowLeft, CheckCircle, Sparkles, MapPin, DollarSign, BedDouble, Bath, Pencil } from 'lucide-react'
 import { ChipSelector } from './ChipSelector'
 import { generateBullets } from '@/lib/bullets'
 import { cn } from '@/lib/utils'
@@ -50,6 +50,46 @@ interface BuyerProfileProps {
   onComplete: (profile: BuyerProfileData) => void
 }
 
+// Common city → ZIP code mappings for MA cities
+const CITY_ZIPS: Record<string, string[]> = {
+  'newton': ['02458', '02459', '02460', '02461', '02462', '02464', '02465', '02466', '02467', '02468'],
+  'boston': ['02101', '02102', '02103', '02104', '02105', '02106', '02107', '02108', '02109', '02110', '02111', '02112', '02113', '02114', '02115', '02116', '02117', '02118', '02119', '02120', '02121', '02122', '02124', '02125', '02126', '02127', '02128', '02129', '02130', '02131', '02132', '02134', '02135', '02136'],
+  'brookline': ['02445', '02446', '02447'],
+  'cambridge': ['02138', '02139', '02140', '02141', '02142'],
+  'somerville': ['02143', '02144', '02145'],
+  'wellesley': ['02481', '02482'],
+  'needham': ['02492', '02494'],
+  'waltham': ['02451', '02452', '02453', '02454'],
+  'watertown': ['02471', '02472'],
+  'arlington': ['02474', '02476'],
+  'lexington': ['02420', '02421'],
+  'natick': ['01760', '01761'],
+  'framingham': ['01701', '01702', '01703', '01704', '01705'],
+  'concord': ['01742'],
+  'sudbury': ['01776'],
+  'wayland': ['01778'],
+  'weston': ['02493'],
+  'dover': ['02030'],
+  'sherborn': ['01770'],
+  'medfield': ['02052'],
+  'westwood': ['02090'],
+  'dedham': ['02026', '02027'],
+  'milton': ['02186', '02187'],
+  'quincy': ['02169', '02170', '02171'],
+  'braintree': ['02184', '02185'],
+  'hingham': ['02043'],
+  'cohasset': ['02025'],
+  'scituate': ['02066'],
+  'duxbury': ['02332'],
+  'marshfield': ['02050'],
+  'plymouth': ['02360', '02361', '02362'],
+}
+
+function getCityZips(city?: string): string[] {
+  if (!city) return []
+  return CITY_ZIPS[city.toLowerCase()] ?? []
+}
+
 function formatPrice(val: number): string {
   if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`
   if (val >= 1000) return `$${Math.round(val / 1000)}K`
@@ -85,6 +125,7 @@ export function BuyerProfile({
   }
 
   const area = `${criteria.city ?? ''}${criteria.state ? `, ${criteria.state}` : ''}`
+  const cityZips = getCityZips(criteria.city)
   const priceRange = criteria.price_min || criteria.price_max
     ? `${criteria.price_min ? formatPrice(criteria.price_min) : '?'}–${criteria.price_max ? formatPrice(criteria.price_max) : '?'}`
     : null
@@ -120,14 +161,6 @@ export function BuyerProfile({
 
           {editingSearch ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <label className="text-[11px] text-muted-foreground">Buyer name</label>
-                <Input
-                  value={buyerName}
-                  onChange={(e) => onBuyerNameChange(e.target.value)}
-                  className="h-8 text-sm"
-                />
-              </div>
               <div className="space-y-1">
                 <label className="text-[11px] text-muted-foreground">City</label>
                 <Input
@@ -194,46 +227,48 @@ export function BuyerProfile({
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {buyerName && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
-                  <User className="h-3.5 w-3.5 text-violet-400" />
-                  <span className="text-muted-foreground">Buyer</span>
-                  <span className="font-medium">{buyerName}</span>
-                </div>
-              )}
               {area && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
                   <MapPin className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-muted-foreground">Area</span>
                   <span className="font-medium">{area}</span>
                 </div>
               )}
-              {criteria.zip && (
+              {cityZips.map((zip) => (
+                <div key={zip} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-400/60" />
+                  <span className="font-medium font-mono">{zip}</span>
+                </div>
+              ))}
+              {criteria.zip && !cityZips.includes(criteria.zip) && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
                   <MapPin className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-muted-foreground">ZIP</span>
-                  <span className="font-medium">{criteria.zip}</span>
+                  <span className="font-medium font-mono">{criteria.zip}</span>
                 </div>
               )}
-              {priceRange && (
+              {criteria.price_min && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
                   <DollarSign className="h-3.5 w-3.5 text-amber-400" />
-                  <span className="text-muted-foreground">Price</span>
-                  <span className="font-medium">{priceRange}</span>
+                  <span className="text-muted-foreground">Low</span>
+                  <span className="font-medium">{formatPrice(criteria.price_min)}</span>
+                </div>
+              )}
+              {criteria.price_max && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
+                  <DollarSign className="h-3.5 w-3.5 text-amber-400" />
+                  <span className="text-muted-foreground">High</span>
+                  <span className="font-medium">{formatPrice(criteria.price_max)}</span>
                 </div>
               )}
               {criteria.beds_min && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
                   <BedDouble className="h-3.5 w-3.5 text-blue-400" />
-                  <span className="text-muted-foreground">Beds</span>
-                  <span className="font-medium">{criteria.beds_min}+</span>
+                  <span className="font-medium">{criteria.beds_min}+ beds</span>
                 </div>
               )}
               {criteria.baths_min && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
                   <Bath className="h-3.5 w-3.5 text-blue-400" />
-                  <span className="text-muted-foreground">Baths</span>
-                  <span className="font-medium">{criteria.baths_min}+</span>
+                  <span className="font-medium">{criteria.baths_min}+ baths</span>
                 </div>
               )}
             </div>
