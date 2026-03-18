@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { verifyLLToken } from '@/lib/auth/jwt'
+import { jwtVerify } from 'jose'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createLogger } from '@/lib/logger'
 
@@ -10,34 +10,58 @@ const log = createLogger('ll-callback')
  * GET /api/auth/ll-callback?token=JWT
  *
  * Cross-app SSO callback from Listing Leads.
- * 1. Validates JWT token signed with CROSS_APP_AUTH_SECRET
- * 2. Creates or syncs Supabase Auth user + local user record
- * 3. Verifies OTP to establish session with cookies on the redirect
- * 4. Redirects to dashboard
  */
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token')
-  const returnTo = request.nextUrl.searchParams.get('returnTo') || '/'
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3010'
 
   if (!token) {
-    return NextResponse.redirect(new URL('/auth/login?error=no_token', request.url))
+    return NextResponse.json({ error: 'No token provided' }, { status: 400 })
   }
 
-  // 1. Verify JWT from Listing Leads
-  const payload = await verifyLLToken(token)
-  if (!payload) {
-    log.warn('Invalid or expired LL token')
-    return NextResponse.redirect(new URL('/auth/login?error=invalid_token', request.url))
+  // 1. Verify JWT — with detailed error reporting
+  const secret = process.env.CROSS_APP_AUTH_SECRET
+  if (!secret) {
+    return NextResponse.json({ error: 'CROSS_APP_AUTH_SECRET not set' }, { status: 500 })
   }
 
-  const { memberstackId, email, role, name } = payload
+  let payload: Record<string, unknown>
+  try {
+    const key = new TextEncoder().encode(secret)
+    const result = await jwtVerify(token, key, { algorithms: ['HS256'] })
+    payload = result.payload as Record<string, unknown>
+  } catch (err) {
+    return NextResponse.json(
+      { error: 'JWT verification failed', details: String(err) },
+      { status: 401 }
+    )
+  }
+
+  const memberstackId = payload.memberstackId as string
+  const email = payload.email as string
+  const role = (payload.role as string) || 'user'
+  const name = (payload.name as string) || email
+
+  if (!memberstackId || !email) {
+    return NextResponse.json(
+      { error: 'JWT missing required fields', payload },
+      { status: 400 }
+    )
+  }
+
   const admin = createAdminClient()
 
   // 2. Find or create Supabase Auth user
   let authUserId: string
 
-  const { data: authUsers } = await admin.auth.admin.listUsers()
+  const { data: authUsers, error: listError } = await admin.auth.admin.listUsers()
+  if (listError) {
+    return NextResponse.json(
+      { error: 'Failed to list auth users', details: listError.message },
+      { status: 500 }
+    )
+  }
+
   const existingAuth = authUsers?.users.find((u) => u.email === email) ?? null
 
   if (existingAuth) {
@@ -50,7 +74,6 @@ export async function GET(request: NextRequest) {
     })
 
     if (createError || !newAuth.user) {
-      log.error({ error: createError }, 'Failed to create auth user')
       return NextResponse.json(
         { error: 'Failed to create auth user', details: createError?.message },
         { status: 500 }
@@ -70,24 +93,18 @@ export async function GET(request: NextRequest) {
   if (existingUser) {
     await admin
       .from('users')
-      .update({
-        email,
-        name: name || email,
-        role,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ email, name, role, updated_at: new Date().toISOString() })
       .eq('memberstack_id', memberstackId)
   } else {
     const { error: insertError } = await admin.from('users').insert({
       id: authUserId,
       email,
-      name: name || email,
+      name,
       memberstack_id: memberstackId,
-      role: role || 'user',
+      role,
     })
 
     if (insertError) {
-      log.error({ error: insertError }, 'Failed to create user record')
       return NextResponse.json(
         { error: 'Failed to create user record', details: insertError.message },
         { status: 500 }
@@ -102,7 +119,6 @@ export async function GET(request: NextRequest) {
   })
 
   if (linkError || !linkData) {
-    log.error({ error: linkError }, 'Failed to generate magic link')
     return NextResponse.json(
       { error: 'Failed to generate magic link', details: linkError?.message },
       { status: 500 }
@@ -113,16 +129,14 @@ export async function GET(request: NextRequest) {
   const otpToken = linkUrl.searchParams.get('token')
 
   if (!otpToken) {
-    log.error({ actionLink: linkData.properties.action_link }, 'No token in magic link')
     return NextResponse.json(
-      { error: 'No token in magic link' },
+      { error: 'No token in magic link', actionLink: linkData.properties.action_link },
       { status: 500 }
     )
   }
 
-  // 5. Verify OTP and set session cookies directly on the redirect response
-  const redirectUrl = new URL(returnTo, appUrl)
-  const response = NextResponse.redirect(redirectUrl)
+  // 5. Verify OTP and set session cookies on the redirect
+  const response = NextResponse.redirect(new URL('/', appUrl))
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -133,8 +147,8 @@ export async function GET(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options)
+          cookiesToSet.forEach(({ name: n, value, options }) => {
+            response.cookies.set(n, value, options)
           })
         },
       },
@@ -147,7 +161,6 @@ export async function GET(request: NextRequest) {
   })
 
   if (otpError) {
-    log.error({ error: otpError }, 'OTP verification failed')
     return NextResponse.json(
       { error: 'OTP verification failed', details: otpError.message },
       { status: 500 }
