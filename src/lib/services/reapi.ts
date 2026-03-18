@@ -173,7 +173,7 @@ export function mapOwnerType(result: ReapiPropertyResult): string {
 export function mapPropertyToDb(result: ReapiPropertyResult, campaignId: string) {
   return {
     campaign_id: campaignId,
-    status: (result.owner1FirstName ? 'skip_traced' : 'found') as 'skip_traced' | 'found',
+    status: (result.owner1FirstName ? 'skip_traced' : 'found') as const,
     address_line1: result.address?.street ?? result.address?.address ?? '',
     address_line2: '',
     city: result.address?.city ?? '',
@@ -197,6 +197,5 @@ export function mapPropertyToDb(result: ReapiPropertyResult, campaignId: string)
     owner_type: mapOwnerType(result),
     owner_first_name: result.owner1FirstName ?? null,
     owner_last_name: result.owner1LastName ?? null,
-    status: 'skip_traced' as const,
   }
 }
