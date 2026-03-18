@@ -16,8 +16,11 @@ interface ReapiPropertyResult {
     zip: string
     county: string
   }
-  latitude: number
-  longitude: number
+  latitude: number | null
+  longitude: number | null
+  location?: { latitude: number; longitude: number }
+  lat?: number
+  lng?: number
   bedrooms: number
   bathrooms: number
   squareFeet: number
@@ -86,6 +89,17 @@ export async function searchProperties(
 
   const result = await reapiFetch<{ data: ReapiPropertyResult[] }>('/v2/PropertySearch', searchParams)
   let properties = result.data ?? []
+
+  // Log first property's coordinate fields for debugging
+  if (properties.length > 0) {
+    const p = properties[0]
+    logger.info({
+      hasLatitude: p.latitude !== undefined && p.latitude !== null,
+      hasLocation: !!p.location,
+      hasLat: p.lat !== undefined,
+      sampleKeys: Object.keys(p).filter(k => /lat|lng|lon|coord|loc|geo/i.test(k)),
+    }, 'REAPI coordinate fields')
+  }
 
   // Filter results client-side for price, beds, baths, sqft
   if (criteria.price_min) {
@@ -159,8 +173,8 @@ export function mapPropertyToDb(result: ReapiPropertyResult, campaignId: string)
     zip: result.address?.zip ?? '',
     county: result.address?.county ?? '',
     neighborhood: result.neighborhood?.name ?? '',
-    latitude: result.latitude ?? null,
-    longitude: result.longitude ?? null,
+    latitude: result.latitude ?? result.location?.latitude ?? result.lat ?? null,
+    longitude: result.longitude ?? result.location?.longitude ?? result.lng ?? null,
     bedrooms: result.bedrooms ?? null,
     bathrooms: result.bathrooms ?? null,
     sqft: result.squareFeet ?? null,
