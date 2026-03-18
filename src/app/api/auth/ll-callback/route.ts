@@ -112,7 +112,22 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 4. Generate magic link OTP
+  // 4. Auto-create agent profile if it doesn't exist (like ZMA does)
+  const { data: existingAgent } = await admin
+    .from('mbl_agents')
+    .select('id')
+    .eq('user_id', authUserId)
+    .single()
+
+  if (!existingAgent) {
+    await admin.from('mbl_agents').insert({
+      user_id: authUserId,
+      name,
+      email,
+    })
+  }
+
+  // 5. Generate magic link OTP
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: 'magiclink',
     email,
