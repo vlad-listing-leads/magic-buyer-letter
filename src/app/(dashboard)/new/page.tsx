@@ -144,7 +144,7 @@ function NewLetterWizard() {
 
     try {
       const payload: CampaignCreateData = {
-        buyer_name: buyerName,
+        buyer_name: buyerName || 'My Buyer',
         buyer_description: description,
         criteria,
         template_style: templateStyle,

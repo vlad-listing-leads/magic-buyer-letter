@@ -4,7 +4,7 @@ import { requireAuth, createAdminClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 const campaignCreateSchema = z.object({
-  buyer_name: z.string().min(1),
+  buyer_name: z.string().default('My Buyer'),
   buyer_description: z.string().default(''),
   criteria: z.object({
     price_min: z.number().optional(),
