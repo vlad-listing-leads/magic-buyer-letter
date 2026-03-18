@@ -26,17 +26,22 @@ function parseDescription(text: string): ParsedData {
     if (leadNameMatch) parsed.buyer_name = leadNameMatch[1]
   }
 
-  const pricePattern = /\$?([\d,.]+)\s*[kK]\s*(?:[-–to]+\s*\$?([\d,.]+)\s*[kK])?/g
-  const priceMatch = pricePattern.exec(text)
+  // Parse price with K/M suffix support: "$800K-1.2M", "$400K-$600K", "$1.5M"
+  const priceWithSuffix = /\$?([\d,.]+)\s*([kKmM])\s*(?:[-–to]+\s*\$?([\d,.]+)\s*([kKmM]))?/g
+  const priceMatch = priceWithSuffix.exec(text)
   if (priceMatch) {
-    const p1 = parseFloat(priceMatch[1].replace(/,/g, '')) * 1000
-    parsed.criteria.price_min = p1
-    if (priceMatch[2]) {
-      parsed.criteria.price_max = parseFloat(priceMatch[2].replace(/,/g, '')) * 1000
+    const toNum = (val: string, suffix: string) => {
+      const n = parseFloat(val.replace(/,/g, ''))
+      return /[mM]/.test(suffix) ? n * 1_000_000 : n * 1000
+    }
+    parsed.criteria.price_min = toNum(priceMatch[1], priceMatch[2])
+    if (priceMatch[3] && priceMatch[4]) {
+      parsed.criteria.price_max = toNum(priceMatch[3], priceMatch[4])
     }
   }
-  const fullPricePattern = /\$?([\d,]+)\s*(?:[-–to]+\s*\$?([\d,]+))?/g
+  // Fallback: full dollar amounts without suffix
   if (!priceMatch) {
+    const fullPricePattern = /\$?([\d,]+)\s*(?:[-–to]+\s*\$?([\d,]+))?/g
     const fp = fullPricePattern.exec(text)
     if (fp) {
       const val = parseInt(fp[1].replace(/,/g, ''), 10)
@@ -305,11 +310,11 @@ export function SmartInput({ onComplete }: SmartInputProps) {
         {!text && !isListening && (
           <div className="flex items-center justify-center gap-2">
             <p className="text-xs text-muted-foreground/60">
-              Try: &ldquo;Sarah and Mike, $400-600K, 3 bed in Newton MA, pre-approved&rdquo;
+              Try: &ldquo;Sarah and Mike, $800K-1.2M, 3 bed in Newton MA, pre-approved&rdquo;
             </p>
             <button
               type="button"
-              onClick={() => setText('Sarah and Mike, $400-600K, 3 bed in Newton MA, pre-approved')}
+              onClick={() => setText('Sarah and Mike, $800K-1.2M, 3 bed in Newton MA, pre-approved')}
               className="text-xs text-[#006AFF] hover:text-[#0058D4] font-medium"
             >
               Copy
