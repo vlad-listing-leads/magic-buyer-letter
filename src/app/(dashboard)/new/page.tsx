@@ -124,11 +124,24 @@ function NewLetterWizard() {
   const handleSmartInputComplete = (
     name: string,
     desc: string,
-    parsedCriteria: PropertySearchCriteria
+    parsedCriteria: PropertySearchCriteria & { financing?: string; notes?: string }
   ) => {
     setBuyerName(name)
     setDescription(desc)
     setCriteria(parsedCriteria)
+
+    // Pre-fill buyer profile from AI-parsed data
+    const validFinancing = ['pre-approved', 'cash', 'fha', 'va', 'conventional']
+    if (parsedCriteria.financing && validFinancing.includes(parsedCriteria.financing)) {
+      setBuyerProfile((prev) => ({
+        ...prev,
+        financing: parsedCriteria.financing as BuyerProfileData['financing'],
+        additional_notes: parsedCriteria.notes ?? prev.additional_notes,
+      }))
+    } else if (parsedCriteria.notes) {
+      setBuyerProfile((prev) => ({ ...prev, additional_notes: parsedCriteria.notes ?? '' }))
+    }
+
     setStep('profile')
   }
 
@@ -238,6 +251,7 @@ function NewLetterWizard() {
         <BuyerProfile
           buyerName={buyerName}
           criteria={criteria}
+          initialProfile={buyerProfile}
           onBack={() => setStep('input')}
           onComplete={handleProfileComplete}
         />

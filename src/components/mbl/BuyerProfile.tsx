@@ -43,16 +43,17 @@ const CONDITION_OPTIONS = [
 interface BuyerProfileProps {
   buyerName: string
   criteria: PropertySearchCriteria
+  initialProfile?: Partial<BuyerProfileData>
   onBack: () => void
   onComplete: (profile: BuyerProfileData) => void
 }
 
-export function BuyerProfile({ buyerName, criteria, onBack, onComplete }: BuyerProfileProps) {
+export function BuyerProfile({ buyerName, criteria, initialProfile, onBack, onComplete }: BuyerProfileProps) {
   const [profile, setProfile] = useState<BuyerProfileData>({
-    financing: '',
-    closing_flexibility: '',
-    condition_tolerance: '',
-    additional_notes: '',
+    financing: initialProfile?.financing ?? '',
+    closing_flexibility: initialProfile?.closing_flexibility ?? '',
+    condition_tolerance: initialProfile?.condition_tolerance ?? '',
+    additional_notes: initialProfile?.additional_notes ?? '',
   })
 
   const bullets = generateBullets(profile, {

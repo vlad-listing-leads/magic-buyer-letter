@@ -1,83 +1,28 @@
 'use client'
 
-import { useState, useMemo, useRef, useCallback } from 'react'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { ArrowRight, Mic, MicOff, User, MapPin, DollarSign, BedDouble, Bath } from 'lucide-react'
+import { useState, useRef, useCallback } from 'react'
+import { ArrowRight, Mic, MicOff, User, MapPin, DollarSign, BedDouble, Bath, Loader2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useApiFetch } from '@/hooks/useApiFetch'
+import { toast } from 'sonner'
 import type { PropertySearchCriteria } from '@/types'
 
-interface ParsedData {
-  buyer_name: string
-  criteria: PropertySearchCriteria
-}
-
-function parseDescription(text: string): ParsedData {
-  const parsed: ParsedData = {
-    buyer_name: '',
-    criteria: {},
-  }
-
-  const nameMatch = text.match(/(?:my\s+)?(?:buyer|client|buyers|clients)\s+(?:named?\s+)?([A-Z][a-z]+(?:\s+(?:and|&)\s+[A-Z][a-z]+)?)/i)
-  if (nameMatch) parsed.buyer_name = nameMatch[1]
-
-  if (!parsed.buyer_name) {
-    const leadNameMatch = text.match(/^([A-Z][a-z]+(?:\s+(?:and|&)\s+[A-Z][a-z]+)?)\s*,/)
-    if (leadNameMatch) parsed.buyer_name = leadNameMatch[1]
-  }
-
-  // Parse price with K/M suffix support: "$800K-1.2M", "$400K-$600K", "$1.5M"
-  const priceWithSuffix = /\$?([\d,.]+)\s*([kKmM])\s*(?:[-–to]+\s*\$?([\d,.]+)\s*([kKmM]))?/g
-  const priceMatch = priceWithSuffix.exec(text)
-  if (priceMatch) {
-    const toNum = (val: string, suffix: string) => {
-      const n = parseFloat(val.replace(/,/g, ''))
-      return /[mM]/.test(suffix) ? n * 1_000_000 : n * 1000
-    }
-    parsed.criteria.price_min = toNum(priceMatch[1], priceMatch[2])
-    if (priceMatch[3] && priceMatch[4]) {
-      parsed.criteria.price_max = toNum(priceMatch[3], priceMatch[4])
-    }
-  }
-  // Fallback: full dollar amounts without suffix
-  if (!priceMatch) {
-    const fullPricePattern = /\$?([\d,]+)\s*(?:[-–to]+\s*\$?([\d,]+))?/g
-    const fp = fullPricePattern.exec(text)
-    if (fp) {
-      const val = parseInt(fp[1].replace(/,/g, ''), 10)
-      if (val > 50000) {
-        parsed.criteria.price_min = val
-        if (fp[2]) {
-          parsed.criteria.price_max = parseInt(fp[2].replace(/,/g, ''), 10)
-        }
-      }
-    }
-  }
-
-  const bedMatch = text.match(/(\d+)\s*[-+]?\s*(?:bed(?:room)?s?|br|bd)/i)
-  if (bedMatch) parsed.criteria.beds_min = parseInt(bedMatch[1], 10)
-
-  const bathMatch = text.match(/(\d+(?:\.\d+)?)\s*[-+]?\s*(?:bath(?:room)?s?|ba)/i)
-  if (bathMatch) parsed.criteria.baths_min = parseFloat(bathMatch[1])
-
-  const inMatch = text.match(/\bin\s+([A-Z][a-zA-Z\s]+?)(?:\s*,\s*([A-Z]{2}))?\s*(?:\.|$|between|under|over|around|near)/i)
-  if (inMatch) {
-    parsed.criteria.city = inMatch[1].trim()
-    if (inMatch[2]) parsed.criteria.state = inMatch[2]
-  }
-
-  const zipMatch = text.match(/\b(\d{5})\b/)
-  if (zipMatch) parsed.criteria.zip = zipMatch[1]
-
-  if (!parsed.criteria.state) {
-    const stateMatch = text.match(/,\s*([A-Z]{2})\b/)
-    if (stateMatch) parsed.criteria.state = stateMatch[1]
-  }
-
-  return parsed
-}
-
 const VOICE_BAR_HEIGHTS = [8, 20, 12, 28, 16, 24, 10, 30, 14, 22, 8, 26, 18, 32, 10, 20, 14, 28, 12, 24, 8, 18, 26, 14]
+
+interface ParsedCriteria {
+  buyer_name: string
+  city: string | null
+  state: string | null
+  zip: string | null
+  price_min: number | null
+  price_max: number | null
+  beds_min: number | null
+  baths_min: number | null
+  sqft_min: number | null
+  sqft_max: number | null
+  financing: string | null
+  notes: string | null
+}
 
 interface SmartInputProps {
   onComplete: (buyerName: string, description: string, criteria: PropertySearchCriteria) => void
@@ -86,24 +31,65 @@ interface SmartInputProps {
 export function SmartInput({ onComplete }: SmartInputProps) {
   const [text, setText] = useState('')
   const [isListening, setIsListening] = useState(false)
+  const [isParsing, setIsParsing] = useState(false)
+  const [parsed, setParsed] = useState<ParsedCriteria | null>(null)
   const [isFocused, setIsFocused] = useState(false)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
-  const parsed = useMemo(() => parseDescription(text), [text])
+  const baseTextRef = useRef('')
+  const apiFetch = useApiFetch()
 
-  const hasCriteria = parsed.buyer_name || parsed.criteria.city || parsed.criteria.price_min || parsed.criteria.beds_min
+  const handleContinue = async () => {
+    if (!text.trim()) return
 
-  const handleContinue = () => {
-    onComplete(parsed.buyer_name, text, parsed.criteria)
+    setIsParsing(true)
+    try {
+      const res = await apiFetch('/api/mbl/parse-buyer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error)
+
+      const data = json.data as ParsedCriteria
+      setParsed(data)
+
+      // Convert to PropertySearchCriteria and continue
+      const criteria: PropertySearchCriteria = {}
+      if (data.city) criteria.city = data.city
+      if (data.state) criteria.state = data.state
+      if (data.zip) criteria.zip = data.zip
+      if (data.price_min) criteria.price_min = data.price_min
+      if (data.price_max) criteria.price_max = data.price_max
+      if (data.beds_min) criteria.beds_min = data.beds_min
+      if (data.baths_min) criteria.baths_min = data.baths_min
+      if (data.sqft_min) criteria.sqft_min = data.sqft_min
+      if (data.sqft_max) criteria.sqft_max = data.sqft_max
+
+      const buyerName = data.buyer_name || 'My Buyer'
+
+      // Pass financing and notes through for Step 2 pre-fill
+      const enrichedCriteria = {
+        ...criteria,
+        ...(data.financing ? { financing: data.financing } : {}),
+        ...(data.notes ? { notes: data.notes } : {}),
+      }
+
+      onComplete(buyerName, text, enrichedCriteria)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to parse description')
+    } finally {
+      setIsParsing(false)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && text.trim()) {
+    if (e.key === 'Enter' && text.trim() && !isParsing) {
       e.preventDefault()
       handleContinue()
     }
   }
-
-  const baseTextRef = useRef('')
 
   const toggleVoice = useCallback(() => {
     if (isListening) {
@@ -145,31 +131,33 @@ export function SmartInput({ onComplete }: SmartInputProps) {
     setIsListening(true)
   }, [isListening, text])
 
-  // Criteria items for the detection cards
-  const detectedItems = useMemo(() => {
+  // Build detected items from parsed data
+  const detectedItems = parsed ? (() => {
     const items: { icon: typeof User; label: string; value: string; color: string }[] = []
-    if (parsed.buyer_name) {
+    if (parsed.buyer_name && parsed.buyer_name !== 'My Buyer') {
       items.push({ icon: User, label: 'Buyer', value: parsed.buyer_name, color: 'text-violet-400' })
     }
-    if (parsed.criteria.city) {
-      const loc = `${parsed.criteria.city}${parsed.criteria.state ? `, ${parsed.criteria.state}` : ''}`
-      items.push({ icon: MapPin, label: 'Area', value: loc, color: 'text-emerald-400' })
+    if (parsed.city) {
+      items.push({ icon: MapPin, label: 'Area', value: `${parsed.city}${parsed.state ? `, ${parsed.state}` : ''}`, color: 'text-emerald-400' })
     }
-    if (parsed.criteria.zip) {
-      items.push({ icon: MapPin, label: 'ZIP', value: parsed.criteria.zip, color: 'text-emerald-400' })
+    if (parsed.zip) {
+      items.push({ icon: MapPin, label: 'ZIP', value: parsed.zip, color: 'text-emerald-400' })
     }
-    if (parsed.criteria.price_min) {
-      const price = `$${(parsed.criteria.price_min / 1000).toFixed(0)}K${parsed.criteria.price_max ? `–$${(parsed.criteria.price_max / 1000).toFixed(0)}K` : '+'}`
+    if (parsed.price_min || parsed.price_max) {
+      const fmtK = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n / 1000)}K`
+      const price = parsed.price_min && parsed.price_max
+        ? `${fmtK(parsed.price_min)}–${fmtK(parsed.price_max)}`
+        : parsed.price_min ? `${fmtK(parsed.price_min)}+` : `up to ${fmtK(parsed.price_max!)}`
       items.push({ icon: DollarSign, label: 'Price', value: price, color: 'text-amber-400' })
     }
-    if (parsed.criteria.beds_min) {
-      items.push({ icon: BedDouble, label: 'Beds', value: `${parsed.criteria.beds_min}+`, color: 'text-blue-400' })
+    if (parsed.beds_min) {
+      items.push({ icon: BedDouble, label: 'Beds', value: `${parsed.beds_min}+`, color: 'text-blue-400' })
     }
-    if (parsed.criteria.baths_min) {
-      items.push({ icon: Bath, label: 'Baths', value: `${parsed.criteria.baths_min}+`, color: 'text-blue-400' })
+    if (parsed.baths_min) {
+      items.push({ icon: Bath, label: 'Baths', value: `${parsed.baths_min}+`, color: 'text-blue-400' })
     }
     return items
-  }, [parsed])
+  })() : []
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
@@ -186,7 +174,6 @@ export function SmartInput({ onComplete }: SmartInputProps) {
 
         {/* Input with glow effect */}
         <div className="relative">
-          {/* Glow */}
           <div
             className={cn(
               'absolute -inset-1 rounded-2xl bg-[#006AFF]/20 blur-xl transition-opacity duration-500',
@@ -198,18 +185,18 @@ export function SmartInput({ onComplete }: SmartInputProps) {
             <input
               type="text"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => { setText(e.target.value); setParsed(null) }}
               onKeyDown={handleKeyDown}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              placeholder="Sarah, $400-600K, 3 bed 2 bath, Newton, pre-approved"
+              placeholder="Sarah, $800K-1.2M, 3 bed in Newton MA, pre-approved"
+              disabled={isParsing}
               className={cn(
                 'w-full h-16 pl-5 pr-28 rounded-2xl border-2 bg-background text-lg',
                 'placeholder:text-muted-foreground/50',
                 'focus:outline-none transition-colors duration-200',
-                isFocused || text
-                  ? 'border-[#006AFF]/50'
-                  : 'border-border'
+                'disabled:opacity-60',
+                isFocused || text ? 'border-[#006AFF]/50' : 'border-border'
               )}
               autoFocus
             />
@@ -217,6 +204,7 @@ export function SmartInput({ onComplete }: SmartInputProps) {
               <button
                 type="button"
                 onClick={toggleVoice}
+                disabled={isParsing}
                 className={cn(
                   'p-2.5 rounded-xl transition-all',
                   isListening
@@ -230,20 +218,37 @@ export function SmartInput({ onComplete }: SmartInputProps) {
               <button
                 type="button"
                 onClick={handleContinue}
-                disabled={!text.trim()}
+                disabled={!text.trim() || isParsing}
                 className={cn(
                   'flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all',
-                  text.trim()
+                  text.trim() && !isParsing
                     ? 'bg-[#006AFF] text-white hover:bg-[#0058D4] shadow-lg shadow-[#006AFF]/25'
                     : 'bg-muted text-muted-foreground cursor-not-allowed'
                 )}
               >
-                Next
-                <ArrowRight className="h-4 w-4" />
+                {isParsing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Parsing
+                  </>
+                ) : (
+                  <>
+                    Next
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </button>
             </div>
           </div>
         </div>
+
+        {/* AI parsing indicator */}
+        {isParsing && (
+          <div className="flex items-center justify-center gap-2 text-sm text-[#006AFF]">
+            <Sparkles className="h-4 w-4" />
+            <span>AI is analyzing your description...</span>
+          </div>
+        )}
 
         {/* Voice visualizer */}
         {isListening && (
@@ -284,18 +289,17 @@ export function SmartInput({ onComplete }: SmartInputProps) {
           </div>
         )}
 
-        {/* Detected criteria — appears as cards */}
-        {hasCriteria && (
+        {/* Detected criteria from AI parse */}
+        {detectedItems.length > 0 && (
           <div className="space-y-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider text-center">
-              Auto-detected
+              AI detected
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               {detectedItems.map((item, i) => (
                 <div
                   key={i}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border/60 text-sm"
-                  style={{ animationDelay: `${i * 0.05}s` }}
                 >
                   <item.icon className={cn('h-3.5 w-3.5', item.color)} />
                   <span className="text-muted-foreground">{item.label}</span>
