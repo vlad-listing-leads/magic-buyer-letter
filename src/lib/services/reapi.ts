@@ -81,12 +81,12 @@ export async function searchProperties(
   if (criteria.city) searchParams.city = criteria.city
   if (criteria.state) searchParams.state = criteria.state
   if (criteria.zip) searchParams.zip = criteria.zip
-  if (criteria.price_min) searchParams.estimatedValueMin = criteria.price_min
-  if (criteria.price_max) searchParams.estimatedValueMax = criteria.price_max
-  if (criteria.beds_min) searchParams.bedroomsMin = criteria.beds_min
-  if (criteria.baths_min) searchParams.bathroomsMin = criteria.baths_min
-  if (criteria.sqft_min) searchParams.sqftMin = criteria.sqft_min
-  if (criteria.sqft_max) searchParams.sqftMax = criteria.sqft_max
+  if (criteria.price_min) searchParams.estimated_value_min = criteria.price_min
+  if (criteria.price_max) searchParams.estimated_value_max = criteria.price_max
+  if (criteria.beds_min) searchParams.bedrooms_min = criteria.beds_min
+  if (criteria.baths_min) searchParams.bathrooms_min = criteria.baths_min
+  if (criteria.sqft_min) searchParams.sqft_min = criteria.sqft_min
+  if (criteria.sqft_max) searchParams.sqft_max = criteria.sqft_max
 
   const result = await reapiFetch<{ data: ReapiPropertyResult[] }>('/v2/PropertySearch', searchParams)
   return result.data ?? []
