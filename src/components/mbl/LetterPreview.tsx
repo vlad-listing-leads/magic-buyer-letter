@@ -172,7 +172,7 @@ export function LetterPreview({
 
       {/* Letter Card */}
       <Card className={cn(
-        'bg-[#faf8f5] text-stone-900 overflow-hidden',
+        'bg-[#faf8f5] text-stone-900 overflow-hidden [aspect-ratio:8.5/11]',
         editable && 'cursor-text',
       )}>
         <CardContent className="p-8 space-y-4">
@@ -190,24 +190,24 @@ export function LetterPreview({
             </svg>
           </div>
 
-          <EditableField value={opening} field="opening" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
-          <EditableField value={body1} field="body_1" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
-          <EditableField value={body2} field="body_2" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
+          <EditableField value={opening} field="opening" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
+          <EditableField value={body1} field="body_1" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
+          <EditableField value={body2} field="body_2" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
 
           {/* Bullets */}
           <div>
             <EditableField value={bulletIntro} field="bullet_intro" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm font-semibold mb-2" />
-            <ul className="list-disc pl-5 space-y-1 text-sm">
+            <ul className="list-disc pl-5 space-y-1 text-sm [line-height:1.2]">
               <li><EditableField value={b1} field="bullet_1" onUpdate={handleUpdate} editable={editable} /></li>
               {b2 && <li><EditableField value={b2} field="bullet_2" onUpdate={handleUpdate} editable={editable} /></li>}
               {b3 && <li><EditableField value={b3} field="bullet_3" onUpdate={handleUpdate} editable={editable} /></li>}
             </ul>
           </div>
 
-          <EditableField value={body3} field="body_3" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
-          <EditableField value={body4} field="body_4" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
-          <EditableField value={phoneLine} field="phone_line" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
-          <EditableField value={closing} field="closing" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
+          <EditableField value={body3} field="body_3" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
+          <EditableField value={body4} field="body_4" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
+          <EditableField value={phoneLine} field="phone_line" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
+          <EditableField value={closing} field="closing" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
 
           {/* Signature block */}
           <div className="flex items-center gap-3 p-3 bg-stone-200/60 rounded-lg">

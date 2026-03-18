@@ -136,7 +136,7 @@ export function LetterEditor({
   }), [])
 
   return (
-    <Card className="bg-[#faf8f5] text-stone-900 overflow-hidden">
+    <Card className="bg-[#faf8f5] text-stone-900 overflow-hidden" style={{ aspectRatio: '8.5 / 11' }}>
       {/* Hills illustration */}
       <div className="flex justify-center pt-8 pb-2">
         <svg viewBox="0 0 500 80" xmlns="http://www.w3.org/2000/svg" className="w-48 h-12">
@@ -163,7 +163,7 @@ export function LetterEditor({
             editorContainerProps={{
               className: 'letter-editor',
             }}
-            className="prose prose-stone prose-sm max-w-none focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[200px] [&_.tiptap_p]:my-3 [&_.tiptap_p]:leading-relaxed [&_.tiptap_ul]:my-3 [&_.tiptap_ul]:pl-5 [&_.tiptap_ul]:list-disc [&_.tiptap_li]:my-1 [&_.tiptap_hr]:my-4 [&_.tiptap_hr]:border-stone-300"
+            className="prose prose-stone prose-sm max-w-none focus:outline-none [&_.tiptap]:outline-none [&_.tiptap_p]:my-3 [&_.tiptap_p]:[line-height:1.4] [&_.tiptap_ul]:my-3 [&_.tiptap_ul]:pl-5 [&_.tiptap_ul]:list-disc [&_.tiptap_li]:my-1 [&_.tiptap_li]:[line-height:1.2] [&_.tiptap_hr]:my-4 [&_.tiptap_hr]:border-stone-300"
           />
         </EditorRoot>
       </CardContent>
