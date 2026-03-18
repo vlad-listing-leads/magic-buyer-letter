@@ -6,42 +6,49 @@ import { createLogger } from '@/lib/logger'
 
 const log = createLogger('ll-callback')
 
+interface CrossAppTokenPayload {
+  memberstackId: string
+  email: string
+  role: string
+  name?: string
+  timestamp: number
+}
+
 /**
  * GET /api/auth/ll-callback?token=JWT
  *
- * Cross-app SSO callback from Listing Leads.
+ * Listing Leads cross-app SSO callback.
+ * Matches ZMA's implementation exactly.
  */
 export async function GET(request: NextRequest) {
-  const token = request.nextUrl.searchParams.get('token')
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3010'
+  const { searchParams, origin } = request.nextUrl
+  const token = searchParams.get('token')
 
   if (!token) {
-    return NextResponse.json({ error: 'No token provided' }, { status: 400 })
+    log.warn('ll-callback: missing token')
+    return NextResponse.redirect(new URL('/auth/login?error=missing_token', origin))
   }
 
-  // 1. Verify JWT — with detailed error reporting
   const secret = process.env.CROSS_APP_AUTH_SECRET
   if (!secret) {
+    log.error('ll-callback: CROSS_APP_AUTH_SECRET not configured')
     return NextResponse.json({ error: 'CROSS_APP_AUTH_SECRET not set' }, { status: 500 })
   }
 
-  let payload: Record<string, unknown>
+  // 1. Validate JWT
+  let payload: CrossAppTokenPayload
   try {
-    const key = new TextEncoder().encode(secret)
-    const result = await jwtVerify(token, key, { algorithms: ['HS256'] })
-    payload = result.payload as Record<string, unknown>
+    const result = await jwtVerify(token, new TextEncoder().encode(secret))
+    payload = result.payload as unknown as CrossAppTokenPayload
   } catch (err) {
+    log.warn({ err }, 'll-callback: invalid or expired token')
     return NextResponse.json(
       { error: 'JWT verification failed', details: String(err) },
       { status: 401 }
     )
   }
 
-  const memberstackId = payload.memberstackId as string
-  const email = payload.email as string
-  const role = (payload.role as string) || 'user'
-  const name = (payload.name as string) || email
-
+  const { memberstackId, email, role, name } = payload
   if (!memberstackId || !email) {
     return NextResponse.json(
       { error: 'JWT missing required fields', payload },
@@ -49,109 +56,99 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  const displayName = name || email.split('@')[0]
   const admin = createAdminClient()
 
-  // 2. Find or create Supabase Auth user
-  let authUserId: string
+  // 2. Create Supabase Auth user (if not exists)
+  const { data: created, error: createErr } = await admin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: { memberstack_id: memberstackId },
+  })
 
-  const { data: authUsers, error: listError } = await admin.auth.admin.listUsers()
-  if (listError) {
-    return NextResponse.json(
-      { error: 'Failed to list auth users', details: listError.message },
-      { status: 500 }
-    )
-  }
-
-  const existingAuth = authUsers?.users.find((u) => u.email === email) ?? null
-
-  if (existingAuth) {
-    authUserId = existingAuth.id
-  } else {
-    const { data: newAuth, error: createError } = await admin.auth.admin.createUser({
+  if (created?.user) {
+    // New auth user — create users table row
+    log.info({ email, memberstackId }, 'll-callback: created new auth user')
+    await admin.from('users').insert({
+      id: created.user.id,
       email,
-      email_confirm: true,
-      user_metadata: { memberstack_id: memberstackId, name },
-    })
-
-    if (createError || !newAuth.user) {
-      return NextResponse.json(
-        { error: 'Failed to create auth user', details: createError?.message },
-        { status: 500 }
-      )
-    }
-
-    authUserId = newAuth.user.id
-  }
-
-  // 3. Upsert local user record
-  const { data: existingUser } = await admin
-    .from('users')
-    .select('id')
-    .eq('memberstack_id', memberstackId)
-    .single()
-
-  if (existingUser) {
-    await admin
-      .from('users')
-      .update({ email, name, role, updated_at: new Date().toISOString() })
-      .eq('memberstack_id', memberstackId)
-  } else {
-    const { error: insertError } = await admin.from('users').insert({
-      id: authUserId,
-      email,
-      name,
+      name: displayName,
+      role: role || 'user',
       memberstack_id: memberstackId,
-      role,
     })
 
-    if (insertError) {
-      return NextResponse.json(
-        { error: 'Failed to create user record', details: insertError.message },
-        { status: 500 }
-      )
+    // Auto-create agent profile
+    await admin.from('mbl_agents').insert({
+      user_id: created.user.id,
+      name: displayName,
+      email,
+    })
+  } else {
+    // Auth user already exists — sync profile
+    if (createErr) {
+      log.info({ email, error: createErr.message }, 'll-callback: auth user exists, syncing')
+    }
+
+    const { data: existing } = await admin
+      .from('users')
+      .select('id, memberstack_id')
+      .eq('email', email)
+      .single()
+
+    if (existing) {
+      await admin
+        .from('users')
+        .update({
+          memberstack_id: memberstackId,
+          name: displayName,
+          role: role || 'user',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id)
+
+      // Ensure agent profile exists
+      const { data: existingAgent } = await admin
+        .from('mbl_agents')
+        .select('id')
+        .eq('user_id', existing.id)
+        .single()
+
+      if (!existingAgent) {
+        await admin.from('mbl_agents').insert({
+          user_id: existing.id,
+          name: displayName,
+          email,
+        })
+      }
     }
   }
 
-  // 4. Auto-create agent profile if it doesn't exist (like ZMA does)
-  const { data: existingAgent } = await admin
-    .from('mbl_agents')
-    .select('id')
-    .eq('user_id', authUserId)
-    .single()
-
-  if (!existingAgent) {
-    await admin.from('mbl_agents').insert({
-      user_id: authUserId,
-      name,
-      email,
-    })
-  }
-
-  // 5. Generate magic link OTP
+  // 3. Generate magic link OTP
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: 'magiclink',
     email,
   })
 
   if (linkError || !linkData) {
+    log.error({ error: linkError }, 'll-callback: failed to generate magic link')
     return NextResponse.json(
       { error: 'Failed to generate magic link', details: linkError?.message },
       { status: 500 }
     )
   }
 
-  const linkUrl = new URL(linkData.properties.action_link)
-  const otpToken = linkUrl.searchParams.get('token')
-
-  if (!otpToken) {
+  // Extract email_otp (same as ZMA)
+  const emailOtp = linkData.properties?.email_otp
+  if (!emailOtp) {
+    log.error('ll-callback: no email_otp in generateLink response')
     return NextResponse.json(
-      { error: 'No token in magic link', actionLink: linkData.properties.action_link },
+      { error: 'No email_otp in magic link response' },
       { status: 500 }
     )
   }
 
-  // 5. Verify OTP and set session cookies on the redirect
-  const response = NextResponse.redirect(new URL('/', appUrl))
+  // 4. Verify OTP directly — set session cookies on the redirect response
+  const response = NextResponse.redirect(new URL('/', origin))
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -170,17 +167,20 @@ export async function GET(request: NextRequest) {
     }
   )
 
-  const { error: otpError } = await supabase.auth.verifyOtp({
+  const { error: verifyError } = await supabase.auth.verifyOtp({
+    email,
+    token: emailOtp,
     type: 'magiclink',
-    token_hash: otpToken,
   })
 
-  if (otpError) {
+  if (verifyError) {
+    log.error({ error: verifyError.message }, 'll-callback: OTP verification failed')
     return NextResponse.json(
-      { error: 'OTP verification failed', details: otpError.message },
+      { error: 'OTP verification failed', details: verifyError.message },
       { status: 500 }
     )
   }
 
+  log.info({ email }, 'll-callback: session established')
   return response
 }
