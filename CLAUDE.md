@@ -105,6 +105,7 @@ Read user profile from LL (source of truth) via `getListingLeadsProfile(memberst
 
 ## Deployment
 
+- **Production URL**: https://magic-buyer-letter.listingleads.com
 - **NEVER use `vercel` CLI** — always `git push`
 - Configure env vars in Vercel dashboard
 - Port 3010 in development
