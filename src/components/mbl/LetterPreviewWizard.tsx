@@ -4,9 +4,9 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { LetterPreview } from './LetterPreview'
-import type { LetterContent } from './LetterPreview'
+import { LetterEditor } from './LetterEditor'
 import { EnvelopeMockup } from './EnvelopeMockup'
+import type { JSONContent } from 'novel'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
 
 interface LetterPreviewWizardProps {
@@ -34,7 +34,7 @@ export function LetterPreviewWizard({
     properties.find((p) => p.personalized_content) ?? properties[0] ?? null
 
   const [envelopeType, setEnvelopeType] = useState<'standard' | 'custom'>('standard')
-  const [editedContent, setEditedContent] = useState<Partial<LetterContent>>({})
+  const [_letterJSON, setLetterJSON] = useState<JSONContent | null>(null)
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -42,7 +42,7 @@ export function LetterPreviewWizard({
         <h2 className="text-2xl font-bold">
           Preview what {buyerName || 'your buyer'}&apos;s homeowners will receive
         </h2>
-        <p className="text-muted-foreground">Click any text in the letter to edit it directly</p>
+        <p className="text-muted-foreground">Edit the letter directly — it works like a doc</p>
       </div>
 
       {/* Template style selector */}
@@ -56,7 +56,7 @@ export function LetterPreviewWizard({
         </Tabs>
       </div>
 
-      {/* Letter / Envelope preview */}
+      {/* Letter / Envelope tabs */}
       <div className="max-w-2xl mx-auto">
         <Tabs defaultValue="letter">
           <TabsList>
@@ -65,15 +65,13 @@ export function LetterPreviewWizard({
           </TabsList>
 
           <TabsContent value="letter">
-            <LetterPreview
+            <LetterEditor
               agent={agent}
               property={sampleProperty}
               buyerName={buyerName}
               bullets={bullets}
               templateStyle={templateStyle}
-              editable
-              editedContent={editedContent}
-              onContentChange={setEditedContent}
+              onContentChange={setLetterJSON}
             />
           </TabsContent>
 
