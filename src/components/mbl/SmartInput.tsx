@@ -303,9 +303,18 @@ export function SmartInput({ onComplete }: SmartInputProps) {
 
         {/* Example hint */}
         {!text && !isListening && (
-          <p className="text-center text-xs text-muted-foreground/60">
-            Try: &ldquo;Sarah and Mike, $400-600K, 3 bed in Newton MA, pre-approved&rdquo;
-          </p>
+          <div className="flex items-center justify-center gap-2">
+            <p className="text-xs text-muted-foreground/60">
+              Try: &ldquo;Sarah and Mike, $400-600K, 3 bed in Newton MA, pre-approved&rdquo;
+            </p>
+            <button
+              type="button"
+              onClick={() => setText('Sarah and Mike, $400-600K, 3 bed in Newton MA, pre-approved')}
+              className="text-xs text-[#006AFF] hover:text-[#0058D4] font-medium"
+            >
+              Copy
+            </button>
+          </div>
         )}
       </div>
     </div>
