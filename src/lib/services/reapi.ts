@@ -57,7 +57,7 @@ async function reapiFetch<T>(path: string, body: Record<string, unknown>): Promi
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': env.reapi.key,
-      'x-user-id': env.reapi.userId,
+      ...(env.reapi.userId ? { 'x-user-id': env.reapi.userId } : {}),
     },
     body: JSON.stringify(body),
   })
