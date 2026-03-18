@@ -106,6 +106,8 @@ export function SmartInput({ onComplete }: SmartInputProps) {
     }
   }
 
+  const baseTextRef = useRef('')
+
   const toggleVoice = useCallback(() => {
     if (isListening) {
       recognitionRef.current?.stop()
@@ -116,28 +118,29 @@ export function SmartInput({ onComplete }: SmartInputProps) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRecognition) return
 
+    // Capture whatever text is already in the input as the base
+    baseTextRef.current = text
+
     const recognition = new SpeechRecognition()
     recognition.continuous = true
     recognition.interimResults = true
     recognition.lang = 'en-US'
     recognitionRef.current = recognition
 
-    let finalTranscript = ''
-
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      // Rebuild full transcript from all results every time
+      let final = ''
       let interim = ''
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript
+      for (let i = 0; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
-          finalTranscript += transcript
+          final += event.results[i][0].transcript
         } else {
-          interim = transcript
+          interim += event.results[i][0].transcript
         }
       }
-      setText((prev) => {
-        const base = prev.endsWith(interim) ? prev.slice(0, -interim.length) : prev
-        return finalTranscript || (base + interim)
-      })
+      const base = baseTextRef.current
+      const separator = base && !base.endsWith(' ') ? ' ' : ''
+      setText(base + separator + final + interim)
     }
 
     recognition.onend = () => setIsListening(false)
@@ -145,7 +148,7 @@ export function SmartInput({ onComplete }: SmartInputProps) {
 
     recognition.start()
     setIsListening(true)
-  }, [isListening])
+  }, [isListening, text])
 
   return (
     <div className="space-y-6 animate-fade-in">
