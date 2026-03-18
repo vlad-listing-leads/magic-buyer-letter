@@ -22,7 +22,7 @@ import {
 import { DeliveryPipeline } from '@/components/mbl/DeliveryPipeline'
 import {
   Send, CheckCircle, Truck, Undo2, DollarSign,
-  ArrowLeft, Copy, Download, Trash2, Loader2,
+  ArrowLeft, Download, Trash2, Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
@@ -73,15 +73,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
   const handleExport = () => {
     window.open(`/api/mbl/campaigns/${id}/export`, '_blank')
-  }
-
-  const handleDuplicate = () => {
-    if (data?.campaign) {
-      const c = data.campaign
-      router.push(
-        `/new?buyer=${encodeURIComponent(c.buyer_name)}&city=${encodeURIComponent(c.criteria_city)}&state=${encodeURIComponent(c.criteria_state)}`
-      )
-    }
   }
 
   if (isLoading) {
@@ -140,10 +131,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleDuplicate}>
-            <Copy className="mr-1 h-4 w-4" />
-            Duplicate
-          </Button>
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="mr-1 h-4 w-4" />
             Export CSV
