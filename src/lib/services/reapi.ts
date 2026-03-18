@@ -89,8 +89,21 @@ export async function searchProperties(
 
   logger.info({ searchParams, criteria }, 'REAPI search')
 
-  const result = await reapiFetch<{ data: ReapiPropertyResult[] }>('/v2/PropertySearch', searchParams)
-  let properties = result.data ?? []
+  // Paginate: fetch multiple pages to build a larger list
+  let properties: ReapiPropertyResult[] = []
+  const MAX_PAGES = 3
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const result = await reapiFetch<{ data: ReapiPropertyResult[]; total?: number }>('/v2/PropertySearch', {
+      ...searchParams,
+      page,
+    })
+    const batch = result.data ?? []
+    properties = [...properties, ...batch]
+    logger.info({ page, batch: batch.length, total: properties.length, apiTotal: result.total }, 'REAPI page')
+
+    // Stop if API returned fewer than requested (no more pages)
+    if (batch.length < 500) break
+  }
 
   logger.info({ returned: properties.length }, 'REAPI raw results')
 
@@ -160,7 +173,7 @@ export function mapOwnerType(result: ReapiPropertyResult): string {
 export function mapPropertyToDb(result: ReapiPropertyResult, campaignId: string) {
   return {
     campaign_id: campaignId,
-    status: 'found' as const,
+    status: (result.owner1FirstName ? 'skip_traced' : 'found') as 'skip_traced' | 'found',
     address_line1: result.address?.street ?? result.address?.address ?? '',
     address_line2: '',
     city: result.address?.city ?? '',
@@ -182,5 +195,8 @@ export function mapPropertyToDb(result: ReapiPropertyResult, campaignId: string)
     years_owned: result.yearsOwned ?? null,
     property_type: result.propertyType ?? '',
     owner_type: mapOwnerType(result),
+    owner_first_name: result.owner1FirstName ?? null,
+    owner_last_name: result.owner1LastName ?? null,
+    status: 'skip_traced' as const,
   }
 }
