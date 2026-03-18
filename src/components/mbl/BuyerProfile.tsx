@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { ArrowRight, ArrowLeft, CheckCircle, Sparkles } from 'lucide-react'
+import { ArrowRight, ArrowLeft, CheckCircle, Sparkles, User, MapPin, DollarSign, BedDouble, Bath, Pencil } from 'lucide-react'
 import { ChipSelector } from './ChipSelector'
 import { generateBullets } from '@/lib/bullets'
 import { cn } from '@/lib/utils'
@@ -43,18 +43,35 @@ const CONDITION_OPTIONS = [
 interface BuyerProfileProps {
   buyerName: string
   criteria: PropertySearchCriteria
+  onCriteriaChange: (criteria: PropertySearchCriteria) => void
+  onBuyerNameChange: (name: string) => void
   initialProfile?: Partial<BuyerProfileData>
   onBack: () => void
   onComplete: (profile: BuyerProfileData) => void
 }
 
-export function BuyerProfile({ buyerName, criteria, initialProfile, onBack, onComplete }: BuyerProfileProps) {
+function formatPrice(val: number): string {
+  if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`
+  if (val >= 1000) return `$${Math.round(val / 1000)}K`
+  return `$${val}`
+}
+
+export function BuyerProfile({
+  buyerName,
+  criteria,
+  onCriteriaChange,
+  onBuyerNameChange,
+  initialProfile,
+  onBack,
+  onComplete,
+}: BuyerProfileProps) {
   const [profile, setProfile] = useState<BuyerProfileData>({
     financing: initialProfile?.financing ?? '',
     closing_flexibility: initialProfile?.closing_flexibility ?? '',
     condition_tolerance: initialProfile?.condition_tolerance ?? '',
     additional_notes: initialProfile?.additional_notes ?? '',
   })
+  const [editingSearch, setEditingSearch] = useState(false)
 
   const bullets = generateBullets(profile, {
     min: criteria.price_min,
@@ -67,6 +84,11 @@ export function BuyerProfile({ buyerName, criteria, initialProfile, onBack, onCo
     onComplete(profile)
   }
 
+  const area = `${criteria.city ?? ''}${criteria.state ? `, ${criteria.state}` : ''}`
+  const priceRange = criteria.price_min || criteria.price_max
+    ? `${criteria.price_min ? formatPrice(criteria.price_min) : '?'}–${criteria.price_max ? formatPrice(criteria.price_max) : '?'}`
+    : null
+
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
       {/* Header */}
@@ -75,9 +97,149 @@ export function BuyerProfile({ buyerName, criteria, initialProfile, onBack, onCo
           What should the letter say about {buyerName || 'your buyer'}?
         </h1>
         <p className="text-muted-foreground">
-          Pick what applies — these become bullet points in your letter
+          Confirm search criteria, then pick what goes in the letter
         </p>
       </div>
+
+      {/* Search criteria summary / edit */}
+      <Card>
+        <CardContent className="pt-5 pb-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Search criteria
+            </span>
+            <button
+              type="button"
+              onClick={() => setEditingSearch(!editingSearch)}
+              className="text-xs text-[#006AFF] hover:text-[#0058D4] font-medium flex items-center gap-1"
+            >
+              <Pencil className="h-3 w-3" />
+              {editingSearch ? 'Done' : 'Edit'}
+            </button>
+          </div>
+
+          {editingSearch ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Buyer name</label>
+                <Input
+                  value={buyerName}
+                  onChange={(e) => onBuyerNameChange(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">City</label>
+                <Input
+                  value={criteria.city ?? ''}
+                  onChange={(e) => onCriteriaChange({ ...criteria, city: e.target.value || undefined })}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">State</label>
+                <Input
+                  value={criteria.state ?? ''}
+                  onChange={(e) => onCriteriaChange({ ...criteria, state: e.target.value || undefined })}
+                  className="h-8 text-sm"
+                  maxLength={2}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">ZIP</label>
+                <Input
+                  value={criteria.zip ?? ''}
+                  onChange={(e) => onCriteriaChange({ ...criteria, zip: e.target.value || undefined })}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Price min</label>
+                <Input
+                  type="number"
+                  value={criteria.price_min ?? ''}
+                  onChange={(e) => onCriteriaChange({ ...criteria, price_min: e.target.value ? Number(e.target.value) : undefined })}
+                  placeholder="400000"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Price max</label>
+                <Input
+                  type="number"
+                  value={criteria.price_max ?? ''}
+                  onChange={(e) => onCriteriaChange({ ...criteria, price_max: e.target.value ? Number(e.target.value) : undefined })}
+                  placeholder="1200000"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Beds min</label>
+                <Input
+                  type="number"
+                  value={criteria.beds_min ?? ''}
+                  onChange={(e) => onCriteriaChange({ ...criteria, beds_min: e.target.value ? Number(e.target.value) : undefined })}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Baths min</label>
+                <Input
+                  type="number"
+                  value={criteria.baths_min ?? ''}
+                  onChange={(e) => onCriteriaChange({ ...criteria, baths_min: e.target.value ? Number(e.target.value) : undefined })}
+                  className="h-8 text-sm"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {buyerName && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
+                  <User className="h-3.5 w-3.5 text-violet-400" />
+                  <span className="text-muted-foreground">Buyer</span>
+                  <span className="font-medium">{buyerName}</span>
+                </div>
+              )}
+              {area && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-muted-foreground">Area</span>
+                  <span className="font-medium">{area}</span>
+                </div>
+              )}
+              {criteria.zip && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-muted-foreground">ZIP</span>
+                  <span className="font-medium">{criteria.zip}</span>
+                </div>
+              )}
+              {priceRange && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
+                  <DollarSign className="h-3.5 w-3.5 text-amber-400" />
+                  <span className="text-muted-foreground">Price</span>
+                  <span className="font-medium">{priceRange}</span>
+                </div>
+              )}
+              {criteria.beds_min && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
+                  <BedDouble className="h-3.5 w-3.5 text-blue-400" />
+                  <span className="text-muted-foreground">Beds</span>
+                  <span className="font-medium">{criteria.beds_min}+</span>
+                </div>
+              )}
+              {criteria.baths_min && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
+                  <Bath className="h-3.5 w-3.5 text-blue-400" />
+                  <span className="text-muted-foreground">Baths</span>
+                  <span className="font-medium">{criteria.baths_min}+</span>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-8 lg:grid-cols-5">
         {/* Selections — left */}

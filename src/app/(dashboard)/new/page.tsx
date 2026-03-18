@@ -251,6 +251,8 @@ function NewLetterWizard() {
         <BuyerProfile
           buyerName={buyerName}
           criteria={criteria}
+          onCriteriaChange={setCriteria}
+          onBuyerNameChange={setBuyerName}
           initialProfile={buyerProfile}
           onBack={() => setStep('input')}
           onComplete={handleProfileComplete}
