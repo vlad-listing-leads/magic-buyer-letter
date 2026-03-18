@@ -89,21 +89,8 @@ export async function searchProperties(
 
   logger.info({ searchParams, criteria }, 'REAPI search')
 
-  // Paginate: fetch multiple pages to build a larger list
-  let properties: ReapiPropertyResult[] = []
-  const MAX_PAGES = 3
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const result = await reapiFetch<{ data: ReapiPropertyResult[]; total?: number }>('/v2/PropertySearch', {
-      ...searchParams,
-      page,
-    })
-    const batch = result.data ?? []
-    properties = [...properties, ...batch]
-    logger.info({ page, batch: batch.length, total: properties.length, apiTotal: result.total }, 'REAPI page')
-
-    // Stop if API returned fewer than requested (no more pages)
-    if (batch.length < 500) break
-  }
+  const result = await reapiFetch<{ data: ReapiPropertyResult[] }>('/v2/PropertySearch', searchParams)
+  let properties = result.data ?? []
 
   logger.info({ returned: properties.length }, 'REAPI raw results')
 
