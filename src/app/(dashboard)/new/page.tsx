@@ -55,6 +55,7 @@ export default function NewLetterPage() {
         bullet_4: data.bullet_4 || undefined,
       }
 
+      // 1. Create campaign
       const res = await apiFetch('/api/mbl/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -66,11 +67,13 @@ export default function NewLetterPage() {
         throw new Error(json.error || 'Failed to create campaign')
       }
 
-      // Campaign created — redirect to it
-      const json = await res.json().catch(() => null)
-      if (json?.data?.id) {
-        router.push(`/campaigns/${json.data.id}`)
-      }
+      const { data: result } = await res.json()
+      const newCampaignId = result.id
+      setCampaignId(newCampaignId)
+
+      // 2. Open SSE stream for pipeline progress
+      const es = new EventSource(`/api/mbl/campaigns/${newCampaignId}/pipeline`)
+      setEventSource(es)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to start campaign')
       setStep('details')
