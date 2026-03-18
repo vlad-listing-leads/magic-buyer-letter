@@ -143,7 +143,7 @@ export async function GET(
             .eq('campaign_id', campaign.id)
             .eq('status', 'skip_traced')
 
-          verifiedCount = count ?? skipTracedCount
+          verifiedCount = count ?? propCount
         }
 
         await admin
