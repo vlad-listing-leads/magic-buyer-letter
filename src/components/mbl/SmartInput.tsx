@@ -80,6 +80,9 @@ function parseDescription(text: string): ParsedData {
   return parsed
 }
 
+// Pre-computed random heights for voice visualizer bars
+const VOICE_BAR_HEIGHTS = [8, 20, 12, 28, 16, 24, 10, 30, 14, 22, 8, 26, 18, 32, 10, 20, 14, 28, 12, 24, 8, 18, 26, 14]
+
 interface SmartInputProps {
   onComplete: (buyerName: string, description: string, criteria: PropertySearchCriteria) => void
 }
@@ -190,6 +193,45 @@ export function SmartInput({ onComplete }: SmartInputProps) {
             </button>
           </div>
         </div>
+
+        {/* Voice visualizer */}
+        {isListening && (
+          <div className="flex flex-col items-center gap-3 mt-4">
+            <div className="flex items-end justify-center gap-[3px] h-8">
+              {VOICE_BAR_HEIGHTS.map((maxH, i) => (
+                <div
+                  key={i}
+                  className="w-[3px] rounded-full bg-red-500"
+                  style={{
+                    animationName: 'voice-bar',
+                    animationDuration: `${0.4 + (i % 5) * 0.1}s`,
+                    animationDelay: `${i * 0.04}s`,
+                    animationTimingFunction: 'ease-in-out',
+                    animationIterationCount: 'infinite',
+                    animationDirection: 'alternate',
+                    // @ts-expect-error CSS custom property
+                    '--bar-max': `${maxH}px`,
+                    height: '4px',
+                  }}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={toggleVoice}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-red-500/10 text-red-500 text-xs font-medium hover:bg-red-500/20 transition-colors"
+            >
+              <MicOff className="h-3.5 w-3.5" />
+              Stop recording
+            </button>
+            <style>{`
+              @keyframes voice-bar {
+                0% { height: 4px; }
+                100% { height: var(--bar-max, 20px); }
+              }
+            `}</style>
+          </div>
+        )}
       </div>
 
       {/* Parsed preview */}
