@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { jwtVerify } from 'jose'
 import { createAdminClient } from '@/lib/supabase/server'
+import { getListingLeadsProfile } from '@/lib/supabase/listing-leads'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('ll-callback')
@@ -18,7 +19,7 @@ interface CrossAppTokenPayload {
  * GET /api/auth/ll-callback?token=JWT
  *
  * Listing Leads cross-app SSO callback.
- * Matches ZMA's implementation exactly.
+ * Syncs profile data from LL on every login (same as ZMA).
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl
@@ -59,6 +60,32 @@ export async function GET(request: NextRequest) {
   const displayName = name || email.split('@')[0]
   const admin = createAdminClient()
 
+  // 1b. Fetch profile from Listing Leads database (same as ZMA)
+  let llProfile: Awaited<ReturnType<typeof getListingLeadsProfile>> = null
+  try {
+    llProfile = await getListingLeadsProfile(memberstackId)
+    if (llProfile) {
+      log.info({ email, fields: Object.keys(llProfile.fields) }, 'll-callback: fetched LL profile')
+    }
+  } catch (err) {
+    log.warn({ error: String(err) }, 'll-callback: failed to fetch LL profile (non-fatal)')
+  }
+
+  // Build agent profile data from LL
+  const agentData: Record<string, string> = {}
+  if (llProfile) {
+    const f = llProfile.fields
+    const fullName = [llProfile.firstName, llProfile.lastName].filter(Boolean).join(' ')
+    if (fullName) agentData.name = fullName
+    if (f.phone) agentData.phone = f.phone
+    if (f.brokerage) agentData.brokerage = f.brokerage
+    if (f.license_number) agentData.license_number = f.license_number
+    if (f.website) agentData.website = f.website
+    if (f.headshot) agentData.headshot_url = f.headshot
+    if (f.logo) agentData.logo_url = f.logo
+    if (f.address) agentData.address_line1 = f.address
+  }
+
   // 2. Create Supabase Auth user (if not exists)
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email,
@@ -66,58 +93,76 @@ export async function GET(request: NextRequest) {
     user_metadata: { memberstack_id: memberstackId },
   })
 
+  let userId: string
+
   if (created?.user) {
-    // New auth user — create users table row
+    userId = created.user.id
     log.info({ email, memberstackId }, 'll-callback: created new auth user')
+
+    // New user — create users table row
     await admin.from('users').insert({
-      id: created.user.id,
+      id: userId,
       email,
-      name: displayName,
+      name: agentData.name || displayName,
       role: role || 'user',
       memberstack_id: memberstackId,
     })
 
-    // Auto-create agent profile
+    // Auto-create agent profile with LL data
     await admin.from('mbl_agents').insert({
-      user_id: created.user.id,
-      name: displayName,
+      user_id: userId,
+      name: agentData.name || displayName,
       email,
+      ...agentData,
     })
   } else {
-    // Auth user already exists — sync profile
+    // Auth user exists — sync profile
     if (createErr) {
       log.info({ email, error: createErr.message }, 'll-callback: auth user exists, syncing')
     }
 
     const { data: existing } = await admin
       .from('users')
-      .select('id, memberstack_id')
+      .select('id')
       .eq('email', email)
       .single()
 
+    userId = existing?.id ?? ''
+
     if (existing) {
+      // Sync user record
       await admin
         .from('users')
         .update({
           memberstack_id: memberstackId,
-          name: displayName,
+          name: agentData.name || displayName,
           role: role || 'user',
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id)
 
-      // Ensure agent profile exists
+      // Sync agent profile from LL on every login
       const { data: existingAgent } = await admin
         .from('mbl_agents')
         .select('id')
         .eq('user_id', existing.id)
         .single()
 
-      if (!existingAgent) {
+      if (existingAgent) {
+        // Update with LL data (only non-empty fields)
+        if (Object.keys(agentData).length > 0) {
+          await admin
+            .from('mbl_agents')
+            .update({ ...agentData, updated_at: new Date().toISOString() })
+            .eq('id', existingAgent.id)
+        }
+      } else {
+        // Create agent profile
         await admin.from('mbl_agents').insert({
           user_id: existing.id,
-          name: displayName,
+          name: agentData.name || displayName,
           email,
+          ...agentData,
         })
       }
     }
@@ -137,17 +182,13 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // Extract email_otp (same as ZMA)
   const emailOtp = linkData.properties?.email_otp
   if (!emailOtp) {
     log.error('ll-callback: no email_otp in generateLink response')
-    return NextResponse.json(
-      { error: 'No email_otp in magic link response' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'No email_otp in magic link response' }, { status: 500 })
   }
 
-  // 4. Verify OTP directly — set session cookies on the redirect response
+  // 4. Verify OTP — set session cookies on the redirect
   const response = NextResponse.redirect(new URL('/', origin))
 
   const supabase = createServerClient(
