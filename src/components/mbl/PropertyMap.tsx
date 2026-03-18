@@ -54,8 +54,9 @@ export function PropertyMap({ properties, selectedIds, onToggleSelect }: Propert
   if (mappableProperties.length === 0) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center py-12 text-muted-foreground">
-          No properties with coordinates to display
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-muted-foreground">Map unavailable — properties don&apos;t have coordinates</p>
+          <p className="text-xs text-muted-foreground mt-1">Switch to List view to see all properties</p>
         </CardContent>
       </Card>
     )

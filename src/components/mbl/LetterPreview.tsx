@@ -9,9 +9,15 @@ import { LETTER_TEMPLATES } from '@/lib/templates'
 /** Editable content sections of the letter */
 export interface LetterContent {
   opening: string
+  body_1: string
+  body_2: string
+  bullet_intro: string
   bullet_1: string
   bullet_2: string
   bullet_3: string
+  body_3: string
+  body_4: string
+  phone_line: string
   closing: string
   ps: string
 }
@@ -96,20 +102,40 @@ export function LetterPreview({
     : '123 Main St, Your City'
   const neighborhood = property?.neighborhood || 'the area'
 
+  const phone = agent.phone || '(555) 123-4567'
+
   const opening = editedContent?.opening
     ?? personalized?.opening
     ?? `Your home at ${address} is one of the only properties that my clients, ${buyerName || 'my buyers'}, would seriously consider buying in ${neighborhood}.`
 
+  const body1 = editedContent?.body_1
+    ?? "We've looked at everything currently on the market. Nothing has been the right fit."
+
+  const body2 = editedContent?.body_2
+    ?? "I promised them I'd do everything in my power to help them find a new home. That's why I'm writing to you."
+
+  const bulletIntro = editedContent?.bullet_intro
+    ?? `Here's what's important to know about ${buyerName || 'my buyers'}:`
+
   const b1 = editedContent?.bullet_1 ?? personalized?.bullet_1 ?? bullets.b1 ?? 'Pre-approved and ready to buy'
   const b2 = editedContent?.bullet_2 ?? personalized?.bullet_2 ?? bullets.b2 ?? 'Flexible on closing timeline'
   const b3 = editedContent?.bullet_3 ?? personalized?.bullet_3 ?? bullets.b3 ?? 'Love the neighborhood'
+
+  const body3 = editedContent?.body_3
+    ?? 'I want to be upfront: there are no guarantees here.'
+
+  const body4 = editedContent?.body_4
+    ?? 'But if the right offer could change your plans, a short conversation is probably worth your time.'
+
+  const phoneLine = editedContent?.phone_line
+    ?? `My personal cell is ${phone}.`
 
   const closing = editedContent?.closing
     ?? personalized?.closing
     ?? 'I look forward to hearing from you,'
 
   const ps = editedContent?.ps
-    ?? `If you'd also like to know what your home is realistically worth in today's market, I'm happy to put together a complimentary home value report — no cost, no obligation. Just text or call me at ${agent.phone || '(555) 123-4567'}.`
+    ?? `If you'd also like to know what your home is realistically worth in today's market, I'm happy to put together a complimentary home value report — no cost, no obligation. Just text or call me at ${phone}.`
 
   const handleUpdate = useCallback((field: keyof LetterContent, value: string) => {
     onContentChange?.({ ...editedContent, [field]: value })
@@ -164,66 +190,24 @@ export function LetterPreview({
             </svg>
           </div>
 
-          {/* Opening */}
-          <EditableField
-            value={opening}
-            field="opening"
-            onUpdate={handleUpdate}
-            editable={editable}
-            tag="p"
-            className="text-sm leading-relaxed"
-          />
-
-          <p className="text-sm leading-relaxed">
-            We&apos;ve looked at everything currently on the market. Nothing has been the right fit.
-          </p>
-
-          <p className="text-sm leading-relaxed">
-            I promised them I&apos;d do everything in my power to help them find a new home. That&apos;s why I&apos;m writing to you.
-          </p>
+          <EditableField value={opening} field="opening" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
+          <EditableField value={body1} field="body_1" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
+          <EditableField value={body2} field="body_2" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
 
           {/* Bullets */}
           <div>
-            <p className="text-sm font-semibold mb-2">
-              Here&apos;s what&apos;s important to know about {buyerName || 'my buyers'}:
-            </p>
+            <EditableField value={bulletIntro} field="bullet_intro" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm font-semibold mb-2" />
             <ul className="list-disc pl-5 space-y-1 text-sm">
-              <li>
-                <EditableField value={b1} field="bullet_1" onUpdate={handleUpdate} editable={editable} />
-              </li>
-              {b2 && (
-                <li>
-                  <EditableField value={b2} field="bullet_2" onUpdate={handleUpdate} editable={editable} />
-                </li>
-              )}
-              {b3 && (
-                <li>
-                  <EditableField value={b3} field="bullet_3" onUpdate={handleUpdate} editable={editable} />
-                </li>
-              )}
+              <li><EditableField value={b1} field="bullet_1" onUpdate={handleUpdate} editable={editable} /></li>
+              {b2 && <li><EditableField value={b2} field="bullet_2" onUpdate={handleUpdate} editable={editable} /></li>}
+              {b3 && <li><EditableField value={b3} field="bullet_3" onUpdate={handleUpdate} editable={editable} /></li>}
             </ul>
           </div>
 
-          <p className="text-sm leading-relaxed">
-            I want to be upfront: there are no guarantees here.
-          </p>
-
-          <p className="text-sm leading-relaxed">
-            But if the right offer could change your plans, a short conversation is probably worth your time.
-          </p>
-
-          <p className="text-sm leading-relaxed">
-            My personal cell is <strong>{agent.phone || '(555) 123-4567'}</strong>.
-          </p>
-
-          <EditableField
-            value={closing}
-            field="closing"
-            onUpdate={handleUpdate}
-            editable={editable}
-            tag="p"
-            className="text-sm leading-relaxed"
-          />
+          <EditableField value={body3} field="body_3" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
+          <EditableField value={body4} field="body_4" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
+          <EditableField value={phoneLine} field="phone_line" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
+          <EditableField value={closing} field="closing" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm leading-relaxed" />
 
           {/* Signature block */}
           <div className="flex items-center gap-3 p-3 bg-stone-200/60 rounded-lg">

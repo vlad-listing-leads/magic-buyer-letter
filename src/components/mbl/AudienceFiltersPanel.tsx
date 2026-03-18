@@ -61,6 +61,62 @@ const OWNER_TYPES: { value: OwnerType; label: string }[] = [
   { value: 'investor', label: 'Investors' },
 ]
 
+/** Chip button for single-select options (years, beds, etc.) */
+function OptionChip({
+  label,
+  selected,
+  isDefault,
+  onClick,
+}: {
+  label: string
+  selected: boolean
+  isDefault: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'px-2.5 py-1 rounded-md text-xs border transition-colors',
+        selected && !isDefault && 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]',
+        selected && isDefault && 'border-border bg-accent text-foreground',
+        !selected && 'border-transparent text-muted-foreground hover:bg-accent',
+      )}
+    >
+      {label}
+    </button>
+  )
+}
+
+/** Chip button for multi-select facets (city, zip, etc.) */
+function FacetChip({
+  label,
+  count,
+  selected,
+  onClick,
+}: {
+  label: string
+  count: number
+  selected: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors border',
+        selected
+          ? 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]'
+          : 'border-border text-muted-foreground hover:bg-accent'
+      )}
+    >
+      {label} <span className="text-[10px] opacity-60">{count}</span>
+    </button>
+  )
+}
+
 export function AudienceFiltersPanel({
   open,
   onOpenChange,
@@ -71,7 +127,6 @@ export function AudienceFiltersPanel({
   onApplyAndSelectAll,
   onReset,
 }: AudienceFiltersPanelProps) {
-  // Compute available facets from properties
   const facets = useMemo(() => {
     const cities = new Map<string, number>()
     const neighborhoods = new Map<string, number>()
@@ -90,10 +145,7 @@ export function AudienceFiltersPanel({
     }
   }, [properties])
 
-  const toggleArrayFilter = (
-    key: 'cities' | 'neighborhoods' | 'zips',
-    value: string
-  ) => {
+  const toggleArrayFilter = (key: 'cities' | 'neighborhoods' | 'zips', value: string) => {
     const current = filters[key]
     const next = current.includes(value)
       ? current.filter((v) => v !== value)
@@ -111,110 +163,92 @@ export function AudienceFiltersPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto w-full sm:max-w-md">
+      <SheetContent className="overflow-y-auto w-full sm:max-w-sm">
         <SheetHeader>
           <SheetTitle>Filters</SheetTitle>
         </SheetHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-5 py-3">
           {/* Location */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-semibold">Location</h4>
+          {(facets.cities.length > 0 || facets.zips.length > 0) && (
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</h4>
 
-            {/* Cities */}
-            {facets.cities.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">City</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {facets.cities.map(([city, count]) => (
-                    <button
-                      key={city}
-                      type="button"
-                      onClick={() => toggleArrayFilter('cities', city)}
-                      className={cn(
-                        'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors border',
-                        filters.cities.includes(city)
-                          ? 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]'
-                          : 'border-border text-muted-foreground hover:bg-accent'
-                      )}
-                    >
-                      {city} <span className="text-[10px] opacity-60">{count}</span>
-                    </button>
-                  ))}
+              {facets.cities.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">City</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {facets.cities.map(([city, count]) => (
+                      <FacetChip
+                        key={city}
+                        label={city}
+                        count={count}
+                        selected={filters.cities.includes(city)}
+                        onClick={() => toggleArrayFilter('cities', city)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Neighborhoods */}
-            {facets.neighborhoods.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">Neighborhoods</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {facets.neighborhoods.map(([n, count]) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => toggleArrayFilter('neighborhoods', n)}
-                      className={cn(
-                        'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors border',
-                        filters.neighborhoods.includes(n)
-                          ? 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]'
-                          : 'border-border text-muted-foreground hover:bg-accent'
-                      )}
-                    >
-                      {n} <span className="text-[10px] opacity-60">{count}</span>
-                    </button>
-                  ))}
+              {facets.neighborhoods.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Neighborhoods</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {facets.neighborhoods.map(([n, count]) => (
+                      <FacetChip
+                        key={n}
+                        label={n}
+                        count={count}
+                        selected={filters.neighborhoods.includes(n)}
+                        onClick={() => toggleArrayFilter('neighborhoods', n)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* ZIPs */}
-            {facets.zips.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">ZIP codes</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {facets.zips.map(([z, count]) => (
-                    <button
-                      key={z}
-                      type="button"
-                      onClick={() => toggleArrayFilter('zips', z)}
-                      className={cn(
-                        'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors border',
-                        filters.zips.includes(z)
-                          ? 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]'
-                          : 'border-border text-muted-foreground hover:bg-accent'
-                      )}
-                    >
-                      {z} <span className="text-[10px] opacity-60">{count}</span>
-                    </button>
-                  ))}
+              {facets.zips.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">ZIP codes</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {facets.zips.map(([z, count]) => (
+                      <FacetChip
+                        key={z}
+                        label={z}
+                        count={count}
+                        selected={filters.zips.includes(z)}
+                        onClick={() => toggleArrayFilter('zips', z)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Property */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-semibold">Property</h4>
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Property</h4>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Est. value min ($K)</label>
+                <label className="text-[11px] text-muted-foreground">Value min ($K)</label>
                 <Input
                   type="number"
                   placeholder="Any"
-                  value={filters.value_min ?? ''}
+                  value={filters.value_min ? filters.value_min / 1000 : ''}
                   onChange={(e) =>
                     onFiltersChange({
                       ...filters,
                       value_min: e.target.value ? Number(e.target.value) * 1000 : null,
                     })
                   }
+                  className="h-8 text-xs"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Est. value max ($K)</label>
+                <label className="text-[11px] text-muted-foreground">Value max ($K)</label>
                 <Input
                   type="number"
                   placeholder="Any"
@@ -225,134 +259,103 @@ export function AudienceFiltersPanel({
                       value_max: e.target.value ? Number(e.target.value) * 1000 : null,
                     })
                   }
+                  className="h-8 text-xs"
                 />
               </div>
             </div>
 
-            {/* Years owned */}
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Years owned</label>
-              <div className="flex gap-1.5">
+              <label className="text-[11px] text-muted-foreground">Years owned</label>
+              <div className="flex gap-1">
                 {YEARS_OPTIONS.map((opt) => (
-                  <button
+                  <OptionChip
                     key={opt.label}
-                    type="button"
+                    label={opt.label}
+                    selected={filters.years_owned_min === opt.value}
+                    isDefault={opt.value === null}
                     onClick={() => onFiltersChange({ ...filters, years_owned_min: opt.value })}
-                    className={cn(
-                      'px-2.5 py-1 rounded-md text-xs border transition-colors',
-                      filters.years_owned_min === opt.value
-                        ? 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]'
-                        : 'border-border text-muted-foreground hover:bg-accent'
-                    )}
-                  >
-                    {opt.label}
-                  </button>
+                  />
                 ))}
               </div>
             </div>
 
-            {/* Beds */}
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Bedrooms</label>
-              <div className="flex gap-1.5">
-                {BEDS_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.label}
-                    type="button"
-                    onClick={() => onFiltersChange({ ...filters, beds_min: opt.value })}
-                    className={cn(
-                      'px-2.5 py-1 rounded-md text-xs border transition-colors',
-                      filters.beds_min === opt.value
-                        ? 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]'
-                        : 'border-border text-muted-foreground hover:bg-accent'
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Baths */}
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Bathrooms</label>
-              <div className="flex gap-1.5">
-                {BATHS_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.label}
-                    type="button"
-                    onClick={() => onFiltersChange({ ...filters, baths_min: opt.value })}
-                    className={cn(
-                      'px-2.5 py-1 rounded-md text-xs border transition-colors',
-                      filters.baths_min === opt.value
-                        ? 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]'
-                        : 'border-border text-muted-foreground hover:bg-accent'
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Sqft */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Sq ft min</label>
+                <label className="text-[11px] text-muted-foreground">Bedrooms</label>
+                <div className="flex gap-1">
+                  {BEDS_OPTIONS.map((opt) => (
+                    <OptionChip
+                      key={opt.label}
+                      label={opt.label}
+                      selected={filters.beds_min === opt.value}
+                      isDefault={opt.value === null}
+                      onClick={() => onFiltersChange({ ...filters, beds_min: opt.value })}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Bathrooms</label>
+                <div className="flex gap-1">
+                  {BATHS_OPTIONS.map((opt) => (
+                    <OptionChip
+                      key={opt.label}
+                      label={opt.label}
+                      selected={filters.baths_min === opt.value}
+                      isDefault={opt.value === null}
+                      onClick={() => onFiltersChange({ ...filters, baths_min: opt.value })}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Sq ft min</label>
                 <Input
                   type="number"
                   placeholder="Any"
                   value={filters.sqft_min ?? ''}
                   onChange={(e) =>
-                    onFiltersChange({
-                      ...filters,
-                      sqft_min: e.target.value ? Number(e.target.value) : null,
-                    })
+                    onFiltersChange({ ...filters, sqft_min: e.target.value ? Number(e.target.value) : null })
                   }
+                  className="h-8 text-xs"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Sq ft max</label>
+                <label className="text-[11px] text-muted-foreground">Sq ft max</label>
                 <Input
                   type="number"
                   placeholder="Any"
                   value={filters.sqft_max ?? ''}
                   onChange={(e) =>
-                    onFiltersChange({
-                      ...filters,
-                      sqft_max: e.target.value ? Number(e.target.value) : null,
-                    })
+                    onFiltersChange({ ...filters, sqft_max: e.target.value ? Number(e.target.value) : null })
                   }
+                  className="h-8 text-xs"
                 />
               </div>
             </div>
 
-            {/* Equity */}
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Equity %</label>
-              <div className="flex gap-1.5">
+              <label className="text-[11px] text-muted-foreground">Equity %</label>
+              <div className="flex gap-1">
                 {EQUITY_OPTIONS.map((opt) => (
-                  <button
+                  <OptionChip
                     key={opt.label}
-                    type="button"
+                    label={opt.label}
+                    selected={filters.equity_min === opt.value}
+                    isDefault={opt.value === null}
                     onClick={() => onFiltersChange({ ...filters, equity_min: opt.value })}
-                    className={cn(
-                      'px-2.5 py-1 rounded-md text-xs border transition-colors',
-                      filters.equity_min === opt.value
-                        ? 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]'
-                        : 'border-border text-muted-foreground hover:bg-accent'
-                    )}
-                  >
-                    {opt.label}
-                  </button>
+                  />
                 ))}
               </div>
             </div>
           </div>
 
           {/* Owner type */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-semibold">Owner type</h4>
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Owner type</h4>
             {OWNER_TYPES.map((type) => (
               <div key={type.value} className="flex items-center gap-2">
                 <Checkbox
@@ -378,7 +381,7 @@ export function AudienceFiltersPanel({
               onClick={onReset}
               className="text-xs text-muted-foreground hover:text-foreground underline"
             >
-              Reset to defaults
+              Reset
             </button>
           </div>
           <Button
