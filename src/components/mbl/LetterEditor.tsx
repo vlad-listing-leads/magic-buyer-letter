@@ -4,9 +4,9 @@ import { useMemo } from 'react'
 import {
   EditorRoot,
   EditorContent,
-  StarterKit,
   type JSONContent,
 } from 'novel'
+import StarterKit from '@tiptap/starter-kit'
 import { Card, CardContent } from '@/components/ui/card'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
 
