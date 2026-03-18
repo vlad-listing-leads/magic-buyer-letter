@@ -3,10 +3,11 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Mail, Send, CheckCircle, DollarSign, Loader2, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  Mail, Send, CheckCircle, DollarSign, Loader2, ChevronRight, Plus,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import type { MblCampaign, CampaignStatus } from '@/types'
@@ -36,7 +37,6 @@ function relativeTime(dateStr: string): string {
 }
 
 export default function DashboardPage() {
-  const { user } = useCurrentUser()
   const apiFetch = useApiFetch()
   const [activeTab, setActiveTab] = useState<FilterTab>('all')
 
@@ -49,13 +49,11 @@ export default function DashboardPage() {
     },
   })
 
-  const displayName = user?.name?.split(' ')[0] ?? 'there'
   const totalCampaigns = campaigns?.length ?? 0
   const totalSent = campaigns?.reduce((sum, c) => sum + c.properties_sent, 0) ?? 0
   const totalDelivered = campaigns?.reduce((sum, c) => sum + c.properties_delivered, 0) ?? 0
   const totalSpend = campaigns?.reduce((sum, c) => sum + c.total_cost_cents, 0) ?? 0
 
-  // Filter campaigns by tab
   const filtered = useMemo(() => {
     if (!campaigns) return []
     const statuses = FILTER_STATUSES[activeTab]
@@ -63,7 +61,6 @@ export default function DashboardPage() {
     return campaigns.filter((c) => statuses.includes(c.status))
   }, [campaigns, activeTab])
 
-  // Tab counts
   const tabCounts = useMemo(() => {
     if (!campaigns) return { all: 0, delivered: 0, sent: 0, sending: 0 }
     return {
@@ -78,185 +75,153 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Welcome back, {displayName}
-        </h1>
-        <p className="text-muted-foreground">
-          Your Magic Buyer Letter dashboard
-        </p>
+      {/* Header with stats inline */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Magic Buyer Letters</h1>
+          <p className="text-muted-foreground text-sm">Your campaigns and delivery tracking</p>
+        </div>
+        <Link href="/new">
+          <Button className="bg-[#006AFF] hover:bg-[#0058D4] text-white">
+            <Plus className="mr-1.5 h-4 w-4" />
+            New Letter
+          </Button>
+        </Link>
       </div>
 
-      {/* Stats cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 stagger-children">
-        <Card className="card-hover">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Campaigns
-            </CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalCampaigns}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-hover">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Letters Sent
-            </CardTitle>
-            <Send className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalSent}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-hover">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Delivered
-            </CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalDelivered}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-hover">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Spend
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${(totalSpend / 100).toFixed(2)}</div>
-          </CardContent>
-        </Card>
+      {/* Stats row — compact */}
+      <div className="flex items-center gap-6 text-sm">
+        <div className="flex items-center gap-2">
+          <Mail className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Campaigns</span>
+          <span className="font-bold">{totalCampaigns}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Send className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Sent</span>
+          <span className="font-bold">{totalSent}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Delivered</span>
+          <span className="font-bold">{totalDelivered}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Spend</span>
+          <span className="font-bold">${(totalSpend / 100).toFixed(2)}</span>
+        </div>
       </div>
 
-      {/* Recent campaigns */}
+      {/* Filter tabs */}
+      <div className="flex gap-1">
+        {(['all', 'delivered', 'sent', 'sending'] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+              activeTab === tab
+                ? 'bg-[#006AFF] text-white'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+            )}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {' '}
+            <span className={cn(
+              'text-xs',
+              activeTab === tab ? 'text-white/80' : 'text-muted-foreground'
+            )}>
+              ({tabCounts[tab]})
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Campaign list */}
       {isLoading ? (
-        <div className="flex justify-center py-8">
+        <div className="flex justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : campaigns && campaigns.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Campaigns</CardTitle>
-            </div>
-            {/* Filter tabs */}
-            <div className="flex gap-1 mt-2">
-              {(['all', 'delivered', 'sent', 'sending'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                    activeTab === tab
-                      ? 'bg-[#006AFF] text-white'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                  )}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  {' '}
-                  <span className={cn(
-                    'text-xs',
-                    activeTab === tab ? 'text-white/80' : 'text-muted-foreground'
-                  )}>
-                    ({tabCounts[tab]})
-                  </span>
-                </button>
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="p-3 text-left font-medium text-muted-foreground">Buyer</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">Area</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">Template</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">Sent</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">Delivered</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">Returned</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">Cost</th>
+                <th className="p-3 w-8" />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((c) => (
+                <tr key={c.id} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
+                  <td className="p-3">
+                    <Link href={`/campaigns/${c.id}`} className="font-medium hover:underline">
+                      {c.buyer_name}
+                    </Link>
+                    <div className="text-xs text-muted-foreground">
+                      {relativeTime(c.created_at)}
+                    </div>
+                  </td>
+                  <td className="p-3 text-muted-foreground">
+                    {c.criteria_city}{c.criteria_state ? `, ${c.criteria_state}` : ''}
+                  </td>
+                  <td className="p-3 capitalize">{c.template_style}</td>
+                  <td className="p-3 font-mono">{c.properties_sent}</td>
+                  <td className="p-3 font-mono">{c.properties_delivered}</td>
+                  <td className="p-3">
+                    <span className={cn(
+                      'font-mono',
+                      c.properties_returned > 0 && 'text-destructive font-semibold'
+                    )}>
+                      {c.properties_returned}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <Badge variant="secondary" className="capitalize text-xs">
+                      {c.status.replace('_', ' ')}
+                    </Badge>
+                  </td>
+                  <td className="p-3 font-mono">${(c.total_cost_cents / 100).toFixed(2)}</td>
+                  <td className="p-3">
+                    <Link href={`/campaigns/${c.id}`}>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </Link>
+                  </td>
+                </tr>
               ))}
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="p-3 text-left font-medium text-muted-foreground">Buyer</th>
-                    <th className="p-3 text-left font-medium text-muted-foreground">Area</th>
-                    <th className="p-3 text-left font-medium text-muted-foreground">Template</th>
-                    <th className="p-3 text-left font-medium text-muted-foreground">Sent</th>
-                    <th className="p-3 text-left font-medium text-muted-foreground">Delivered</th>
-                    <th className="p-3 text-left font-medium text-muted-foreground">Returned</th>
-                    <th className="p-3 text-left font-medium text-muted-foreground">Status</th>
-                    <th className="p-3 text-left font-medium text-muted-foreground">Cost</th>
-                    <th className="p-3 w-8" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((c) => (
-                    <tr key={c.id} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
-                      <td className="p-3">
-                        <Link href={`/campaigns/${c.id}`} className="font-medium hover:underline">
-                          {c.buyer_name}
-                        </Link>
-                        <div className="text-xs text-muted-foreground">
-                          {relativeTime(c.created_at)}
-                        </div>
-                      </td>
-                      <td className="p-3 text-muted-foreground">
-                        {c.criteria_city}{c.criteria_state ? `, ${c.criteria_state}` : ''}
-                      </td>
-                      <td className="p-3 capitalize">{c.template_style}</td>
-                      <td className="p-3 font-mono">{c.properties_sent}</td>
-                      <td className="p-3 font-mono">{c.properties_delivered}</td>
-                      <td className="p-3">
-                        <span className={cn(
-                          'font-mono',
-                          c.properties_returned > 0 && 'text-destructive font-semibold'
-                        )}>
-                          {c.properties_returned}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <Badge variant="secondary" className="capitalize text-xs">
-                          {c.status.replace('_', ' ')}
-                        </Badge>
-                      </td>
-                      <td className="p-3 font-mono">${(c.total_cost_cents / 100).toFixed(2)}</td>
-                      <td className="p-3">
-                        <Link href={`/campaigns/${c.id}`}>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                  {filtered.length === 0 && (
-                    <tr>
-                      <td colSpan={9} className="p-8 text-center text-muted-foreground">
-                        No campaigns match this filter
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="p-8 text-center text-muted-foreground">
+                    No campaigns match this filter
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Mail className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-1">No campaigns yet</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Create your first Magic Buyer Letter campaign to get started
-            </p>
-            <Link
-              href="/new"
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-6 bg-[#006AFF] text-white hover:bg-[#0058D4] transition-colors"
-            >
-              Create New Letter
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center py-16 border border-dashed border-border rounded-lg">
+          <Mail className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-1">No campaigns yet</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Create your first Magic Buyer Letter campaign to get started
+          </p>
+          <Link href="/new">
+            <Button className="bg-[#006AFF] hover:bg-[#0058D4] text-white">
+              <Plus className="mr-1.5 h-4 w-4" />
+              New Letter
+            </Button>
+          </Link>
+        </div>
       )}
     </div>
   )
