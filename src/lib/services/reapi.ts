@@ -87,13 +87,8 @@ export async function searchProperties(
   if (criteria.state) searchParams.state = criteria.state
   if (criteria.zip) searchParams.zip = criteria.zip
 
-  // Send price/beds/baths/sqft to API for server-side filtering
-  if (criteria.price_min) searchParams.estimatedValueMin = criteria.price_min
-  if (criteria.price_max) searchParams.estimatedValueMax = criteria.price_max
-  if (criteria.beds_min) searchParams.bedroomsMin = criteria.beds_min
-  if (criteria.baths_min) searchParams.bathroomsMin = criteria.baths_min
-  if (criteria.sqft_min) searchParams.squareFeetMin = criteria.sqft_min
-  if (criteria.sqft_max) searchParams.squareFeetMax = criteria.sqft_max
+  // REAPI v2 doesn't support server-side price/beds/baths/sqft filtering
+  // These are filtered client-side below
 
   logger.info({ searchParams }, 'REAPI search params')
 
