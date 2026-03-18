@@ -193,44 +193,49 @@ export async function GET(
 
         let generatedCount = 0
         const totalVerified = verifiedProps?.length ?? 0
-        for (const prop of verifiedProps ?? []) {
-          try {
-            const content = await generateLetterContent(
-              {
-                owner_first_name: prop.owner_first_name ?? 'Homeowner',
-                owner_last_name: prop.owner_last_name ?? '',
-                owner_type: prop.owner_type ?? 'unknown',
-                address: `${prop.address_line1}, ${prop.city}`,
-                neighborhood: prop.neighborhood,
-                estimated_value: prop.estimated_value,
-                years_owned: prop.years_owned,
-                bedrooms: prop.bedrooms,
-                sqft: prop.sqft,
-              },
-              {
-                buyer_name: campaign.buyer_name,
-                bullet_1: campaign.bullet_1,
-                bullet_2: campaign.bullet_2,
-                bullet_3: campaign.bullet_3,
-                template_style: campaign.template_style,
-              }
+        const BATCH_SIZE = 5
+
+        // Process in concurrent batches of 5
+        for (let i = 0; i < (verifiedProps?.length ?? 0); i += BATCH_SIZE) {
+          const batch = verifiedProps!.slice(i, i + BATCH_SIZE)
+          const results = await Promise.allSettled(
+            batch.map(prop =>
+              generateLetterContent(
+                {
+                  owner_first_name: prop.owner_first_name ?? 'Homeowner',
+                  owner_last_name: prop.owner_last_name ?? '',
+                  owner_type: prop.owner_type ?? 'unknown',
+                  address: `${prop.address_line1}, ${prop.city}`,
+                  neighborhood: prop.neighborhood,
+                  estimated_value: prop.estimated_value,
+                  years_owned: prop.years_owned,
+                  bedrooms: prop.bedrooms,
+                  sqft: prop.sqft,
+                },
+                {
+                  buyer_name: campaign.buyer_name,
+                  bullet_1: campaign.bullet_1,
+                  bullet_2: campaign.bullet_2,
+                  bullet_3: campaign.bullet_3,
+                  template_style: campaign.template_style,
+                }
+              ).then(async content => {
+                await admin
+                  .from('mbl_properties')
+                  .update({ personalized_content: content, status: 'generated' })
+                  .eq('id', prop.id)
+                return true
+              })
             )
+          )
 
-            await admin
-              .from('mbl_properties')
-              .update({ personalized_content: content, status: 'generated' })
-              .eq('id', prop.id)
-
-            generatedCount++
-            send({
-              step: 'generating',
-              progress: 75 + Math.round((generatedCount / totalVerified) * 20),
-              message: `Personalized ${generatedCount} of ${totalVerified} letters`,
-              count: generatedCount,
-            })
-          } catch (err) {
-            logger.warn({ propertyId: prop.id, err }, 'Failed to generate letter content')
-          }
+          generatedCount += results.filter(r => r.status === 'fulfilled').length
+          send({
+            step: 'generating',
+            progress: 75 + Math.round((generatedCount / totalVerified) * 20),
+            message: `Personalized ${generatedCount} of ${totalVerified} letters`,
+            count: generatedCount,
+          })
         }
 
         await admin

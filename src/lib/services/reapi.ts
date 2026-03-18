@@ -77,7 +77,7 @@ export async function searchProperties(
 ): Promise<ReapiPropertyResult[]> {
   // REAPI only supports location-based search params
   const searchParams: Record<string, unknown> = {
-    size: 100,
+    size: 25,
   }
 
   if (criteria.city) searchParams.city = criteria.city
