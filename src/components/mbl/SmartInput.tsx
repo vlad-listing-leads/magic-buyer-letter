@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { ArrowRight, Mic, MicOff, User, MapPin, DollarSign, BedDouble, Bath, Loader2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useApiFetch } from '@/hooks/useApiFetch'
@@ -38,6 +38,14 @@ export function SmartInput({ onComplete }: SmartInputProps) {
   const baseTextRef = useRef('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const apiFetch = useApiFetch()
+
+  // Auto-resize textarea whenever text changes (from voice, copy, or typing)
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = `${Math.max(64, textareaRef.current.scrollHeight)}px`
+    }
+  }, [text])
 
   const handleContinue = async () => {
     if (!text.trim()) return
