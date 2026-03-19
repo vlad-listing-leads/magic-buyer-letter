@@ -182,17 +182,23 @@ export function SmartInput({ onComplete }: SmartInputProps) {
           />
 
           <div className="relative">
-            <input
-              type="text"
+            <textarea
               value={text}
-              onChange={(e) => { setText(e.target.value); setParsed(null) }}
+              onChange={(e) => {
+                setText(e.target.value)
+                setParsed(null)
+                // Auto-resize
+                e.target.style.height = 'auto'
+                e.target.style.height = `${Math.max(64, e.target.scrollHeight)}px`
+              }}
               onKeyDown={handleKeyDown}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               placeholder="Sarah, $800K-1.2M, 3 bed in Newton MA, pre-approved"
               disabled={isParsing}
+              rows={1}
               className={cn(
-                'w-full h-16 pl-5 pr-28 rounded-2xl border-2 bg-background text-lg',
+                'w-full min-h-16 pl-5 pr-28 py-4 rounded-2xl border-2 bg-background text-lg resize-none overflow-hidden',
                 'placeholder:text-muted-foreground/50',
                 'focus:outline-none transition-colors duration-200',
                 'disabled:opacity-60',
@@ -200,7 +206,7 @@ export function SmartInput({ onComplete }: SmartInputProps) {
               )}
               autoFocus
             />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+            <div className="absolute right-2 top-4 flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={toggleVoice}
