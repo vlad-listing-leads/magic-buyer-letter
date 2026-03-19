@@ -52,7 +52,7 @@ export function LetterPreviewWizard({
 
   // Helper to get per-skill content for preview
   const getSkillBullets = (skillId: string) => {
-    const bySkill = (sampleProperty as Record<string, unknown>)?.personalized_content_by_skill as Record<string, { opening: string; bullet_1: string; bullet_2: string; bullet_3: string; closing: string }> | null
+    const bySkill = (sampleProperty as unknown as Record<string, unknown>)?.personalized_content_by_skill as Record<string, { opening: string; bullet_1: string; bullet_2: string; bullet_3: string; closing: string }> | null
     const content = bySkill?.[skillId]
     if (content) {
       return { b1: content.bullet_1, b2: content.bullet_2, b3: content.bullet_3 }
@@ -61,7 +61,7 @@ export function LetterPreviewWizard({
   }
 
   const getSkillEditedContent = (skillId: string) => {
-    const bySkill = (sampleProperty as Record<string, unknown>)?.personalized_content_by_skill as Record<string, { opening: string; closing: string }> | null
+    const bySkill = (sampleProperty as unknown as Record<string, unknown>)?.personalized_content_by_skill as Record<string, { opening: string; closing: string }> | null
     const content = bySkill?.[skillId]
     if (content) {
       return { opening: content.opening, closing: content.closing }
