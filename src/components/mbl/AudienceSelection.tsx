@@ -96,13 +96,10 @@ export function AudienceSelection({
 
   const selectMany = useCallback(
     (ids: string[]) => {
-      const next = new Set(selectedIds)
-      for (const id of ids) {
-        next.add(id)
-      }
-      onSelectedIdsChange(next)
+      // Replace selection — only polygon properties are selected
+      onSelectedIdsChange(new Set(ids))
     },
-    [selectedIds, onSelectedIdsChange]
+    [onSelectedIdsChange]
   )
 
   const handleApplyAndSelectAll = () => {
