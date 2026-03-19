@@ -198,7 +198,7 @@ export function SmartInput({ onComplete }: SmartInputProps) {
               disabled={isParsing}
               rows={1}
               className={cn(
-                'w-full min-h-16 pl-5 pr-28 py-4 rounded-2xl border-2 bg-background text-lg resize-none overflow-hidden',
+                'w-full min-h-16 pl-5 pr-32 py-4 rounded-2xl border-2 bg-background text-lg resize-none overflow-hidden',
                 'placeholder:text-muted-foreground/50',
                 'focus:outline-none transition-colors duration-200',
                 'disabled:opacity-60',
