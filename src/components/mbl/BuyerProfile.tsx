@@ -226,49 +226,78 @@ export function BuyerProfile({
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {area && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
-                  <MapPin className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="font-medium">{area}</span>
+            <div className="space-y-4">
+              {/* Location group */}
+              {(area || criteria.zip || cityZips.length > 0) && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <MapPin className="h-3.5 w-3.5 text-emerald-400" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</span>
+                  </div>
+                  {area && (
+                    <p className="text-sm font-medium mb-1.5">{area}</p>
+                  )}
+                  <div className="flex flex-wrap gap-1.5">
+                    {cityZips.map((zip) => (
+                      <span key={zip} className="px-2 py-0.5 rounded-md bg-muted text-xs font-mono">
+                        {zip}
+                      </span>
+                    ))}
+                    {criteria.zip && !cityZips.includes(criteria.zip) && (
+                      <span className="px-2 py-0.5 rounded-md bg-muted text-xs font-mono">
+                        {criteria.zip}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
-              {cityZips.map((zip) => (
-                <div key={zip} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
-                  <MapPin className="h-3.5 w-3.5 text-emerald-400/60" />
-                  <span className="font-medium font-mono">{zip}</span>
-                </div>
-              ))}
-              {criteria.zip && !cityZips.includes(criteria.zip) && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
-                  <MapPin className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="font-medium font-mono">{criteria.zip}</span>
-                </div>
-              )}
-              {criteria.price_min && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
-                  <DollarSign className="h-3.5 w-3.5 text-amber-400" />
-                  <span className="text-muted-foreground">Low</span>
-                  <span className="font-medium">{formatPrice(criteria.price_min)}</span>
-                </div>
-              )}
-              {criteria.price_max && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
-                  <DollarSign className="h-3.5 w-3.5 text-amber-400" />
-                  <span className="text-muted-foreground">High</span>
-                  <span className="font-medium">{formatPrice(criteria.price_max)}</span>
-                </div>
-              )}
-              {criteria.beds_min && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
-                  <BedDouble className="h-3.5 w-3.5 text-blue-400" />
-                  <span className="font-medium">{criteria.beds_min}+ beds</span>
+
+              {/* Price group */}
+              {(criteria.price_min || criteria.price_max) && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <DollarSign className="h-3.5 w-3.5 text-amber-400" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {criteria.price_min && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase">Low</p>
+                        <p className="text-sm font-medium">{formatPrice(criteria.price_min)}</p>
+                      </div>
+                    )}
+                    {criteria.price_min && criteria.price_max && (
+                      <span className="text-muted-foreground">–</span>
+                    )}
+                    {criteria.price_max && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase">High</p>
+                        <p className="text-sm font-medium">{formatPrice(criteria.price_max)}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-              {criteria.baths_min && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-card border border-border/60 text-sm">
-                  <Bath className="h-3.5 w-3.5 text-blue-400" />
-                  <span className="font-medium">{criteria.baths_min}+ baths</span>
+
+              {/* Property details */}
+              {(criteria.beds_min || criteria.baths_min) && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <BedDouble className="h-3.5 w-3.5 text-blue-400" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Property</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {criteria.beds_min && (
+                      <span className="px-2 py-0.5 rounded-md bg-muted text-xs font-medium">
+                        {criteria.beds_min}+ beds
+                      </span>
+                    )}
+                    {criteria.baths_min && (
+                      <span className="px-2 py-0.5 rounded-md bg-muted text-xs font-medium">
+                        {criteria.baths_min}+ baths
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
