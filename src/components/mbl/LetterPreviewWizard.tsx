@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useApiFetch } from '@/hooks/useApiFetch'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
@@ -26,15 +28,28 @@ export function LetterPreviewWizard({
   buyerName,
   bullets,
   templateStyle,
-  onTemplateChange,
   onBack,
   onContinue,
 }: LetterPreviewWizardProps) {
+  const apiFetch = useApiFetch()
   const sampleProperty =
     properties.find((p) => p.personalized_content) ?? properties[0] ?? null
 
   const [envelopeType, setEnvelopeType] = useState<'standard' | 'custom'>('standard')
   const [_letterJSON, setLetterJSON] = useState<JSONContent | null>(null)
+
+  // Fetch active skills for tab display
+  const { data: skills } = useQuery<{ id: string; name: string; description: string }[]>({
+    queryKey: ['active-skills'],
+    queryFn: async () => {
+      const res = await apiFetch('/api/mbl/skills')
+      const json = await res.json()
+      return json.data ?? []
+    },
+  })
+
+  const activeSkills = skills ?? []
+  const hasMultipleSkills = activeSkills.length > 1
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -45,16 +60,20 @@ export function LetterPreviewWizard({
         <p className="text-muted-foreground">Edit the letter directly — it works like a doc</p>
       </div>
 
-      {/* Template style selector */}
-      <div className="flex justify-center">
-        <Tabs defaultValue={templateStyle} onValueChange={(v) => onTemplateChange(v as TemplateStyle)}>
-          <TabsList>
-            <TabsTrigger value="warm">Warm + Personal</TabsTrigger>
-            <TabsTrigger value="direct">Straight to the Point</TabsTrigger>
-            <TabsTrigger value="luxury">Luxury</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+      {/* Skill tabs (only show if multiple skills) */}
+      {hasMultipleSkills && (
+        <div className="flex justify-center">
+          <Tabs defaultValue={activeSkills[0]?.id}>
+            <TabsList>
+              {activeSkills.map((skill) => (
+                <TabsTrigger key={skill.id} value={skill.id}>
+                  {skill.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
 
       {/* Letter / Envelope tabs */}
       <div className="max-w-2xl mx-auto">

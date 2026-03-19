@@ -1,6 +1,5 @@
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
-import type { TemplateStyle } from '@/types'
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 
@@ -17,18 +16,9 @@ interface CampaignContext {
   bullet_1: string
   bullet_2: string
   bullet_3: string
-  template_style: TemplateStyle
 }
 
-function buildSystemPrompt(templateStyle: TemplateStyle): string {
-  const toneMap: Record<TemplateStyle, string> = {
-    warm: 'Write in a warm, personal, conversational tone. Be genuine and relatable.',
-    direct: 'Write in a professional, direct, and concise tone. Focus on the business opportunity.',
-    luxury: 'Write in a refined, sophisticated tone. Use elevated language appropriate for high-value properties.',
-  }
-
-  return `You are a real estate letter writer. ${toneMap[templateStyle]}
-
+const BASE_INSTRUCTIONS = `
 Write a buyer letter template. Use these EXACT variables (double curly braces) — the app will replace them with real data for each recipient:
 
 Available variables:
@@ -49,6 +39,9 @@ Respond with ONLY a JSON object (no markdown, no explanation) with these keys:
 Do NOT include the bullet points in your response — the app adds those separately.
 Do NOT include greetings like "Dear" — the app handles that.
 Keep it concise — total letter should be under 300 words.`
+
+function buildSystemPromptFromSkill(skillInstructions: string): string {
+  return `You are a real estate letter writer. ${skillInstructions}\n${BASE_INSTRUCTIONS}`
 }
 
 function buildUserPrompt(context: CampaignContext): string {
@@ -101,13 +94,14 @@ async function callClaude(systemPrompt: string, userPrompt: string): Promise<Let
 }
 
 /**
- * Generate ONE letter template for the entire campaign.
- * Returns a template with {{variables}} that the app fills in per-property.
+ * Generate a letter template using a skill's prompt instructions.
+ * This is the primary method — called once per skill per campaign.
  */
-export async function generateLetterTemplate(
-  context: CampaignContext
+export async function generateLetterForSkill(
+  context: CampaignContext,
+  skillInstructions: string
 ): Promise<LetterTemplate> {
-  const systemPrompt = buildSystemPrompt(context.template_style)
+  const systemPrompt = buildSystemPromptFromSkill(skillInstructions)
   const userPrompt = buildUserPrompt(context)
   return callClaude(systemPrompt, userPrompt)
 }
