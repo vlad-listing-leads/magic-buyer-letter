@@ -109,28 +109,30 @@ export function LetterPreviewWizard({
           </div>
         )}
 
-        {/* Letter / Envelope tabs */}
-        <Tabs defaultValue="letter">
-          <TabsList>
-            <TabsTrigger value="letter">Letter Page 1</TabsTrigger>
-            <TabsTrigger value="envelope">Envelope Front</TabsTrigger>
-          </TabsList>
+        {/* Preview container — dark background to frame the letter */}
+        <div className="rounded-xl bg-[#282524] p-5">
+          <Tabs defaultValue="letter">
+            <TabsList>
+              <TabsTrigger value="letter">Letter Page 1</TabsTrigger>
+              <TabsTrigger value="envelope">Envelope Front</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="letter">
-            <LetterPreview
-              agent={agent}
-              property={sampleProperty}
-              buyerName={buyerName}
-              bullets={selectedSkill ? getSkillBullets(selectedSkill) : bullets}
-              templateStyle={templateStyle}
-              editedContent={selectedSkill ? getSkillEditedContent(selectedSkill) : undefined}
-            />
-          </TabsContent>
+            <TabsContent value="letter">
+              <LetterPreview
+                agent={agent}
+                property={sampleProperty}
+                buyerName={buyerName}
+                bullets={selectedSkill ? getSkillBullets(selectedSkill) : bullets}
+                templateStyle={templateStyle}
+                editedContent={selectedSkill ? getSkillEditedContent(selectedSkill) : undefined}
+              />
+            </TabsContent>
 
-          <TabsContent value="envelope">
-            <EnvelopeMockup agent={agent} property={sampleProperty} />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="envelope">
+              <EnvelopeMockup agent={agent} property={sampleProperty} />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
 
       {/* Envelope type selector */}
