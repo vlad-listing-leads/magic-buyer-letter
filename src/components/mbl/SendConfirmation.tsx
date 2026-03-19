@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CreditCard, Mail, Clock, AlertTriangle, Loader2 } from 'lucide-react'
 import { useApiFetch } from '@/hooks/useApiFetch'
-import { toast } from 'sonner'
+import { sileo } from 'sileo'
 import type { MblCampaign } from '@/types'
 
 interface SendConfirmationProps {
@@ -39,7 +39,7 @@ export function SendConfirmation({ campaign, selectedCount, onCancel }: SendConf
       // Redirect to Stripe Checkout
       window.location.href = json.data.url
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create checkout')
+      sileo.error({ title: err instanceof Error ? err.message : 'Failed to create checkout' })
       setIsLoading(false)
     }
   }

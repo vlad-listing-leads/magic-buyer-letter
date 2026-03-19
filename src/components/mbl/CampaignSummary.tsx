@@ -1,12 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Download, FileText, Table, CheckCircle } from 'lucide-react'
 import { useApiFetch } from '@/hooks/useApiFetch'
-import { toast } from 'sonner'
+import { sileo } from 'sileo'
 import type { MblCampaign, MblProperty, MblAgent } from '@/types'
 
 interface CampaignSummaryProps {
@@ -29,167 +28,67 @@ export function CampaignSummary({
   const apiFetch = useApiFetch()
   const [lettersDownloaded, setLettersDownloaded] = useState(false)
   const [addressesDownloaded, setAddressesDownloaded] = useState(false)
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+  const [isGeneratingAddresses, setIsGeneratingAddresses] = useState(false)
 
   const selectedProperties = properties.filter(p => p.selected)
   const area = `${campaign.criteria_city}${campaign.criteria_state ? `, ${campaign.criteria_state}` : ''}`
 
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
-
   const handleDownloadLetters = async () => {
     setIsGeneratingPdf(true)
     try {
-      const { jsPDF } = await import('jspdf')
-      const html2canvas = (await import('html2canvas')).default
+      const { pdf } = await import('@react-pdf/renderer')
+      const { LetterDocument } = await import('./LetterPdf')
 
-      // Create an off-screen container for rendering
-      const container = document.createElement('div')
-      container.style.position = 'absolute'
-      container.style.left = '-9999px'
-      container.style.top = '0'
-      document.body.appendChild(container)
+      const blob = await pdf(
+        LetterDocument({ properties: selectedProperties, agent, selectedSkillId })
+      ).toBlob()
 
-      const doc = new jsPDF({ unit: 'px', format: 'letter' })
-      const pageW = doc.internal.pageSize.getWidth()
-      const pageH = doc.internal.pageSize.getHeight()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${campaign.buyer_name}_letters.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
 
-      for (let i = 0; i < selectedProperties.length; i++) {
-        const prop = selectedProperties[i]
-        if (i > 0) doc.addPage()
-
-        const content = selectedSkillId && prop.personalized_content_by_skill?.[selectedSkillId]
-          ? prop.personalized_content_by_skill[selectedSkillId]
-          : prop.personalized_content as { body: string; ps: string } | null
-
-        const body = (content?.body ?? '').replace(/\n/g, '<br/>')
-        const ps = content?.ps ?? ''
-        const agentName = agent?.name ?? ''
-        const initials = agentName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-
-        // Render HTML letter — matches LetterPreview exactly
-        const logoHtml = agent?.logo_url
-          ? `<img src="${agent.logo_url}" style="height:56px;max-width:220px;object-fit:contain;" crossorigin="anonymous" />`
-          : `<div style="font-size:20px;font-weight:bold;color:#2d2d2d;">${agent?.brokerage || agentName}</div>`
-
-        const headshotHtml = agent?.headshot_url
-          ? `<img src="${agent.headshot_url}" style="width:56px;height:56px;border-radius:6px;object-fit:cover;flex-shrink:0;" crossorigin="anonymous" />`
-          : `<div style="width:56px;height:56px;border-radius:6px;background:#e5e2dd;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:bold;color:#555;flex-shrink:0;">${initials}</div>`
-
-        container.innerHTML = `
-          <div style="width:816px;min-height:1056px;padding:96px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1a1a1a;background:#faf9f7;box-sizing:border-box;">
-            <div style="text-align:center;margin-bottom:32px;">
-              ${logoHtml}
-            </div>
-            <div style="margin-bottom:12px;">${body}</div>
-            <div style="margin-top:40px;display:flex;align-items:flex-start;gap:12px;">
-              ${headshotHtml}
-              <div style="line-height:1.4;">
-                <div style="font-weight:bold;font-size:15px;">${agentName}${agent?.license_number ? ` <span style="font-weight:normal;font-size:11px;color:#888;">(${agent.license_number})</span>` : ''}</div>
-                ${agent?.brokerage ? `<div style="font-size:13px;color:#444;">${agent.brokerage}</div>` : ''}
-                <div style="font-size:13px;color:#444;">${agent?.phone ?? ''}</div>
-                ${agent?.email ? `<div style="font-size:13px;color:#444;">${agent.email}</div>` : ''}
-              </div>
-            </div>
-            ${ps ? `<div style="margin-top:24px;font-size:13px;line-height:1.4;color:#555;"><strong>p.s.</strong> ${ps}</div>` : ''}
-          </div>
-        `
-
-        // Wait for images to load before capturing
-        const images = container.querySelectorAll('img')
-        await Promise.all(Array.from(images).map(img =>
-          img.complete ? Promise.resolve() : new Promise(resolve => { img.onload = resolve; img.onerror = resolve })
-        ))
-
-        const canvas = await html2canvas(container.firstElementChild as HTMLElement, {
-          scale: 2,
-          backgroundColor: '#faf9f7',
-          width: 816,
-          windowWidth: 816,
-          useCORS: true,
-          allowTaint: true,
-        })
-
-        const imgData = canvas.toDataURL('image/jpeg', 0.92)
-        const imgW = pageW
-        const imgH = (canvas.height / canvas.width) * pageW
-        doc.addImage(imgData, 'JPEG', 0, 0, imgW, Math.min(imgH, pageH))
-      }
-
-      document.body.removeChild(container)
-      doc.save(`${campaign.buyer_name}_letters.pdf`)
       setLettersDownloaded(true)
-      toast.success('Letters PDF downloaded')
+      sileo.success({ title: 'Letters PDF downloaded' })
 
-      if (addressesDownloaded) {
-        await markComplete()
-      }
+      if (addressesDownloaded) await markComplete()
     } catch (err) {
       console.error(err)
-      toast.error('Failed to generate PDF')
+      sileo.error({ title: 'Failed to generate PDF' })
     } finally {
       setIsGeneratingPdf(false)
     }
   }
 
   const handleDownloadAddresses = async () => {
+    setIsGeneratingAddresses(true)
     try {
-      const { jsPDF } = await import('jspdf')
-      const doc = new jsPDF({ unit: 'in', format: 'letter', orientation: 'landscape' })
+      const { pdf } = await import('@react-pdf/renderer')
+      const { AddressDocument } = await import('./LetterPdf')
 
-      const margin = 0.5
-      let y = 0.8
+      const blob = await pdf(
+        AddressDocument({ properties: selectedProperties, buyerName: campaign.buyer_name, area })
+      ).toBlob()
 
-      // Title
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(14)
-      doc.text(`${campaign.buyer_name} — Address List`, margin, y)
-      y += 0.15
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.text(`${area} · ${selectedProperties.length} properties`, margin, y)
-      y += 0.35
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${campaign.buyer_name}_addresses.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
 
-      // Table header
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(8)
-      const cols = [margin, 1.2, 4.5, 6, 7, 8, 9]
-      doc.text('#', cols[0], y)
-      doc.text('Address', cols[1], y)
-      doc.text('City, State ZIP', cols[2], y)
-      doc.text('Beds', cols[3], y)
-      doc.text('Baths', cols[4], y)
-      doc.text('Sqft', cols[5], y)
-      doc.text('Value', cols[6], y)
-      y += 0.05
-      doc.line(margin, y, 10.5, y)
-      y += 0.15
-
-      // Table rows
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
-
-      for (let i = 0; i < selectedProperties.length; i++) {
-        const prop = selectedProperties[i]
-        if (y > 7.5) { doc.addPage(); y = 0.8 }
-
-        doc.text(String(i + 1), cols[0], y)
-        doc.text(prop.address_line1 || '', cols[1], y)
-        doc.text(`${prop.city}, ${prop.state} ${prop.zip}`, cols[2], y)
-        doc.text(String(prop.bedrooms ?? '—'), cols[3], y)
-        doc.text(String(prop.bathrooms ?? '—'), cols[4], y)
-        doc.text(prop.sqft ? prop.sqft.toLocaleString() : '—', cols[5], y)
-        doc.text(prop.estimated_value ? `$${prop.estimated_value.toLocaleString()}` : '—', cols[6], y)
-        y += 0.2
-      }
-
-      doc.save(`${campaign.buyer_name}_addresses.pdf`)
       setAddressesDownloaded(true)
-      toast.success('Address list PDF downloaded')
+      sileo.success({ title: 'Address list PDF downloaded' })
 
-      if (lettersDownloaded) {
-        await markComplete()
-      }
+      if (lettersDownloaded) await markComplete()
     } catch (err) {
-      toast.error('Failed to generate PDF')
+      console.error(err)
+      sileo.error({ title: 'Failed to generate PDF' })
+    } finally {
+      setIsGeneratingAddresses(false)
     }
   }
 
@@ -201,7 +100,7 @@ export function CampaignSummary({
         body: JSON.stringify({ status: 'sent' }),
       })
     } catch {
-      // Silent — campaign status update is best-effort
+      // Silent
     }
     onComplete()
   }
@@ -212,9 +111,7 @@ export function CampaignSummary({
     <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Campaign Summary</h1>
-        <p className="text-muted-foreground">
-          Download your letters and address list
-        </p>
+        <p className="text-muted-foreground">Download your letters and address list</p>
       </div>
 
       {/* Stats */}
@@ -266,6 +163,7 @@ export function CampaignSummary({
 
         <Button
           onClick={handleDownloadAddresses}
+          disabled={isGeneratingAddresses}
           variant={addressesDownloaded ? 'outline' : 'default'}
           className={`w-full h-14 text-base justify-between ${!addressesDownloaded ? 'bg-[#006AFF] hover:bg-[#0058D4] text-white' : ''}`}
           size="lg"
@@ -273,12 +171,14 @@ export function CampaignSummary({
           <div className="flex items-center gap-2">
             <Table className="h-5 w-5" />
             <div className="text-left">
-              <p className="font-semibold">Download Address List</p>
+              <p className="font-semibold">{isGeneratingAddresses ? 'Generating PDF...' : 'Download Address List'}</p>
               <p className="text-xs opacity-70">All {selectedProperties.length} recipient addresses as PDF</p>
             </div>
           </div>
           {addressesDownloaded ? (
             <CheckCircle className="h-5 w-5 text-emerald-500" />
+          ) : isGeneratingAddresses ? (
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
           ) : (
             <Download className="h-5 w-5" />
           )}

@@ -14,6 +14,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ExternalLink, LogOut, Moon, Sun, Settings } from 'lucide-react'
+import { Toaster as SileoToaster } from 'sileo'
+import 'sileo/styles.css'
 import { useState, useEffect } from 'react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -109,6 +111,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </SidebarInset>
       </SidebarProvider>
+      <SileoToaster position="top-center" />
     </div>
   )
 }

@@ -28,7 +28,7 @@ import {
   Search, MapPin,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { toast } from 'sonner'
+import { sileo } from 'sileo'
 import Link from 'next/link'
 import type { MblCampaign, MblProperty, MblAgent } from '@/types'
 
@@ -91,10 +91,10 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       const res = await apiFetch(`/api/mbl/campaigns/${id}`, { method: 'DELETE' })
       const json = await res.json()
       if (!json.success) throw new Error(json.error)
-      toast.success('Campaign deleted')
+      sileo.success({ title: 'Campaign deleted' })
       router.push('/')
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete')
+      sileo.error({ title: err instanceof Error ? err.message : 'Failed to delete' })
       setIsDeleting(false)
     }
   }

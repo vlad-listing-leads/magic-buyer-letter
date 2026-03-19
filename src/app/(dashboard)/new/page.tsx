@@ -13,7 +13,7 @@ import { CampaignSummary } from '@/components/mbl/CampaignSummary'
 import { generateBullets } from '@/lib/bullets'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { toast } from 'sonner'
+import { sileo } from 'sileo'
 import { cn } from '@/lib/utils'
 import type {
   PropertySearchCriteria,
@@ -199,7 +199,7 @@ function NewLetterWizard() {
       const { data: result } = await res.json()
       setCampaignId(result.id)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to start campaign')
+      sileo.error({ title: err instanceof Error ? err.message : 'Failed to start campaign' })
       setStep('profile')
     }
   }
@@ -207,14 +207,14 @@ function NewLetterWizard() {
   const handlePipelineComplete = useCallback(
     (id: string, readyCount: number) => {
       setCampaignId(id)
-      toast.success(`Found ${readyCount} properties!`)
+      sileo.success({ title: `Found ${readyCount} properties!` })
       setStep('audience')
     },
     []
   )
 
   const handlePipelineError = useCallback((error: string) => {
-    toast.error(error)
+    sileo.error({ title: error })
   }, [])
 
   const handleGenerateLetters = async () => {
@@ -254,7 +254,7 @@ function NewLetterWizard() {
             const event = JSON.parse(line.slice(6))
             if (event.step === 'error') throw new Error(event.error)
             if (event.step === 'ready') {
-              toast.success(`${event.count} letters generated!`)
+              sileo.success({ title: `${event.count} letters generated!` })
               await refetchCampaign()
             }
           } catch (e) {
@@ -263,7 +263,7 @@ function NewLetterWizard() {
         }
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Letter generation failed')
+      sileo.error({ title: err instanceof Error ? err.message : 'Letter generation failed' })
     } finally {
       setIsGeneratingLetters(false)
     }

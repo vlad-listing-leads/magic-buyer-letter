@@ -9,7 +9,7 @@ import {
   User, FileText, CheckCircle,
 } from 'lucide-react'
 import { useApiFetch } from '@/hooks/useApiFetch'
-import { toast } from 'sonner'
+import { sileo } from 'sileo'
 import { cn } from '@/lib/utils'
 import type { MblCampaign, MblProperty, TemplateStyle } from '@/types'
 import { LETTER_TEMPLATES } from '@/lib/templates'
@@ -77,7 +77,7 @@ export function ReviewAndSend({
 
       window.location.href = json.data.url
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create checkout')
+      sileo.error({ title: err instanceof Error ? err.message : 'Failed to create checkout' })
       setIsLoading(false)
     }
   }

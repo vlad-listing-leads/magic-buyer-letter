@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { ArrowRight, Mic, MicOff, User, MapPin, DollarSign, BedDouble, Bath, Loader2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useApiFetch } from '@/hooks/useApiFetch'
-import { toast } from 'sonner'
+import { sileo } from 'sileo'
 import type { PropertySearchCriteria } from '@/types'
 
 const VOICE_BAR_HEIGHTS = [8, 20, 12, 28, 16, 24, 10, 30, 14, 22, 8, 26, 18, 32, 10, 20, 14, 28, 12, 24, 8, 18, 26, 14]
@@ -87,7 +87,7 @@ export function SmartInput({ onComplete }: SmartInputProps) {
 
       onComplete(buyerName, text, enrichedCriteria)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to parse description')
+      sileo.error({ title: err instanceof Error ? err.message : 'Failed to parse description' })
     } finally {
       setIsParsing(false)
     }

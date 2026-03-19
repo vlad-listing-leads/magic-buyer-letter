@@ -25,7 +25,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Plus, Pencil, Trash2, Loader2, Sparkles, ArrowUp, ArrowDown } from 'lucide-react'
-import { toast } from 'sonner'
+import { sileo } from 'sileo'
 import type { MblSkill } from '@/types'
 
 interface SkillFormData {
@@ -78,9 +78,9 @@ export default function AdminSkillsPage() {
       setSheetOpen(false)
       setEditingId(null)
       setForm(EMPTY_FORM)
-      toast.success(editingId ? 'Skill updated' : 'Skill created')
+      sileo.success({ title: editingId ? 'Skill updated' : 'Skill created' })
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => sileo.error({ title: err.message }),
   })
 
   const toggleActiveMutation = useMutation({
@@ -97,7 +97,7 @@ export default function AdminSkillsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-skills'] })
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => sileo.error({ title: err.message }),
   })
 
   const swapOrderMutation = useMutation({
@@ -121,7 +121,7 @@ export default function AdminSkillsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-skills'] })
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => sileo.error({ title: err.message }),
   })
 
   const handleMoveUp = (index: number) => {
@@ -142,9 +142,9 @@ export default function AdminSkillsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-skills'] })
-      toast.success('Skill deleted')
+      sileo.success({ title: 'Skill deleted' })
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => sileo.error({ title: err.message }),
   })
 
   const handleEdit = (skill: MblSkill) => {

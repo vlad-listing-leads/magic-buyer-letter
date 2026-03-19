@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { QueryProvider } from '@/components/QueryProvider'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { Toaster } from 'sonner'
+// Sileo notifications added in dashboard layout
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -35,7 +35,6 @@ export default function RootLayout({
               {children}
             </TooltipProvider>
           </QueryProvider>
-          <Toaster position="bottom-right" theme="dark" />
         </ThemeProvider>
       </body>
     </html>
