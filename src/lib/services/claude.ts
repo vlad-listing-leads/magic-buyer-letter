@@ -19,41 +19,45 @@ interface CampaignContext {
   bullet_3: string
 }
 
-const BASE_INSTRUCTIONS = `
-Write a buyer letter template. Use these EXACT variables (double curly braces) — the app will replace them with real data for each recipient:
+/**
+ * System prompt — ONLY explains variables and JSON format.
+ * All creative direction comes from the skill's prompt_instructions.
+ */
+function buildSystemPrompt(skillInstructions: string): string {
+  return `You write real estate buyer letters. Follow these instructions for tone, style, and format:
 
-Available variables:
-- {{property_address}} — their property street address + city
+${skillInstructions}
+
+VARIABLES — use these exact placeholders (double curly braces). The app replaces them per recipient:
+- {{property_address}} — recipient's street address + city
 - {{neighborhood}} — their neighborhood name
-- {{buyer_name}} — the buyer's name (already provided)
-- {{bullet_1}}, {{bullet_2}}, {{bullet_3}} — buyer selling points (already provided)
-- {{agent_name}} — the agent's name
+- {{buyer_name}} — the buyer's name
+- {{bullet_1}}, {{bullet_2}}, {{bullet_3}} — buyer selling points
+- {{agent_name}} — the sending agent's name
 - {{agent_phone}} — agent's phone number
 
-Do NOT use owner names — we don't have them. Address the homeowner generically.
+We do NOT have homeowner names. Address them generically.
 
-Respond with ONLY a JSON object (no markdown, no explanation) with these keys:
-- "opening": 2-3 sentences. Mention {{property_address}} and {{neighborhood}}. Address the homeowner without using their name.
-- "body": 2-3 sentences in the middle of the letter, between the opening and the bullet points. Explain why the agent is writing and what makes the buyer special.
-- "closing": 1-2 sentences after the bullets. Include a call-to-action mentioning {{agent_phone}}.
-- "ps": Optional P.S. line. A short, personal postscript that adds value (e.g. offering a free home value report). Set to empty string "" if not needed.
+RESPONSE FORMAT — respond with ONLY a JSON object, no markdown:
+{
+  "opening": "the opening section of the letter",
+  "body": "the middle section, before bullet points",
+  "closing": "the closing section, after bullet points",
+  "ps": "optional postscript, or empty string if not needed"
+}
 
-Do NOT include the bullet points in your response — the app adds those separately.
-Do NOT include greetings like "Dear" — the app handles that.
-Keep it concise — total letter should be under 300 words.`
-
-function buildSystemPromptFromSkill(skillInstructions: string): string {
-  return `You are a real estate letter writer. ${skillInstructions}\n${BASE_INSTRUCTIONS}`
+The app will insert bullet points between "body" and "closing" automatically.
+The app will add the agent signature block automatically.`
 }
 
 function buildUserPrompt(context: CampaignContext): string {
-  return `Buyer: ${context.buyer_name}
+  return `Write a letter for this buyer:
+
+Buyer: ${context.buyer_name}
 Area: ${context.area}
 Bullet 1: ${context.bullet_1}
 Bullet 2: ${context.bullet_2}
-Bullet 3: ${context.bullet_3}
-
-Write the letter template with {{variables}} for personalization.`
+Bullet 3: ${context.bullet_3}`
 }
 
 async function callClaude(systemPrompt: string, userPrompt: string): Promise<LetterTemplate> {
@@ -66,7 +70,7 @@ async function callClaude(systemPrompt: string, userPrompt: string): Promise<Let
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
+      max_tokens: 1000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     }),
@@ -86,25 +90,25 @@ async function callClaude(systemPrompt: string, userPrompt: string): Promise<Let
     if (!jsonMatch) throw new Error('No JSON found')
     return JSON.parse(jsonMatch[0]) as LetterTemplate
   } catch {
-    logger.warn({ text }, 'Failed to parse Claude response as JSON')
+    logger.warn({ text }, 'Failed to parse Claude response as JSON, using raw text')
     return {
-      opening: 'Your home at {{property_address}} caught my eye. My clients, {{buyer_name}}, are specifically looking for a home in {{neighborhood}}.',
-      body: "We've been searching for the right property for a while now. Nothing on the market has been the right fit — that's why I'm reaching out directly.",
-      closing: "If you'd be open to a conversation, I'd love to tell you more. You can reach me at {{agent_phone}}. I look forward to hearing from you.",
+      opening: text.slice(0, Math.floor(text.length * 0.4)),
+      body: text.slice(Math.floor(text.length * 0.4), Math.floor(text.length * 0.7)),
+      closing: text.slice(Math.floor(text.length * 0.7)),
     }
   }
 }
 
 /**
  * Generate a letter template using a skill's prompt instructions.
- * This is the primary method — called once per skill per campaign.
+ * The skill controls ALL creative direction — tone, format, length, style.
  */
 export async function generateLetterForSkill(
   context: CampaignContext,
   skillInstructions: string
 ): Promise<LetterTemplate> {
   logger.info({ skillInstructions: skillInstructions.slice(0, 100), buyer: context.buyer_name }, 'Generating letter for skill')
-  const systemPrompt = buildSystemPromptFromSkill(skillInstructions)
+  const systemPrompt = buildSystemPrompt(skillInstructions)
   const userPrompt = buildUserPrompt(context)
   return callClaude(systemPrompt, userPrompt)
 }
