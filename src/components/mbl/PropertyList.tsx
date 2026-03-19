@@ -161,6 +161,9 @@ export function PropertyList({
                 <th className="p-3 text-left font-medium text-muted-foreground cursor-pointer" onClick={() => toggleSort('equity_percent')}>
                   <span className="flex items-center gap-1">Equity <ArrowUpDown className="h-3 w-3" /></span>
                 </th>
+                <th className="p-3 text-left font-medium text-muted-foreground cursor-pointer" onClick={() => toggleSort('years_owned')}>
+                  <span className="flex items-center gap-1">Yrs Owned <ArrowUpDown className="h-3 w-3" /></span>
+                </th>
                 <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
                 <th className="p-3 text-left font-medium text-muted-foreground">Status</th>
               </tr>
@@ -198,6 +201,7 @@ export function PropertyList({
                   <td className="p-3">{prop.bedrooms ?? '—'}</td>
                   <td className="p-3 font-mono">{prop.sqft?.toLocaleString() ?? '—'}</td>
                   <td className="p-3 font-mono">{prop.equity_percent ? `${prop.equity_percent}%` : '—'}</td>
+                  <td className="p-3 font-mono">{prop.years_owned ?? '—'}</td>
                   <td className="p-3">
                     <Badge variant="secondary" className="text-xs">
                       {OWNER_TYPE_LABELS[prop.owner_type]}
@@ -213,7 +217,7 @@ export function PropertyList({
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={9} className="p-8 text-center text-muted-foreground">
                     No properties match your filters
                   </td>
                 </tr>

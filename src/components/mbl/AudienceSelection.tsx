@@ -94,6 +94,17 @@ export function AudienceSelection({
     onSelectedIdsChange(new Set())
   }, [onSelectedIdsChange])
 
+  const selectMany = useCallback(
+    (ids: string[]) => {
+      const next = new Set(selectedIds)
+      for (const id of ids) {
+        next.add(id)
+      }
+      onSelectedIdsChange(next)
+    },
+    [selectedIds, onSelectedIdsChange]
+  )
+
   const handleApplyAndSelectAll = () => {
     onSelectedIdsChange(new Set(filteredProperties.map((p) => p.id)))
     setFiltersOpen(false)
@@ -186,6 +197,7 @@ export function AudienceSelection({
           properties={filteredProperties}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
+          onSelectMany={selectMany}
         />
       )}
 
