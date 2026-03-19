@@ -174,7 +174,7 @@ export function LetterPreview({
       <Card className={cn(
         'bg-[#faf9f7] text-[#1a1a1a] overflow-hidden [aspect-ratio:8.5/11]',
         editable && 'cursor-text',
-      )} style={{ fontFamily: "Georgia, 'Times New Roman', Times, serif" }}>
+      )} style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
         <CardContent className="px-12 pb-10 pt-0">
           {/* Letterhead */}
           <div className="flex justify-center pt-10 pb-4">

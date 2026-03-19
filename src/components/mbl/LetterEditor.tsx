@@ -118,13 +118,13 @@ export function LetterEditor({
     ?? `If you'd also like to know what your home is realistically worth in today's market, I'm happy to put together a complimentary home value report — no cost, no obligation. Just text or call me at ${phone}.`
 
   return (
-    <Card className="bg-[#faf9f7] text-[#1a1a1a] overflow-hidden" style={{ aspectRatio: '8.5 / 11', fontFamily: "Georgia, 'Times New Roman', Times, serif" }}>
+    <Card className="bg-[#faf9f7] text-[#1a1a1a] overflow-hidden" style={{ aspectRatio: '8.5 / 11', fontFamily: "Arial, Helvetica, sans-serif" }}>
       {/* Letterhead */}
       <div className="flex justify-center pt-10 pb-4">
         {agent.logo_url ? (
           <img src={agent.logo_url} alt={agent.name} className="h-14 max-w-[220px] object-contain" />
         ) : (
-          <div className="h-14 flex items-center text-xl font-bold text-[#2d2d2d] tracking-tight" style={{ fontFamily: "Georgia, serif" }}>
+          <div className="h-14 flex items-center text-xl font-bold text-[#2d2d2d] tracking-tight" style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
             {agent.brokerage || agent.name}
           </div>
         )}
@@ -143,7 +143,7 @@ export function LetterEditor({
             editorContainerProps={{
               className: 'letter-editor',
             }}
-            className="max-w-none focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:font-[Georgia,_'Times_New_Roman',_Times,_serif] [&_.tiptap]:text-[15px] [&_.tiptap_p]:my-[0.8em] [&_.tiptap_p]:[line-height:1.5] [&_.tiptap_ul]:my-[0.8em] [&_.tiptap_ul]:pl-6 [&_.tiptap_ul]:list-disc [&_.tiptap_li]:my-[0.3em] [&_.tiptap_li]:[line-height:1.35]"
+            className="max-w-none focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:font-[Arial,_Helvetica,_sans-serif] [&_.tiptap]:text-[15px] [&_.tiptap_p]:my-[0.8em] [&_.tiptap_p]:[line-height:1.5] [&_.tiptap_ul]:my-[0.8em] [&_.tiptap_ul]:pl-6 [&_.tiptap_ul]:list-disc [&_.tiptap_li]:my-[0.3em] [&_.tiptap_li]:[line-height:1.35]"
           />
         </EditorRoot>
 
