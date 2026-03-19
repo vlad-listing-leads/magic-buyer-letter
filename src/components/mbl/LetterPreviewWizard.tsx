@@ -110,7 +110,7 @@ export function LetterPreviewWizard({
         )}
 
         {/* Preview container — dark background to frame the letter */}
-        <div className="rounded-xl bg-[#282524] p-5">
+        <div className="rounded-xl bg-[#282524] px-2 pt-5 pb-2">
           <Tabs defaultValue="letter">
             <TabsList>
               <TabsTrigger value="letter">Letter Page 1</TabsTrigger>

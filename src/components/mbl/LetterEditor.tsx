@@ -118,7 +118,7 @@ export function LetterEditor({
     ?? `If you'd also like to know what your home is realistically worth in today's market, I'm happy to put together a complimentary home value report — no cost, no obligation. Just text or call me at ${phone}.`
 
   return (
-    <Card className="bg-[#faf9f7] text-[#1a1a1a] overflow-hidden" style={{ aspectRatio: '8.5 / 11', fontFamily: "Arial, Helvetica, sans-serif" }}>
+    <Card className="bg-[#faf9f7] text-[#1a1a1a] overflow-hidden rounded-lg" style={{ aspectRatio: '8.5 / 11', fontFamily: "Arial, Helvetica, sans-serif" }}>
       {/* Letterhead */}
       <div className="flex justify-center pt-10 pb-4">
         {agent.logo_url ? (

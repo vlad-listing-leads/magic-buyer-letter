@@ -172,7 +172,7 @@ export function LetterPreview({
 
       {/* Letter Card */}
       <Card className={cn(
-        'bg-[#faf9f7] text-[#1a1a1a] overflow-hidden [aspect-ratio:8.5/11]',
+        'bg-[#faf9f7] text-[#1a1a1a] overflow-hidden [aspect-ratio:8.5/11] rounded-lg',
         editable && 'cursor-text',
       )} style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
         <CardContent className="px-12 pb-10 pt-0">
