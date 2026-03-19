@@ -42,7 +42,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     setMounted(true)
   }, [])
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin'
+  const isAdmin = mounted && (user?.role === 'admin' || user?.role === 'superadmin')
   const logoSrc = mounted && resolvedTheme === 'dark' ? '/logo-white.svg' : '/logo.svg'
   const collapsedLogoSrc =
     mounted && resolvedTheme === 'dark' ? '/logo-collapsed-dark-mode.svg' : '/logo-collapsed.svg'
