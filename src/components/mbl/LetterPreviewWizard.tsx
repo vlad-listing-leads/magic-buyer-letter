@@ -34,11 +34,6 @@ export function LetterPreviewWizard({
   const [envelopeType, setEnvelopeType] = useState<'standard' | 'custom'>('standard')
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null)
 
-  // Auto-select first skill when loaded
-  if (activeSkills.length > 0 && selectedSkill === null) {
-    setSelectedSkill(activeSkills[0].id)
-  }
-
   // Fetch active skills
   const { data: skills } = useQuery<{ id: string; name: string; description: string }[]>({
     queryKey: ['active-skills'],
@@ -51,6 +46,11 @@ export function LetterPreviewWizard({
 
   const activeSkills = skills ?? []
   const hasMultipleSkills = activeSkills.length > 1
+
+  // Auto-select first skill when loaded
+  if (activeSkills.length > 0 && selectedSkill === null) {
+    setSelectedSkill(activeSkills[0].id)
+  }
 
   // Find a sample property with per-skill content
   const sampleProperty =
