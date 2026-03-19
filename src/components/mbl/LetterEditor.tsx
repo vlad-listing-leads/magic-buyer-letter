@@ -46,11 +46,6 @@ function buildLetterJSON(props: {
   body4: string
   phoneLine: string
   closing: string
-  agentName: string
-  agentBrokerage: string
-  agentPhone: string
-  agentWebsite: string
-  ps: string
 }): JSONContent {
   const bulletItems: JSONContent[] = [
     { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: props.b1 }] }] },
@@ -74,23 +69,6 @@ function buildLetterJSON(props: {
       { type: 'paragraph', content: [{ type: 'text', text: props.body4 }] },
       { type: 'paragraph', content: [{ type: 'text', text: props.phoneLine }] },
       { type: 'paragraph', content: [{ type: 'text', text: props.closing }] },
-      { type: 'horizontalRule' },
-      {
-        type: 'paragraph',
-        content: [
-          { type: 'text', text: props.agentName, marks: [{ type: 'bold' }] },
-          { type: 'text', text: ` · ${props.agentBrokerage}` },
-          { type: 'text', text: ` · ${props.agentPhone}` },
-          ...(props.agentWebsite ? [{ type: 'text' as const, text: ` · ${props.agentWebsite}` }] : []),
-        ],
-      },
-      {
-        type: 'paragraph',
-        content: [
-          { type: 'text', text: 'p.s. ', marks: [{ type: 'bold' }] },
-          { type: 'text', text: props.ps },
-        ],
-      },
     ],
   }
 }
@@ -125,30 +103,35 @@ export function LetterEditor({
     body3: editedContent?.body_3 ?? 'I want to be upfront: there are no guarantees here.',
     body4: editedContent?.body_4 ?? 'But if the right offer could change your plans, a short conversation is probably worth your time.',
     phoneLine: editedContent?.phone_line ?? `My personal cell is ${phone}.`,
-    closing: editedContent?.closing ?? personalized?.closing ?? 'I look forward to hearing from you,',
-    agentName: agent.name || 'Agent Name',
-    agentBrokerage: agent.brokerage || '',
-    agentPhone: phone,
-    agentWebsite: agent.website || '',
-    ps: editedContent?.ps
-      ?? `If you'd also like to know what your home is realistically worth in today's market, I'm happy to put together a complimentary home value report — no cost, no obligation. Just text or call me at ${phone}.`,
+    closing: editedContent?.closing ?? personalized?.closing ?? 'Warm regards,',
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [])
 
+  const initials = agent.name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
+  const ps = editedContent?.ps
+    ?? `If you'd also like to know what your home is realistically worth in today's market, I'm happy to put together a complimentary home value report — no cost, no obligation. Just text or call me at ${phone}.`
+
   return (
-    <Card className="bg-[#faf8f5] text-stone-900 overflow-hidden" style={{ aspectRatio: '8.5 / 11' }}>
-      {/* Agent logo */}
-      <div className="flex justify-center pt-8 pb-2">
+    <Card className="bg-[#faf9f7] text-[#1a1a1a] overflow-hidden" style={{ aspectRatio: '8.5 / 11', fontFamily: "Georgia, 'Times New Roman', Times, serif" }}>
+      {/* Letterhead */}
+      <div className="flex justify-center pt-10 pb-4">
         {agent.logo_url ? (
-          <img src={agent.logo_url} alt={agent.name} className="h-12 max-w-[200px] object-contain" />
+          <img src={agent.logo_url} alt={agent.name} className="h-14 max-w-[220px] object-contain" />
         ) : (
-          <div className="h-12 flex items-center text-lg font-bold text-stone-700 tracking-tight">
+          <div className="h-14 flex items-center text-xl font-bold text-[#2d2d2d] tracking-tight" style={{ fontFamily: "Georgia, serif" }}>
             {agent.brokerage || agent.name}
           </div>
         )}
       </div>
 
-      <CardContent className="px-8 pb-8 pt-2">
+      <CardContent className="px-12 pb-10 pt-0">
+        {/* Editable letter body */}
         <EditorRoot>
           <EditorContent
             initialContent={initialJSON}
@@ -160,9 +143,40 @@ export function LetterEditor({
             editorContainerProps={{
               className: 'letter-editor',
             }}
-            className="prose prose-stone prose-sm max-w-none focus:outline-none [&_.tiptap]:outline-none [&_.tiptap_p]:my-3 [&_.tiptap_p]:[line-height:1.4] [&_.tiptap_ul]:my-3 [&_.tiptap_ul]:pl-5 [&_.tiptap_ul]:list-disc [&_.tiptap_li]:my-1 [&_.tiptap_li]:[line-height:1.2] [&_.tiptap_hr]:my-4 [&_.tiptap_hr]:border-stone-300"
+            className="max-w-none focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:font-[Georgia,_'Times_New_Roman',_Times,_serif] [&_.tiptap]:text-[15px] [&_.tiptap_p]:my-[0.8em] [&_.tiptap_p]:[line-height:1.5] [&_.tiptap_ul]:my-[0.8em] [&_.tiptap_ul]:pl-6 [&_.tiptap_ul]:list-disc [&_.tiptap_li]:my-[0.3em] [&_.tiptap_li]:[line-height:1.35]"
           />
         </EditorRoot>
+
+        {/* Non-editable signature block */}
+        <div className="mt-8 select-none" style={{ fontSize: '15px', lineHeight: '1.5' }}>
+          {/* Signature space */}
+          <div className="h-10" />
+
+          {/* Agent info */}
+          <div>
+            <p className="font-bold text-[15px]">{agent.name}</p>
+            {agent.brokerage && (
+              <p className="text-[13px] text-[#444]">{agent.brokerage}</p>
+            )}
+            {agent.license_number && (
+              <p className="text-[13px] text-[#444]">Lic# {agent.license_number}</p>
+            )}
+            <p className="text-[13px] text-[#444]">{phone}</p>
+            {agent.email && (
+              <p className="text-[13px] text-[#444]">{agent.email}</p>
+            )}
+            {agent.website && (
+              <p className="text-[13px] text-[#444]">{agent.website}</p>
+            )}
+          </div>
+        </div>
+
+        {/* P.S. — always below signature */}
+        <div className="mt-6 select-none" style={{ fontSize: '13px', lineHeight: '1.4', color: '#555' }}>
+          <p>
+            <strong>p.s.</strong> {ps}
+          </p>
+        </div>
       </CardContent>
     </Card>
   )

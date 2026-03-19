@@ -172,58 +172,57 @@ export function LetterPreview({
 
       {/* Letter Card */}
       <Card className={cn(
-        'bg-[#faf8f5] text-stone-900 overflow-hidden [aspect-ratio:8.5/11]',
+        'bg-[#faf9f7] text-[#1a1a1a] overflow-hidden [aspect-ratio:8.5/11]',
         editable && 'cursor-text',
-      )}>
-        <CardContent className="p-8 space-y-4">
-          {/* Agent logo */}
-          <div className="flex justify-center mb-4">
+      )} style={{ fontFamily: "Georgia, 'Times New Roman', Times, serif" }}>
+        <CardContent className="px-12 pb-10 pt-0">
+          {/* Letterhead */}
+          <div className="flex justify-center pt-10 pb-4">
             {agent.logo_url ? (
-              <img src={agent.logo_url} alt={agent.name} className="h-12 max-w-[200px] object-contain" />
+              <img src={agent.logo_url} alt={agent.name} className="h-14 max-w-[220px] object-contain" />
             ) : (
-              <div className="h-12 flex items-center text-lg font-bold text-stone-700 tracking-tight">
+              <div className="h-14 flex items-center text-xl font-bold text-[#2d2d2d] tracking-tight">
                 {agent.brokerage || agent.name}
               </div>
             )}
           </div>
 
-          <EditableField value={opening} field="opening" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
-          <EditableField value={body1} field="body_1" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
-          <EditableField value={body2} field="body_2" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
+          {/* Letter body */}
+          <div className="space-y-[0.8em]" style={{ fontSize: '15px', lineHeight: '1.5' }}>
+            <EditableField value={opening} field="opening" onUpdate={handleUpdate} editable={editable} tag="p" />
+            <EditableField value={body1} field="body_1" onUpdate={handleUpdate} editable={editable} tag="p" />
+            <EditableField value={body2} field="body_2" onUpdate={handleUpdate} editable={editable} tag="p" />
 
-          {/* Bullets */}
-          <div>
-            <EditableField value={bulletIntro} field="bullet_intro" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm font-semibold mb-2" />
-            <ul className="list-disc pl-5 space-y-1 text-sm [line-height:1.2]">
-              <li><EditableField value={b1} field="bullet_1" onUpdate={handleUpdate} editable={editable} /></li>
-              {b2 && <li><EditableField value={b2} field="bullet_2" onUpdate={handleUpdate} editable={editable} /></li>}
-              {b3 && <li><EditableField value={b3} field="bullet_3" onUpdate={handleUpdate} editable={editable} /></li>}
-            </ul>
+            <div>
+              <EditableField value={bulletIntro} field="bullet_intro" onUpdate={handleUpdate} editable={editable} tag="p" className="font-bold mb-[0.3em]" />
+              <ul className="list-disc pl-6 space-y-[0.3em]" style={{ lineHeight: '1.35' }}>
+                <li><EditableField value={b1} field="bullet_1" onUpdate={handleUpdate} editable={editable} /></li>
+                {b2 && <li><EditableField value={b2} field="bullet_2" onUpdate={handleUpdate} editable={editable} /></li>}
+                {b3 && <li><EditableField value={b3} field="bullet_3" onUpdate={handleUpdate} editable={editable} /></li>}
+              </ul>
+            </div>
+
+            <EditableField value={body3} field="body_3" onUpdate={handleUpdate} editable={editable} tag="p" />
+            <EditableField value={body4} field="body_4" onUpdate={handleUpdate} editable={editable} tag="p" />
+            <EditableField value={phoneLine} field="phone_line" onUpdate={handleUpdate} editable={editable} tag="p" />
+            <EditableField value={closing} field="closing" onUpdate={handleUpdate} editable={editable} tag="p" />
           </div>
 
-          <EditableField value={body3} field="body_3" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
-          <EditableField value={body4} field="body_4" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
-          <EditableField value={phoneLine} field="phone_line" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
-          <EditableField value={closing} field="closing" onUpdate={handleUpdate} editable={editable} tag="p" className="text-sm [line-height:1.4]" />
-
-          {/* Signature block */}
-          <div className="flex items-center gap-3 p-3 bg-stone-200/60 rounded-lg">
-            <div className="w-12 h-12 rounded-full bg-stone-800 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-              {initials}
-            </div>
-            <div className="flex-1 text-xs leading-relaxed">
-              <div className="font-bold">{agent.name || 'Agent Name'}</div>
-              <div className="text-stone-600">{agent.brokerage}</div>
-              <div className="text-stone-600">{agent.phone}</div>
-              {agent.website && <div className="text-stone-500 text-[10px]">{agent.website}</div>}
-            </div>
+          {/* Signature block — non-editable */}
+          <div className="mt-8 select-none">
+            <div className="h-10" />
+            <p className="font-bold text-[15px]">{agent.name}</p>
+            {agent.brokerage && <p className="text-[13px] text-[#444]">{agent.brokerage}</p>}
+            {agent.license_number && <p className="text-[13px] text-[#444]">Lic# {agent.license_number}</p>}
+            <p className="text-[13px] text-[#444]">{agent.phone || '(555) 123-4567'}</p>
+            {agent.email && <p className="text-[13px] text-[#444]">{agent.email}</p>}
+            {agent.website && <p className="text-[13px] text-[#444]">{agent.website}</p>}
           </div>
 
-          {/* P.S. */}
-          <p className="text-xs text-stone-600 mt-4">
-            <strong>p.s.</strong>{' '}
-            <EditableField value={ps} field="ps" onUpdate={handleUpdate} editable={editable} />
-          </p>
+          {/* P.S. — always below signature */}
+          <div className="mt-6 select-none" style={{ fontSize: '13px', lineHeight: '1.4', color: '#555' }}>
+            <p><strong>p.s.</strong> {ps}</p>
+          </div>
         </CardContent>
       </Card>
     </div>
