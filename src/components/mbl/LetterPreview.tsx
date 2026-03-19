@@ -37,10 +37,8 @@ export function LetterPreview({
     : '123 Main St, Your City'
   const phone = agent.phone || '(555) 123-4567'
 
-  // Body — everything from Claude
-  const body = editedContent?.body
-    ?? personalized?.body
-    ?? `Your home at ${address} caught the attention of my clients, ${buyerName || 'my buyers'}. They are actively searching for a home just like yours and would love the opportunity to make you an offer.\n\nI represent serious, qualified buyers who are ready to move forward. Here's what makes them stand out:\n\n• ${bullets.b1 || 'Qualified and ready to purchase'}\n• ${bullets.b2 || 'Flexible on timeline'}\n• ${bullets.b3 || 'Love the neighborhood'}\n\nIf selling is something you'd consider, even casually, I'd welcome the chance to chat. You can reach me directly at ${phone}.`
+  // Body — everything from Claude, no hardcoded fallback
+  const body = editedContent?.body ?? personalized?.body ?? ''
 
   const ps = editedContent?.ps ?? personalized?.ps ?? ''
 

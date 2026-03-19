@@ -80,6 +80,12 @@ export function LetterPreviewWizard({
       </div>
 
       <div className="max-w-2xl mx-auto space-y-4">
+        {/* Wait for skills to load before rendering */}
+        {!skills ? (
+          <div className="flex justify-center py-12">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#006AFF] border-t-transparent" />
+          </div>
+        ) : <>
         {/* Skill selector — pill buttons, not tabs */}
         {hasMultipleSkills && (
           <div className="flex justify-center gap-2">
@@ -150,6 +156,7 @@ export function LetterPreviewWizard({
           <span className="block text-xs text-muted-foreground">Enterprise tier</span>
         </button>
       </div>
+        </>}
 
       {/* Actions */}
       <div className="max-w-2xl mx-auto flex items-center justify-between">
