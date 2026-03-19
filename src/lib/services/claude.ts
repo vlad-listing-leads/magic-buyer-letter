@@ -3,7 +3,6 @@ import { logger } from '@/lib/logger'
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 
-/** The template Claude generates — uses {{variables}} that the app fills in */
 export interface LetterTemplate {
   body: string
   ps?: string
@@ -17,32 +16,14 @@ interface CampaignContext {
   bullet_3: string
 }
 
-/**
- * System prompt — ONLY explains variables and JSON format.
- * All creative direction comes from the skill's prompt_instructions.
- */
 function buildSystemPrompt(skillInstructions: string): string {
   return `${skillInstructions}
 
-DATA — the app will replace these placeholders with real values per recipient:
-{{property_address}}, {{neighborhood}}, {{buyer_name}}, {{agent_name}}, {{agent_phone}}
-Buyer details: {{bullet_1}}, {{bullet_2}}, {{bullet_3}}
-We do NOT have homeowner names.
+Available placeholders (app replaces per recipient): {{property_address}}, {{neighborhood}}, {{buyer_name}}, {{agent_name}}, {{agent_phone}}, {{bullet_1}}, {{bullet_2}}, {{bullet_3}}
 
-Respond with ONLY a JSON object (no markdown):
-{"body": "your letter content with \\n for line breaks", "ps": "optional postscript or empty string"}
+No homeowner names available.
 
-The app adds agent logo and signature automatically.`
-}
-
-function buildUserPrompt(context: CampaignContext): string {
-  return `Write a letter for this buyer:
-
-Buyer: ${context.buyer_name}
-Area: ${context.area}
-Bullet 1: ${context.bullet_1}
-Bullet 2: ${context.bullet_2}
-Bullet 3: ${context.bullet_3}`
+JSON only: {"body": "content with \\n for breaks", "ps": "or empty string"}`
 }
 
 async function callClaude(systemPrompt: string, userPrompt: string): Promise<LetterTemplate> {
@@ -75,35 +56,28 @@ async function callClaude(systemPrompt: string, userPrompt: string): Promise<Let
     if (!jsonMatch) throw new Error('No JSON found')
     return JSON.parse(jsonMatch[0]) as LetterTemplate
   } catch {
-    logger.warn({ text }, 'Failed to parse Claude response as JSON, using raw text')
+    logger.warn({ text }, 'Failed to parse Claude response as JSON')
     return { body: text }
   }
 }
 
-/**
- * Generate a letter template using a skill's prompt instructions.
- * The skill controls ALL creative direction — tone, format, length, style.
- */
 export async function generateLetterForSkill(
   context: CampaignContext,
   skillInstructions: string
 ): Promise<LetterTemplate> {
-  logger.info({ skillInstructions: skillInstructions.slice(0, 100), buyer: context.buyer_name }, 'Generating letter for skill')
+  logger.info({ skill: skillInstructions.slice(0, 80) }, 'Generating letter')
   const systemPrompt = buildSystemPrompt(skillInstructions)
-  const userPrompt = buildUserPrompt(context)
+  // User prompt: just the data, no instructions
+  const userPrompt = `${context.buyer_name}, ${context.area}, {{bullet_1}}=${context.bullet_1}, {{bullet_2}}=${context.bullet_2}, {{bullet_3}}=${context.bullet_3}`
   return callClaude(systemPrompt, userPrompt)
 }
 
-/**
- * Fill in a letter template with actual property/agent data.
- */
 export function fillTemplate(
   template: LetterTemplate,
   vars: Record<string, string>
 ): LetterTemplate {
-  const fill = (text: string) => {
-    return text.replace(/\{\{(\w+)\}\}/g, (match, key) => vars[key] ?? match)
-  }
+  const fill = (text: string) =>
+    text.replace(/\{\{(\w+)\}\}/g, (match, key) => vars[key] ?? match)
   return {
     body: fill(template.body),
     ps: template.ps ? fill(template.ps) : undefined,
