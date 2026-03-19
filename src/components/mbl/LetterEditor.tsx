@@ -148,26 +148,29 @@ export function LetterEditor({
         </EditorRoot>
 
         {/* Non-editable signature block */}
-        <div className="mt-8 select-none" style={{ fontSize: '15px', lineHeight: '1.5' }}>
-          {/* Signature space */}
-          <div className="h-10" />
-
-          {/* Agent info */}
-          <div>
-            <p className="font-bold text-[15px]">{agent.name}</p>
-            {agent.brokerage && (
-              <p className="text-[13px] text-[#444]">{agent.brokerage}</p>
+        <div className="mt-8 select-none">
+          <div className="h-8" />
+          <div className="flex items-start gap-3">
+            {/* Agent headshot */}
+            {agent.headshot_url ? (
+              <img src={agent.headshot_url} alt={agent.name} className="w-14 h-14 rounded object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-14 h-14 rounded bg-[#e5e2dd] flex items-center justify-center text-[15px] font-bold text-[#555] flex-shrink-0">
+                {initials}
+              </div>
             )}
-            {agent.license_number && (
-              <p className="text-[13px] text-[#444]">Lic# {agent.license_number}</p>
-            )}
-            <p className="text-[13px] text-[#444]">{phone}</p>
-            {agent.email && (
-              <p className="text-[13px] text-[#444]">{agent.email}</p>
-            )}
-            {agent.website && (
-              <p className="text-[13px] text-[#444]">{agent.website}</p>
-            )}
+            {/* Agent details */}
+            <div style={{ lineHeight: '1.4' }}>
+              <p className="font-bold text-[15px]">
+                {agent.name}
+                {agent.license_number && (
+                  <span className="font-normal text-[11px] text-[#888] ml-1">({agent.license_number})</span>
+                )}
+              </p>
+              {agent.brokerage && <p className="text-[13px] text-[#444]">{agent.brokerage}</p>}
+              <p className="text-[13px] text-[#444]">{phone}</p>
+              {agent.email && <p className="text-[13px] text-[#444]">{agent.email}</p>}
+            </div>
           </div>
         </div>
 

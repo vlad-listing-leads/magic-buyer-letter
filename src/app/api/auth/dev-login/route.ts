@@ -11,7 +11,7 @@ const log = createLogger('dev-login')
  * Creates a dev user and establishes a session without LL SSO.
  * BLOCKED in production by middleware.
  */
-export async function GET() {
+export async function GET(request: Request) {
   if (process.env.NODE_ENV !== 'development') {
     return NextResponse.json({ error: 'Not available' }, { status: 403 })
   }
@@ -20,7 +20,9 @@ export async function GET() {
     return NextResponse.json({ error: 'Dev login not enabled' }, { status: 403 })
   }
 
-  const email = process.env.DEV_USER_EMAIL || 'dev@localhost.test'
+  // Allow email param to impersonate any user: /api/auth/dev-login?email=user@example.com
+  const url = new URL(request.url)
+  const email = url.searchParams.get('email') || process.env.DEV_USER_EMAIL || 'dev@localhost.test'
   const admin = createAdminClient()
 
   // Create or get dev user

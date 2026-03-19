@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
@@ -20,15 +20,19 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { DeliveryPipeline } from '@/components/mbl/DeliveryPipeline'
+import { LetterPreview } from '@/components/mbl/LetterPreview'
+import { PropertyList } from '@/components/mbl/PropertyList'
+import { SendConfirmation } from '@/components/mbl/SendConfirmation'
 import {
-  Send, CheckCircle, Truck, Undo2, DollarSign,
-  ArrowLeft, Download, Trash2, Loader2,
+  Send, CheckCircle, Truck, Undo2, DollarSign, Mail,
+  ArrowLeft, Download, Trash2, Loader2, FileText, CreditCard,
+  Search, MapPin,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import type { MblCampaign, MblProperty, DeliveryStatus } from '@/types'
+import type { MblCampaign, MblProperty, MblAgent, DeliveryStatus } from '@/types'
 
 const DELIVERY_STATUS_COLORS: Record<DeliveryStatus, string> = {
   pending: 'bg-gray-500',
@@ -41,11 +45,14 @@ const DELIVERY_STATUS_COLORS: Record<DeliveryStatus, string> = {
   cancelled: 'bg-gray-400',
 }
 
+const PRE_SEND_STATUSES = ['searching', 'skip_tracing', 'verifying', 'generating', 'ready']
+
 export default function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
   const apiFetch = useApiFetch()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null)
 
   const { data, isLoading, error } = useQuery<{ campaign: MblCampaign; properties: MblProperty[] }>({
     queryKey: ['campaign', id],
@@ -56,6 +63,40 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       return json.data
     },
   })
+
+  const { data: agent } = useQuery<MblAgent | null>({
+    queryKey: ['mbl-agent'],
+    queryFn: async () => {
+      const res = await apiFetch('/api/mbl/agent')
+      const json = await res.json()
+      return json.data
+    },
+  })
+
+  // Initialize selection from properties
+  if (data?.properties && selectedIds === null) {
+    setSelectedIds(new Set(data.properties.filter(p => p.selected).map(p => p.id)))
+  }
+
+  const toggleSelect = useCallback((propertyId: string) => {
+    setSelectedIds(prev => {
+      if (!prev) return prev
+      const next = new Set(prev)
+      if (next.has(propertyId)) next.delete(propertyId)
+      else next.add(propertyId)
+      return next
+    })
+  }, [])
+
+  const selectAll = useCallback(() => {
+    if (data?.properties) {
+      setSelectedIds(new Set(data.properties.map(p => p.id)))
+    }
+  }, [data?.properties])
+
+  const deselectAll = useCallback(() => {
+    setSelectedIds(new Set())
+  }, [])
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -95,18 +136,24 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   }
 
   const { campaign, properties } = data
-  const sentCount = campaign.properties_sent
-  const deliveredCount = campaign.properties_delivered
-  const returnedCount = campaign.properties_returned
-  const inTransitCount = sentCount - deliveredCount - returnedCount
-  const totalCost = (campaign.total_cost_cents / 100).toFixed(2)
+  const isPreSend = PRE_SEND_STATUSES.includes(campaign.status)
   const area = `${campaign.criteria_city}${campaign.criteria_state ? `, ${campaign.criteria_state}` : ''}`
   const priceRange =
     campaign.criteria_price_min || campaign.criteria_price_max
       ? `$${campaign.criteria_price_min ? Math.round(campaign.criteria_price_min / 1000) : '?'}K–$${campaign.criteria_price_max ? Math.round(campaign.criteria_price_max / 1000) : '?'}K`
       : ''
-
   const canDelete = campaign.status !== 'sent' && campaign.status !== 'sending' && campaign.status !== 'delivered'
+
+  // Post-send metrics
+  const sentCount = campaign.properties_sent
+  const deliveredCount = campaign.properties_delivered
+  const returnedCount = campaign.properties_returned
+  const inTransitCount = sentCount - deliveredCount - returnedCount
+  const totalCost = (campaign.total_cost_cents / 100).toFixed(2)
+
+  // Pre-send metrics
+  const generatedCount = properties.filter(p => p.status === 'generated' || p.status === 'verified').length
+  const currentSelectedCount = selectedIds?.size ?? 0
 
   return (
     <div className="space-y-6">
@@ -131,6 +178,14 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="flex items-center gap-2">
+          {isPreSend && campaign.status === 'ready' && currentSelectedCount > 0 && (
+            <Link href={`/new?step=review&campaign_id=${id}`}>
+              <Button className="bg-[#006AFF] hover:bg-[#0058D4] text-white">
+                <CreditCard className="mr-1.5 h-4 w-4" />
+                Send {currentSelectedCount} Letters
+              </Button>
+            </Link>
+          )}
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="mr-1 h-4 w-4" />
             Export CSV
@@ -164,241 +219,331 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-5 stagger-children">
-        <Card className="card-hover">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Sent</CardTitle>
-            <Send className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{sentCount}</div>
-          </CardContent>
-        </Card>
-        <Card className="card-hover">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Delivered</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{deliveredCount}</div>
-          </CardContent>
-        </Card>
-        <Card className="card-hover">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">In transit</CardTitle>
-            <Truck className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{Math.max(0, inTransitCount)}</div>
-          </CardContent>
-        </Card>
-        <Card className="card-hover">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Returned</CardTitle>
-            <Undo2 className={cn('h-4 w-4', returnedCount > 0 ? 'text-destructive' : 'text-muted-foreground')} />
-          </CardHeader>
-          <CardContent>
-            <div className={cn('text-2xl font-bold', returnedCount > 0 && 'text-destructive')}>
-              {returnedCount}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="card-hover">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Cost</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalCost}</div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* === PRE-SEND VIEW === */}
+      {isPreSend ? (
+        <>
+          {/* Pre-send stats */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Properties Found</CardTitle>
+                <Search className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{properties.length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Verified</CardTitle>
+                <MapPin className="h-4 w-4 text-emerald-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{generatedCount}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Selected</CardTitle>
+                <CheckCircle className="h-4 w-4 text-[#006AFF]" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{currentSelectedCount}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Est. Cost</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${(currentSelectedCount * 1.12).toFixed(2)}</div>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Delivery Pipeline Visual */}
-      {sentCount > 0 && (
-        <DeliveryPipeline
-          printed={sentCount}
-          inTransit={Math.max(0, inTransitCount)}
-          delivered={deliveredCount}
-          returned={returnedCount}
-        />
-      )}
+          {/* Tabs: Properties + Letter Preview */}
+          <Tabs defaultValue="properties">
+            <TabsList>
+              <TabsTrigger value="properties">Properties ({properties.length})</TabsTrigger>
+              <TabsTrigger value="letter">Letter Preview</TabsTrigger>
+            </TabsList>
 
-      {/* Tabs */}
-      <Tabs defaultValue="recipients">
-        <TabsList>
-          <TabsTrigger value="recipients">Recipients ({properties.length})</TabsTrigger>
-          <TabsTrigger value="tracking">Delivery Tracking</TabsTrigger>
-          <TabsTrigger value="lob">Lob Details</TabsTrigger>
-        </TabsList>
-
-        {/* Recipients Tab */}
-        <TabsContent value="recipients">
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="p-3 text-left font-medium text-muted-foreground">Owner</th>
-                      <th className="p-3 text-left font-medium text-muted-foreground">Address</th>
-                      <th className="p-3 text-left font-medium text-muted-foreground">Details</th>
-                      <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
-                      <th className="p-3 text-left font-medium text-muted-foreground">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {properties.map((prop) => (
-                      <tr key={prop.id} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
-                        <td className="p-3 font-medium">
-                          {prop.owner_first_name} {prop.owner_last_name}
-                        </td>
-                        <td className="p-3">
-                          <div>{prop.address_line1}</div>
-                          <div className="text-xs text-muted-foreground">{prop.city}, {prop.state} {prop.zip}</div>
-                        </td>
-                        <td className="p-3 text-xs text-muted-foreground">
-                          {prop.estimated_value ? `$${(prop.estimated_value / 1000).toFixed(0)}K` : '—'}
-                          {' · '}
-                          {prop.bedrooms ?? '?'}bd/{prop.bathrooms ?? '?'}ba
-                          {' · '}
-                          {prop.sqft?.toLocaleString() ?? '?'} sqft
-                          {prop.equity_percent ? ` · ${prop.equity_percent}% equity` : ''}
-                          {prop.years_owned ? ` · ${prop.years_owned}yr` : ''}
-                        </td>
-                        <td className="p-3">
-                          <Badge variant="secondary" className="text-xs capitalize">
-                            {prop.owner_type}
-                          </Badge>
-                        </td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-1.5">
-                            <div className={cn('h-2 w-2 rounded-full', DELIVERY_STATUS_COLORS[prop.delivery_status])} />
-                            <span className="text-xs capitalize">{prop.delivery_status.replace('_', ' ')}</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {properties.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                          No recipients
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Delivery Tracking Tab */}
-        <TabsContent value="tracking">
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="p-3 text-left font-medium text-muted-foreground">Owner</th>
-                      <th className="p-3 text-left font-medium text-muted-foreground">Address</th>
-                      <th className="p-3 text-left font-medium text-muted-foreground">Status</th>
-                      <th className="p-3 text-left font-medium text-muted-foreground">Lob ID</th>
-                      <th className="p-3 text-left font-medium text-muted-foreground">Expected Delivery</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {properties
-                      .filter((p) => p.lob_letter_id)
-                      .map((prop) => (
-                        <tr key={prop.id} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
-                          <td className="p-3 font-medium">
-                            {prop.owner_first_name} {prop.owner_last_name}
-                          </td>
-                          <td className="p-3 text-muted-foreground">
-                            {prop.address_line1}, {prop.city}
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-1.5">
-                              <div className={cn('h-2 w-2 rounded-full', DELIVERY_STATUS_COLORS[prop.delivery_status])} />
-                              <span className="text-xs capitalize">{prop.delivery_status.replace('_', ' ')}</span>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <code className="text-xs bg-secondary px-1.5 py-0.5 rounded font-mono">
-                              {prop.lob_letter_id}
-                            </code>
-                          </td>
-                          <td className="p-3 text-muted-foreground">
-                            {prop.expected_delivery ? formatDate(prop.expected_delivery) : '—'}
-                          </td>
-                        </tr>
-                      ))}
-                    {properties.filter((p) => p.lob_letter_id).length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                          No letters sent yet
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Lob Details Tab */}
-        <TabsContent value="lob">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-2 gap-y-3 text-sm max-w-md">
-                <span className="text-muted-foreground">Mail type</span>
-                <span>USPS First Class</span>
-                <span className="text-muted-foreground">Color</span>
-                <span>true</span>
-                <span className="text-muted-foreground">Double-sided</span>
-                <span>false</span>
-                <span className="text-muted-foreground">Address placement</span>
-                <span>top_first_page</span>
-                <span className="text-muted-foreground">Envelope</span>
-                <span>Standard #10</span>
-                <span className="text-muted-foreground">Cancel window</span>
-                <span>4 hours</span>
-                <span className="text-muted-foreground">Template</span>
-                <span className="capitalize">{campaign.template_style}</span>
-                <span className="text-muted-foreground">Total letters</span>
-                <span>{sentCount}</span>
-              </div>
-
-              {/* Webhook history from delivery events */}
-              {properties.some((p) => p.delivery_events.length > 0) && (
-                <div className="mt-6">
-                  <h4 className="text-sm font-semibold mb-3">Recent Webhook Events</h4>
-                  <div className="space-y-1">
-                    {properties
-                      .flatMap((p) =>
-                        p.delivery_events.map((e) => ({
-                          ...e,
-                          lob_id: p.lob_letter_id,
-                        }))
-                      )
-                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                      .slice(0, 5)
-                      .map((event, i) => (
-                        <div key={i} className="text-xs text-muted-foreground font-mono">
-                          {event.type} · {event.lob_id} · {formatDate(event.date)}
-                        </div>
-                      ))}
-                  </div>
-                </div>
+            <TabsContent value="properties">
+              {properties.length > 0 && selectedIds ? (
+                <PropertyList
+                  properties={properties}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
+                  onSelectAll={selectAll}
+                  onDeselectAll={deselectAll}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    No properties found for this campaign
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </TabsContent>
+
+            <TabsContent value="letter">
+              {agent ? (
+                <div className="max-w-2xl mx-auto">
+                  <LetterPreview
+                    agent={agent}
+                    property={properties.find(p => p.personalized_content) ?? properties[0] ?? null}
+                    buyerName={campaign.buyer_name}
+                    bullets={{ b1: campaign.bullet_1, b2: campaign.bullet_2, b3: campaign.bullet_3 }}
+                    templateStyle={campaign.template_style}
+                  />
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    Loading agent profile...
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+        </>
+      ) : (
+        /* === POST-SEND VIEW === */
+        <>
+          {/* Post-send stats */}
+          <div className="grid gap-4 md:grid-cols-5">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Sent</CardTitle>
+                <Send className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{sentCount}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Delivered</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{deliveredCount}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">In transit</CardTitle>
+                <Truck className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{Math.max(0, inTransitCount)}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Returned</CardTitle>
+                <Undo2 className={cn('h-4 w-4', returnedCount > 0 ? 'text-destructive' : 'text-muted-foreground')} />
+              </CardHeader>
+              <CardContent>
+                <div className={cn('text-2xl font-bold', returnedCount > 0 && 'text-destructive')}>
+                  {returnedCount}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Cost</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${totalCost}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Delivery Pipeline Visual */}
+          {sentCount > 0 && (
+            <DeliveryPipeline
+              printed={sentCount}
+              inTransit={Math.max(0, inTransitCount)}
+              delivered={deliveredCount}
+              returned={returnedCount}
+            />
+          )}
+
+          {/* Post-send tabs */}
+          <Tabs defaultValue="recipients">
+            <TabsList>
+              <TabsTrigger value="recipients">Recipients ({properties.length})</TabsTrigger>
+              <TabsTrigger value="tracking">Delivery Tracking</TabsTrigger>
+              <TabsTrigger value="lob">Lob Details</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="recipients">
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="p-3 text-left font-medium text-muted-foreground">Owner</th>
+                          <th className="p-3 text-left font-medium text-muted-foreground">Address</th>
+                          <th className="p-3 text-left font-medium text-muted-foreground">Details</th>
+                          <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
+                          <th className="p-3 text-left font-medium text-muted-foreground">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {properties.map((prop) => (
+                          <tr key={prop.id} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
+                            <td className="p-3 font-medium">
+                              {prop.owner_first_name} {prop.owner_last_name}
+                            </td>
+                            <td className="p-3">
+                              <div>{prop.address_line1}</div>
+                              <div className="text-xs text-muted-foreground">{prop.city}, {prop.state} {prop.zip}</div>
+                            </td>
+                            <td className="p-3 text-xs text-muted-foreground">
+                              {prop.estimated_value ? `$${(prop.estimated_value / 1000).toFixed(0)}K` : '—'}
+                              {' · '}
+                              {prop.bedrooms ?? '?'}bd/{prop.bathrooms ?? '?'}ba
+                              {' · '}
+                              {prop.sqft?.toLocaleString() ?? '?'} sqft
+                              {prop.equity_percent ? ` · ${prop.equity_percent}% equity` : ''}
+                              {prop.years_owned ? ` · ${prop.years_owned}yr` : ''}
+                            </td>
+                            <td className="p-3">
+                              <Badge variant="secondary" className="text-xs capitalize">
+                                {prop.owner_type}
+                              </Badge>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-1.5">
+                                <div className={cn('h-2 w-2 rounded-full', DELIVERY_STATUS_COLORS[prop.delivery_status])} />
+                                <span className="text-xs capitalize">{prop.delivery_status.replace('_', ' ')}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {properties.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                              No recipients
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="tracking">
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="p-3 text-left font-medium text-muted-foreground">Owner</th>
+                          <th className="p-3 text-left font-medium text-muted-foreground">Address</th>
+                          <th className="p-3 text-left font-medium text-muted-foreground">Status</th>
+                          <th className="p-3 text-left font-medium text-muted-foreground">Lob ID</th>
+                          <th className="p-3 text-left font-medium text-muted-foreground">Expected Delivery</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {properties
+                          .filter((p) => p.lob_letter_id)
+                          .map((prop) => (
+                            <tr key={prop.id} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
+                              <td className="p-3 font-medium">
+                                {prop.owner_first_name} {prop.owner_last_name}
+                              </td>
+                              <td className="p-3 text-muted-foreground">
+                                {prop.address_line1}, {prop.city}
+                              </td>
+                              <td className="p-3">
+                                <div className="flex items-center gap-1.5">
+                                  <div className={cn('h-2 w-2 rounded-full', DELIVERY_STATUS_COLORS[prop.delivery_status])} />
+                                  <span className="text-xs capitalize">{prop.delivery_status.replace('_', ' ')}</span>
+                                </div>
+                              </td>
+                              <td className="p-3">
+                                <code className="text-xs bg-secondary px-1.5 py-0.5 rounded font-mono">
+                                  {prop.lob_letter_id}
+                                </code>
+                              </td>
+                              <td className="p-3 text-muted-foreground">
+                                {prop.expected_delivery ? formatDate(prop.expected_delivery) : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        {properties.filter((p) => p.lob_letter_id).length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                              No letters sent yet
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="lob">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-2 gap-y-3 text-sm max-w-md">
+                    <span className="text-muted-foreground">Mail type</span>
+                    <span>USPS First Class</span>
+                    <span className="text-muted-foreground">Color</span>
+                    <span>true</span>
+                    <span className="text-muted-foreground">Double-sided</span>
+                    <span>false</span>
+                    <span className="text-muted-foreground">Address placement</span>
+                    <span>top_first_page</span>
+                    <span className="text-muted-foreground">Envelope</span>
+                    <span>Standard #10</span>
+                    <span className="text-muted-foreground">Cancel window</span>
+                    <span>4 hours</span>
+                    <span className="text-muted-foreground">Template</span>
+                    <span className="capitalize">{campaign.template_style}</span>
+                    <span className="text-muted-foreground">Total letters</span>
+                    <span>{sentCount}</span>
+                  </div>
+
+                  {properties.some((p) => p.delivery_events.length > 0) && (
+                    <div className="mt-6">
+                      <h4 className="text-sm font-semibold mb-3">Recent Webhook Events</h4>
+                      <div className="space-y-1">
+                        {properties
+                          .flatMap((p) =>
+                            p.delivery_events.map((e) => ({
+                              ...e,
+                              lob_id: p.lob_letter_id,
+                            }))
+                          )
+                          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                          .slice(0, 5)
+                          .map((event, i) => (
+                            <div key={i} className="text-xs text-muted-foreground font-mono">
+                              {event.type} · {event.lob_id} · {formatDate(event.date)}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
     </div>
   )
 }
