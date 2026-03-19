@@ -87,7 +87,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                     : pathname === item.href || pathname.startsWith(item.href + '/')
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton isActive={isActive} tooltip={item.label} render={<Link href={item.href} />}>
+                    <SidebarMenuButton isActive={isActive} tooltip={mounted ? item.label : undefined} render={<Link href={item.href} />}>
                       <item.icon />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
@@ -108,7 +108,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
                   return (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton isActive={isActive} tooltip={item.label} render={<Link href={item.href} />}>
+                      <SidebarMenuButton isActive={isActive} tooltip={mounted ? item.label : undefined} render={<Link href={item.href} />}>
                         <item.icon />
                         <span>{item.label}</span>
                       </SidebarMenuButton>
