@@ -33,6 +33,17 @@ function isPointInPolygon(point: LatLng, polygon: LatLng[]): boolean {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let leafletModule: any = null
 
+function createVertexIcon() {
+  if (!leafletModule) return undefined
+  const L = leafletModule
+  return L.divIcon({
+    html: '<div style="width:12px;height:12px;background:#006AFF;border:2px solid white;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.4);cursor:grab;"></div>',
+    className: '',
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+  })
+}
+
 function createMarkerIcon(isSelected: boolean) {
   if (!leafletModule) return undefined
   const L = leafletModule
@@ -116,6 +127,7 @@ export function PropertyMap({
     Popup: React.ComponentType<{ children: React.ReactNode }>
     Polygon: React.ComponentType<Record<string, unknown>>
     Polyline: React.ComponentType<Record<string, unknown>>
+    CircleMarker: React.ComponentType<Record<string, unknown>>
   } | null>(null)
 
   const [drawMode, setDrawMode] = useState(false)
@@ -153,6 +165,7 @@ export function PropertyMap({
         Popup: rl.Popup as unknown as React.ComponentType<{ children: React.ReactNode }>,
         Polygon: rl.Polygon as unknown as React.ComponentType<Record<string, unknown>>,
         Polyline: rl.Polyline as unknown as React.ComponentType<Record<string, unknown>>,
+        CircleMarker: rl.CircleMarker as unknown as React.ComponentType<Record<string, unknown>>,
       })
     })
   }, [])
@@ -200,6 +213,14 @@ export function PropertyMap({
     setPolygonPoints(prev => prev.slice(0, -1))
   }, [])
 
+  const handleVertexDrag = useCallback((index: number, newPos: LatLng) => {
+    setPolygonPoints(prev => {
+      const next = [...prev]
+      next[index] = newPos
+      return next
+    })
+  }, [])
+
   if (mappableProperties.length === 0) {
     return (
       <Card>
@@ -226,7 +247,7 @@ export function PropertyMap({
     )
   }
 
-  const { MapContainer, TileLayer, Marker, Popup, Polygon, Polyline } = MapComponents
+  const { MapContainer, TileLayer, Marker, Popup, Polygon, Polyline, CircleMarker } = MapComponents
 
   return (
     <Card className="overflow-hidden">
@@ -284,7 +305,10 @@ export function PropertyMap({
         )}
       </div>
 
-      <div className={`h-[500px] ${drawMode ? 'cursor-crosshair' : ''}`}>
+      {drawMode && (
+        <style>{`.leaflet-container { cursor: crosshair !important; }`}</style>
+      )}
+      <div className="h-[500px]">
         <MapContainer
           key={mapKeyRef.current}
           center={[center.lat, center.lng]}
@@ -360,6 +384,22 @@ export function PropertyMap({
               }}
             />
           )}
+
+          {/* Draggable vertex handles */}
+          {drawMode && polygonPoints.map((point, i) => (
+            <Marker
+              key={`vertex-${i}`}
+              position={point}
+              icon={createVertexIcon()}
+              draggable
+              eventHandlers={{
+                dragend: (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => {
+                  const pos = e.target.getLatLng()
+                  handleVertexDrag(i, [pos.lat, pos.lng])
+                },
+              }}
+            />
+          ))}
         </MapContainer>
       </div>
     </Card>
