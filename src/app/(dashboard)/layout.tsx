@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer"
-                    onClick={() => window.open('https://www.listingleads.com/plan', '_blank')}
+                    onClick={() => window.open('https://www.listingleads.com/profile', '_blank')}
                   >
                     <Settings className="mr-2 h-4 w-4" />
                     Account Settings
