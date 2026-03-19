@@ -134,8 +134,7 @@ export function LetterPreview({
     ?? personalized?.closing
     ?? 'I look forward to hearing from you,'
 
-  const ps = editedContent?.ps
-    ?? `If you'd also like to know what your home is realistically worth in today's market, I'm happy to put together a complimentary home value report — no cost, no obligation. Just text or call me at ${phone}.`
+  const ps = editedContent?.ps ?? ''
 
   // Toggle: highlight listing-specific content in the letter
   const [showListingHighlight, setShowListingHighlight] = useState(false)
@@ -310,10 +309,12 @@ export function LetterPreview({
             </div>
           </div>
 
-          {/* P.S. — always below signature */}
-          <div className="mt-6 select-none" style={{ fontSize: '13px', lineHeight: '1.4', color: '#555' }}>
-            <p><strong>p.s.</strong> {ps}</p>
-          </div>
+          {/* P.S. — only if content exists */}
+          {ps && (
+            <div className="mt-6 select-none" style={{ fontSize: '13px', lineHeight: '1.4', color: '#555' }}>
+              <p><strong>p.s.</strong> {ps}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -8,6 +8,7 @@ export interface LetterTemplate {
   opening: string
   body: string
   closing: string
+  ps?: string
 }
 
 interface CampaignContext {
@@ -35,6 +36,7 @@ Respond with ONLY a JSON object (no markdown, no explanation) with these keys:
 - "opening": 2-3 sentences. Mention {{property_address}} and {{neighborhood}}. Address the homeowner without using their name.
 - "body": 2-3 sentences in the middle of the letter, between the opening and the bullet points. Explain why the agent is writing and what makes the buyer special.
 - "closing": 1-2 sentences after the bullets. Include a call-to-action mentioning {{agent_phone}}.
+- "ps": Optional P.S. line. A short, personal postscript that adds value (e.g. offering a free home value report). Set to empty string "" if not needed.
 
 Do NOT include the bullet points in your response — the app adds those separately.
 Do NOT include greetings like "Dear" — the app handles that.
@@ -101,6 +103,7 @@ export async function generateLetterForSkill(
   context: CampaignContext,
   skillInstructions: string
 ): Promise<LetterTemplate> {
+  logger.info({ skillInstructions: skillInstructions.slice(0, 100), buyer: context.buyer_name }, 'Generating letter for skill')
   const systemPrompt = buildSystemPromptFromSkill(skillInstructions)
   const userPrompt = buildUserPrompt(context)
   return callClaude(systemPrompt, userPrompt)
@@ -120,5 +123,6 @@ export function fillTemplate(
     opening: fill(template.opening),
     body: fill(template.body),
     closing: fill(template.closing),
+    ps: template.ps ? fill(template.ps) : undefined,
   }
 }
