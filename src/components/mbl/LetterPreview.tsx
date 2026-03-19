@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
@@ -137,6 +137,32 @@ export function LetterPreview({
   const ps = editedContent?.ps
     ?? `If you'd also like to know what your home is realistically worth in today's market, I'm happy to put together a complimentary home value report — no cost, no obligation. Just text or call me at ${phone}.`
 
+  // Auto-scale: shrink font/spacing when content overflows
+  const cardRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
+
+  useEffect(() => {
+    const card = cardRef.current
+    const content = contentRef.current
+    if (!card || !content) return
+
+    const check = () => {
+      const cardH = card.clientHeight
+      const contentH = content.scrollHeight
+      if (contentH > cardH && scale > 0.75) {
+        setScale(Math.max(0.75, cardH / contentH))
+      } else if (contentH <= cardH * 0.95 && scale < 1) {
+        setScale(Math.min(1, cardH / contentH))
+      }
+    }
+
+    check()
+    const observer = new ResizeObserver(check)
+    observer.observe(content)
+    return () => observer.disconnect()
+  })
+
   const handleUpdate = useCallback((field: keyof LetterContent, value: string) => {
     onContentChange?.({ ...editedContent, [field]: value })
   }, [editedContent, onContentChange])
@@ -174,8 +200,8 @@ export function LetterPreview({
       <Card className={cn(
         'bg-[#faf9f7] text-[#1a1a1a] overflow-hidden [aspect-ratio:8.5/11] rounded-lg',
         editable && 'cursor-text',
-      )} style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
-        <CardContent className="px-12 pb-10 pt-0">
+      )} style={{ fontFamily: "Arial, Helvetica, sans-serif" }} ref={cardRef}>
+        <CardContent className="px-12 pb-10 pt-0" ref={contentRef} style={{ fontSize: `${Math.round(15 * scale)}px`, lineHeight: scale < 1 ? 1.35 : 1.5 }}>
           {/* Letterhead */}
           <div className="flex justify-center pt-10 pb-4">
             {agent.logo_url ? (
