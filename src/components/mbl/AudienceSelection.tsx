@@ -2,11 +2,12 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, ArrowRight, Filter, List, MapIcon } from 'lucide-react'
-import { PropertyList } from './PropertyList'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Separator } from '@/components/ui/separator'
+import { ArrowLeft, ArrowRight, Sparkles, Filter, Home, MapPin } from 'lucide-react'
 import { PropertyMap } from './PropertyMap'
 import { AudienceFiltersPanel } from './AudienceFiltersPanel'
+import { cn } from '@/lib/utils'
 import type { MblProperty, AudienceFilters } from '@/types'
 
 const DEFAULT_FILTERS: AudienceFilters = {
@@ -43,16 +44,13 @@ export function AudienceSelection({
   onBack,
   onContinue,
 }: AudienceSelectionProps) {
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [filters, setFilters] = useState<AudienceFilters>(DEFAULT_FILTERS)
 
-  // Filter properties based on current filters
   const filteredProperties = useMemo(() => {
     return properties.filter((p) => {
       if (filters.cities.length > 0 && !filters.cities.includes(p.city)) return false
-      if (filters.neighborhoods.length > 0 && !filters.neighborhoods.includes(p.neighborhood))
-        return false
+      if (filters.neighborhoods.length > 0 && !filters.neighborhoods.includes(p.neighborhood)) return false
       if (filters.zips.length > 0 && !filters.zips.includes(p.zip)) return false
       if (filters.value_min && (p.estimated_value ?? 0) < filters.value_min) return false
       if (filters.value_max && (p.estimated_value ?? Infinity) > filters.value_max) return false
@@ -62,19 +60,10 @@ export function AudienceSelection({
       if (filters.baths_min && (p.bathrooms ?? 0) < filters.baths_min) return false
       if (filters.equity_min && (p.equity_percent ?? 0) < filters.equity_min) return false
       if (filters.years_owned_min && (p.years_owned ?? 0) < filters.years_owned_min) return false
-      if (
-        filters.owner_types.length > 0 &&
-        !filters.owner_types.includes(p.owner_type)
-      )
-        return false
+      if (filters.owner_types.length > 0 && !filters.owner_types.includes(p.owner_type)) return false
       return true
     })
   }, [properties, filters])
-
-  // Sendable = filtered + have address verified or status >= generated
-  const sendable = filteredProperties.filter(
-    (p) => p.status === 'generated' || p.status === 'verified' || p.status === 'skip_traced'
-  )
 
   const toggleSelect = useCallback(
     (id: string) => {
@@ -95,108 +84,152 @@ export function AudienceSelection({
   }, [onSelectedIdsChange])
 
   const selectMany = useCallback(
-    (ids: string[]) => {
-      // Replace selection — only polygon properties are selected
-      onSelectedIdsChange(new Set(ids))
-    },
+    (ids: string[]) => onSelectedIdsChange(new Set(ids)),
     [onSelectedIdsChange]
   )
 
-  const handleApplyAndSelectAll = () => {
-    onSelectedIdsChange(new Set(filteredProperties.map((p) => p.id)))
-    setFiltersOpen(false)
-  }
-
-  const handleResetFilters = () => {
-    setFilters(DEFAULT_FILTERS)
-  }
+  const allSelected = filteredProperties.length > 0 && filteredProperties.every(p => selectedIds.has(p.id))
+  const hasActiveFilters = Object.values(filters).some((v) => Array.isArray(v) ? v.length > 0 : v !== null)
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-2xl font-bold">
-            {filteredProperties.length} sendable homeowners
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {area} {priceRange && `· ${priceRange}`} · {filteredProperties.length} of{' '}
-            {properties.length} shown · Addresses verified
-          </p>
+    <div className="animate-fade-in flex flex-col flex-1 min-h-0">
+
+      {/* ── Panels row ── */}
+      <div className="flex-1 flex min-h-0">
+
+      {/* ── Left panel: list ── */}
+      <div className="flex-1 flex flex-col border-r border-border">
+
+        {/* List header */}
+        <div className="flex-shrink-0 px-4 py-3 border-b border-border space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold tracking-tight">{area}</h2>
+              <p className="text-xs text-muted-foreground">
+                {filteredProperties.length} properties{priceRange && ` · ${priceRange}`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                'flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+                selectedIds.size > 0 ? 'bg-[#006AFF]/10 text-[#006AFF]' : 'bg-muted text-muted-foreground'
+              )}>
+                <Home className="h-3 w-3" />
+                {selectedIds.size}
+              </div>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(true)}
+                className={cn(
+                  'flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md transition-colors',
+                  hasActiveFilters ? 'bg-[#006AFF]/10 text-[#006AFF]' : 'text-muted-foreground hover:bg-accent'
+                )}
+              >
+                <Filter className="h-3 w-3" />
+                {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-[#006AFF]" />}
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <button onClick={allSelected ? deselectAll : selectAll} className="text-[11px] text-[#006AFF] hover:underline font-medium">
+              {allSelected ? 'Deselect all' : 'Select all'}
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Selection counter */}
-          <span className="text-sm text-muted-foreground">
-            {selectedIds.size} of {filteredProperties.length} selected
-          </span>
-          <button
-            type="button"
-            onClick={selectAll}
-            className="text-xs text-[#006AFF] hover:underline"
-          >
-            All
-          </button>
-          <span className="text-xs text-muted-foreground">/</span>
-          <button
-            type="button"
-            onClick={deselectAll}
-            className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-          >
-            Clear
-          </button>
-        </div>
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-          >
-            <List className="mr-1 h-4 w-4" /> List
-          </Button>
-          <Button
-            variant={viewMode === 'map' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('map')}
-          >
-            <MapIcon className="mr-1 h-4 w-4" /> Map
-          </Button>
-        </div>
-
-        <Button variant="outline" size="sm" onClick={() => setFiltersOpen(true)}>
-          <Filter className="mr-1 h-4 w-4" />
-          Filters
-          {Object.values(filters).some((v) =>
-            Array.isArray(v) ? v.length > 0 : v !== null
-          ) && (
-            <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
-              Active
-            </Badge>
+        {/* Scrollable property cards */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {filteredProperties.map((prop) => {
+            const isSelected = selectedIds.has(prop.id)
+            return (
+              <div
+                key={prop.id}
+                onClick={() => toggleSelect(prop.id)}
+                className={cn(
+                  'flex items-start gap-3 p-3 cursor-pointer transition-all rounded-lg border',
+                  isSelected
+                    ? 'border-[#006AFF]/40 bg-[#006AFF]/[0.06]'
+                    : 'border-[#333] bg-card hover:border-[#444] hover:bg-accent/30'
+                )}
+              >
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => toggleSelect(prop.id)}
+                  className="flex-shrink-0 mt-0.5"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium leading-tight">{prop.address_line1}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {prop.city}, {prop.state} {prop.zip}
+                      </p>
+                    </div>
+                    {prop.estimated_value && (
+                      <p className="text-sm font-mono font-semibold tabular-nums flex-shrink-0">
+                        ${prop.estimated_value.toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1.5 text-[11px] text-muted-foreground">
+                    {prop.bedrooms && <span>{prop.bedrooms} bed</span>}
+                    {prop.bathrooms && <span>{prop.bathrooms} bath</span>}
+                    {prop.sqft && <span>{prop.sqft.toLocaleString()} sqft</span>}
+                    {prop.years_owned && <span>{prop.years_owned}yr owned</span>}
+                    {prop.equity_percent && <span>{prop.equity_percent}% equity</span>}
+                    {prop.owner_type !== 'owner' && (
+                      <span className="text-amber-500 capitalize">{prop.owner_type}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+          {filteredProperties.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+              <Filter className="h-5 w-5 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">No matches</p>
+              <button onClick={() => setFilters(DEFAULT_FILTERS)} className="text-xs text-[#006AFF] hover:underline mt-1">Reset filters</button>
+            </div>
           )}
-        </Button>
+        </div>
+
       </div>
 
-      {/* Content */}
-      {viewMode === 'list' ? (
-        <PropertyList
-          properties={filteredProperties}
-          selectedIds={selectedIds}
-          onToggleSelect={toggleSelect}
-          onSelectAll={selectAll}
-          onDeselectAll={deselectAll}
-        />
-      ) : (
+      {/* ── Right panel: map (35% width) ── */}
+      <div className="w-[40%] flex-shrink-0 min-h-0">
         <PropertyMap
           properties={filteredProperties}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onSelectMany={selectMany}
         />
-      )}
+      </div>
+
+      </div>{/* end panels row */}
+
+      {/* ── Footer ── */}
+      <div className="flex-shrink-0 h-14 border-t border-border bg-background flex items-center">
+        <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 md:px-8 flex items-center justify-between">
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          <ArrowLeft className="mr-1.5 h-4 w-4" />
+          Back
+        </Button>
+        <Button
+          onClick={onContinue}
+          disabled={selectedIds.size === 0}
+          className={cn(
+            'gap-1.5 font-semibold text-sm',
+            selectedIds.size > 0 ? 'bg-[#006AFF] text-white hover:bg-[#0058D4] shadow-lg shadow-[#006AFF]/20' : 'bg-muted text-muted-foreground'
+          )}
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          Generate {selectedIds.size} Letters
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Button>
+        </div>
+      </div>
 
       {/* Filters panel */}
       <AudienceFiltersPanel
@@ -206,26 +239,9 @@ export function AudienceSelection({
         filters={filters}
         onFiltersChange={setFilters}
         matchCount={filteredProperties.length}
-        onApplyAndSelectAll={handleApplyAndSelectAll}
-        onReset={handleResetFilters}
+        onApplyAndSelectAll={() => { selectAll(); setFiltersOpen(false) }}
+        onReset={() => setFilters(DEFAULT_FILTERS)}
       />
-
-      {/* Actions */}
-      <div className="flex items-center justify-between pt-2">
-        <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to letter
-        </Button>
-        <Button
-          onClick={onContinue}
-          disabled={selectedIds.size === 0}
-          className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-8"
-          size="lg"
-        >
-          Send {selectedIds.size} Letters
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
     </div>
   )
 }

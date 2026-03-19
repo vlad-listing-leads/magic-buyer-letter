@@ -116,7 +116,7 @@ export function PipelineLoading({ campaignId, buyerName, onComplete, onError, on
   const currentStepIndex = STEPS.findIndex(s => s.key === currentStep)
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[50vh] px-4 animate-fade-in">
+    <div className="flex flex-col items-center justify-center min-h-[50vh] px-4 pt-12 animate-fade-in">
       <div className="w-full max-w-md space-y-8">
         {/* Pulsing icon */}
         <div className="flex justify-center">

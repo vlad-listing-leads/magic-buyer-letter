@@ -163,7 +163,7 @@ export function AudienceFiltersPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-sm flex flex-col overflow-hidden">
+      <SheetContent className="w-full sm:max-w-sm flex flex-col overflow-hidden px-6">
         <SheetHeader className="flex-shrink-0">
           <SheetTitle>Filters</SheetTitle>
         </SheetHeader>

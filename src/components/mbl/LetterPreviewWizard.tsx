@@ -4,10 +4,7 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { LetterPreview } from './LetterPreview'
-import { EnvelopeMockup } from './EnvelopeMockup'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
 
 interface LetterPreviewWizardProps {
@@ -35,7 +32,6 @@ export function LetterPreviewWizard({
   onContinue,
 }: LetterPreviewWizardProps) {
   const apiFetch = useApiFetch()
-  const [envelopeType, setEnvelopeType] = useState<'standard' | 'custom'>('standard')
 
   const { data: skills } = useQuery<{ id: string; name: string; description: string }[]>({
     queryKey: ['active-skills'],
@@ -63,7 +59,6 @@ export function LetterPreviewWizard({
     return bySkill?.[skillId] ?? undefined
   }
 
-  // Loading state
   if (!skills) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -110,73 +105,22 @@ export function LetterPreviewWizard({
         </div>
       )}
 
-      {/* Preview container */}
+      {/* Letter preview */}
       <div className="max-w-2xl mx-auto">
         <div className="rounded-xl bg-stone-200 dark:bg-[#282524] px-2 pt-2 pb-2">
-          <Tabs defaultValue="letter" className="gap-2">
-            <TabsList>
-              <TabsTrigger value="letter">Letter Page 1</TabsTrigger>
-              <TabsTrigger value="envelope">Envelope Front</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="letter">
-              <LetterPreview
-                agent={agent}
-                property={sampleProperty}
-                buyerName={buyerName}
-                bullets={bullets}
-                templateStyle={templateStyle}
-                editedContent={selectedSkillId ? getSkillContent(selectedSkillId) : undefined}
-              />
-            </TabsContent>
-
-            <TabsContent value="envelope">
-              <EnvelopeMockup agent={agent} property={sampleProperty} />
-            </TabsContent>
-          </Tabs>
+          <LetterPreview
+            agent={agent}
+            property={sampleProperty}
+            buyerName={buyerName}
+            bullets={bullets}
+            templateStyle={templateStyle}
+            editedContent={selectedSkillId ? getSkillContent(selectedSkillId) : undefined}
+          />
         </div>
       </div>
 
-      {/* Envelope type selector */}
-      <div className="max-w-2xl mx-auto flex gap-3">
-        <button
-          type="button"
-          onClick={() => setEnvelopeType('standard')}
-          className={`flex-1 p-3 rounded-lg border text-left text-sm transition-colors ${
-            envelopeType === 'standard'
-              ? 'border-[#006AFF] bg-[#006AFF]/5'
-              : 'border-border hover:border-muted-foreground/30'
-          }`}
-        >
-          <span className="font-medium">Standard #10</span>
-          <span className="block text-xs text-muted-foreground">Included</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setEnvelopeType('custom')}
-          disabled
-          className="flex-1 p-3 rounded-lg border border-border text-left text-sm opacity-50 cursor-not-allowed"
-        >
-          <span className="font-medium">Custom branded</span>
-          <span className="block text-xs text-muted-foreground">Enterprise tier</span>
-        </button>
-      </div>
-
-      {/* Actions */}
-      <div className="max-w-2xl mx-auto flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-        <Button
-          onClick={onContinue}
-          className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-8"
-          size="lg"
-        >
-          Choose audience
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
+      {/* Bottom spacing for sticky footer */}
+      <div className="h-16" />
     </div>
   )
 }

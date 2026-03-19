@@ -208,6 +208,9 @@ function applyFilters(properties: ReapiPropertyResult[], criteria: PropertySearc
   if (criteria.sqft_max) {
     filtered = filtered.filter(p => (p.squareFeet ?? Infinity) <= criteria.sqft_max!)
   }
+  if (criteria.years_owned_min) {
+    filtered = filtered.filter(p => (p.yearsOwned ?? 0) >= criteria.years_owned_min!)
+  }
   logger.info({ before: properties.length, after: filtered.length }, 'REAPI filtered')
   return filtered
 }

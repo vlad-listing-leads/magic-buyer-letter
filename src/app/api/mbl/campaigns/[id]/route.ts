@@ -53,3 +53,27 @@ export const DELETE = withErrorHandler(async (_request: NextRequest, context) =>
 
   return apiSuccess({ deleted: true })
 })
+
+export const PATCH = withErrorHandler(async (request: NextRequest, context) => {
+  const user = await requireAuth()
+  const admin = createAdminClient()
+  const { id } = await context.params
+
+  const { data: campaign } = await admin
+    .from('mbl_campaigns')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!campaign) return apiError('Campaign not found', 404)
+
+  const body = await request.json()
+  const { status } = body
+
+  if (status) {
+    await admin.from('mbl_campaigns').update({ status }).eq('id', id)
+  }
+
+  return apiSuccess({ updated: true })
+})

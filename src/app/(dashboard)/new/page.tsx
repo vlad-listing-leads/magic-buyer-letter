@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState, useCallback, useEffect, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { SmartInput } from '@/components/mbl/SmartInput'
@@ -9,9 +9,10 @@ import { BuyerProfile } from '@/components/mbl/BuyerProfile'
 import { PipelineLoading } from '@/components/mbl/PipelineLoading'
 import { LetterPreviewWizard } from '@/components/mbl/LetterPreviewWizard'
 import { AudienceSelection } from '@/components/mbl/AudienceSelection'
-import { ReviewAndSend } from '@/components/mbl/ReviewAndSend'
-import { Confirmation } from '@/components/mbl/Confirmation'
+import { CampaignSummary } from '@/components/mbl/CampaignSummary'
 import { generateBullets } from '@/lib/bullets'
+import { Button } from '@/components/ui/button'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import type {
@@ -46,15 +47,19 @@ export default function NewLetterPage() {
 function NewLetterWizard() {
   const searchParams = useSearchParams()
   const apiFetch = useApiFetch()
+  const router = useRouter()
 
   // Check for Stripe return
   const urlStep = searchParams.get('step')
   const urlCampaignId = searchParams.get('campaign_id')
   const urlSentCount = searchParams.get('sent')
 
-  const [step, setStep] = useState<WizardStep>(
-    urlStep === 'confirmation' && urlCampaignId ? 'confirmation' : 'input'
-  )
+  const [step, setStep] = useState<WizardStep>(() => {
+    if (urlCampaignId) {
+      if (urlStep === 'preview' || urlStep === 'review' || urlStep === 'audience') return urlStep as WizardStep
+    }
+    return 'input'
+  })
 
   // Shared wizard state
   const [buyerName, setBuyerName] = useState('')
@@ -285,29 +290,10 @@ function NewLetterWizard() {
   }
 
   return (
-    <div className="py-4">
-      {/* Step progress — hide on input (hero) and confirmation */}
-      {step !== 'input' && step !== 'confirmation' && (
-        <div className="flex items-center justify-center gap-1 mb-8">
-          {STEP_ORDER.filter((s) => s !== 'confirmation').map((s, i) => {
-            const isActive = s === step
-            const isDone = i < currentStepIndex
-            return (
-              <div key={s} className="flex items-center gap-1">
-                <div className="flex items-center gap-1.5">
-                  <div
-                    className={cn(
-                      'h-1.5 rounded-full transition-all duration-300',
-                      isActive ? 'w-8 bg-[#006AFF]' : isDone ? 'w-4 bg-[#006AFF]/40' : 'w-4 bg-muted'
-                    )}
-                  />
-                </div>
-                {i < STEP_ORDER.length - 2 && <div className="w-1" />}
-              </div>
-            )
-          })}
-        </div>
-      )}
+    <div className="flex flex-col h-[calc(100vh-56px)] -my-4 sm:-my-6 md:-my-8 -mx-4 sm:-mx-6 md:-mx-8">
+
+      {/* Scrollable content area — hidden on audience (audience fills full space) */}
+      <div className={cn('overflow-y-auto px-4 sm:px-6 md:px-8 py-4', step === 'audience' ? 'hidden' : 'flex-1')}>
 
       {/* Step 1: Smart Input */}
       {step === 'input' && <SmartInput onComplete={handleSmartInputComplete} />}
@@ -320,6 +306,7 @@ function NewLetterWizard() {
           onCriteriaChange={setCriteria}
           onBuyerNameChange={setBuyerName}
           initialProfile={buyerProfile}
+          onProfileChange={setBuyerProfile}
           onBack={() => setStep('input')}
           onComplete={handleProfileComplete}
         />
@@ -336,22 +323,7 @@ function NewLetterWizard() {
         />
       )}
 
-      {/* Step 4: Audience Selection (before letter generation) */}
-      {step === 'audience' && (
-        <AudienceSelection
-          properties={properties}
-          selectedIds={selectedIds}
-          onSelectedIdsChange={setSelectedIds}
-          area={area}
-          priceRange={priceRange}
-          onBack={() => setStep('generating')}
-          onContinue={() => {
-            // Trigger letter generation for selected properties
-            setStep('preview')
-            handleGenerateLetters()
-          }}
-        />
-      )}
+      {/* Audience renders outside scroll — see below */}
 
       {/* Step 5: Letter Preview (generates on entry, then shows preview) */}
       {step === 'preview' && isGeneratingLetters && (
@@ -386,24 +358,15 @@ function NewLetterWizard() {
         />
       )}
 
-      {/* Step 6: Review & Send */}
+      {/* Step 6: Summary — download PDFs */}
       {step === 'review' && campaign && (
-        <ReviewAndSend
+        <CampaignSummary
           campaign={campaign}
           properties={properties}
-          selectedCount={selectedIds.size}
-          templateStyle={templateStyle}
+          agent={agent ?? null}
           selectedSkillId={selectedSkillId}
-          selectedSkillName={selectedSkillName}
           onBack={() => setStep('preview')}
-        />
-      )}
-
-      {/* Step 7: Confirmation */}
-      {step === 'confirmation' && campaignId && (
-        <Confirmation
-          sentCount={urlSentCount ? parseInt(urlSentCount, 10) : selectedIds.size}
-          campaignId={campaignId}
+          onComplete={() => router.push('/')}
         />
       )}
 
@@ -413,6 +376,74 @@ function NewLetterWizard() {
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#006AFF] border-t-transparent" />
         </div>
       )}
+
+      </div>{/* end scrollable content */}
+
+      {/* Step 4: Audience Selection — full bleed, outside scroll */}
+      {step === 'audience' && (
+        <AudienceSelection
+          properties={properties}
+          selectedIds={selectedIds}
+          onSelectedIdsChange={setSelectedIds}
+          area={area}
+          priceRange={priceRange}
+          onBack={() => setStep('generating')}
+          onContinue={() => {
+            setStep('preview')
+            handleGenerateLetters()
+          }}
+        />
+      )}
+
+      {/* Footer — part of flex layout, never moves */}
+      {step !== 'input' && step !== 'generating' && step !== 'audience' && step !== 'review' && (
+        <div className="flex-shrink-0 h-14 border-t border-border bg-background flex items-center">
+          <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 md:px-8 flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (step === 'profile') setStep('input')
+                else if (step === 'preview') setStep('audience')
+              }}
+            >
+              <ArrowLeft className="mr-1.5 h-4 w-4" />
+              Back
+            </Button>
+
+            {step === 'profile' && (
+              <Button
+                onClick={() => handleProfileComplete(buyerProfile)}
+                disabled={!(
+                  ((criteria.city && criteria.state) || criteria.zip) &&
+                  criteria.price_min && criteria.price_max &&
+                  (criteria.price_max - criteria.price_min <= 600000) &&
+                  criteria.years_owned_min &&
+                  criteria.beds_min && criteria.baths_min &&
+                  buyerProfile.financing
+                )}
+                className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-6 gap-2 font-semibold shadow-lg shadow-[#006AFF]/20"
+                size="lg"
+              >
+                Find Properties
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            )}
+
+            {step === 'preview' && !isGeneratingLetters && (
+              <Button
+                onClick={() => setStep('review')}
+                className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-6 gap-2 font-semibold shadow-lg shadow-[#006AFF]/20"
+                size="lg"
+              >
+                Continue
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

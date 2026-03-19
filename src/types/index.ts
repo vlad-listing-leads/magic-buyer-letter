@@ -174,6 +174,7 @@ export interface MblProperty {
   address_deliverable: boolean | null
   lob_verification_id: string | null
   personalized_content: PersonalizedContent | null
+  personalized_content_by_skill: Record<string, { body: string; ps: string }> | null
   lob_letter_id: string | null
   lob_url: string | null
   expected_delivery: string | null
@@ -227,6 +228,7 @@ export interface PropertySearchCriteria {
   baths_min?: number
   sqft_min?: number
   sqft_max?: number
+  years_owned_min?: number
   area?: string
   city?: string
   state?: string

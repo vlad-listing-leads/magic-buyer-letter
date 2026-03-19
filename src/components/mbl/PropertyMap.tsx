@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { PenTool, X, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { MblProperty } from '@/types'
 
 interface PropertyMapProps {
@@ -250,65 +250,49 @@ export function PropertyMap({
   const { MapContainer, TileLayer, Marker, Popup, Polygon, Polyline, CircleMarker } = MapComponents
 
   return (
-    <Card className="overflow-hidden">
-      {/* Draw toolbar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30">
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Draw toolbar — floating over map */}
+      <div className="absolute top-2 left-2 right-2 z-[1000] flex items-center gap-1.5" style={{ position: 'relative' }}>
         {onSelectMany && (
-          <Button
-            variant={drawMode ? 'default' : 'outline'}
-            size="sm"
+          <button
+            type="button"
             onClick={handleToggleDraw}
-            className={drawMode ? 'bg-[#006AFF] hover:bg-[#0058D4] text-white' : ''}
+            className={cn(
+              'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors shadow-sm',
+              drawMode
+                ? 'bg-[#006AFF] text-white'
+                : 'bg-background/90 backdrop-blur-sm border border-border text-foreground hover:bg-accent'
+            )}
           >
-            <PenTool className="mr-1 h-3.5 w-3.5" />
-            {drawMode ? 'Drawing...' : 'Draw area'}
-          </Button>
+            <PenTool className="h-3 w-3" />
+            {drawMode ? 'Drawing...' : 'Draw'}
+          </button>
         )}
 
         {drawMode && (
           <>
-            <span className="text-xs text-muted-foreground">
-              {polygonPoints.length === 0
-                ? 'Click on map to start drawing'
-                : `${polygonPoints.length} point${polygonPoints.length === 1 ? '' : 's'} placed`}
-            </span>
-
             {polygonPoints.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={handleUndoPoint}>
+              <button type="button" onClick={handleUndoPoint} className="px-2 py-1.5 rounded-md text-xs bg-background/90 backdrop-blur-sm border border-border hover:bg-accent shadow-sm">
                 Undo
-              </Button>
+              </button>
             )}
-
             {polygonPoints.length >= 3 && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleFinishPolygon}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <Check className="mr-1 h-3.5 w-3.5" />
-                Select in area
-              </Button>
+              <button type="button" onClick={handleFinishPolygon} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm">
+                <Check className="h-3 w-3" />
+                Select area
+              </button>
             )}
-
-            <Button variant="ghost" size="sm" onClick={handleCancelDraw}>
-              <X className="mr-1 h-3.5 w-3.5" />
-              Cancel
-            </Button>
+            <button type="button" onClick={handleCancelDraw} className="px-2 py-1.5 rounded-md text-xs bg-background/90 backdrop-blur-sm border border-border hover:bg-accent shadow-sm">
+              <X className="h-3 w-3" />
+            </button>
           </>
-        )}
-
-        {!drawMode && onSelectMany && (
-          <span className="text-xs text-muted-foreground ml-1">
-            Click pins to toggle, or draw an area to select multiple
-          </span>
         )}
       </div>
 
       {drawMode && (
         <style>{`.leaflet-container { cursor: crosshair !important; }`}</style>
       )}
-      <div className="h-[500px]">
+      <div className="flex-1 min-h-[300px]">
         <MapContainer
           key={mapKeyRef.current}
           center={[center.lat, center.lng]}
@@ -317,8 +301,8 @@ export function PropertyMap({
           scrollWheelZoom
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           />
 
           <MapClickHandler drawMode={drawMode} onMapClick={handleMapClick} />
@@ -402,6 +386,6 @@ export function PropertyMap({
           ))}
         </MapContainer>
       </div>
-    </Card>
+    </div>
   )
 }

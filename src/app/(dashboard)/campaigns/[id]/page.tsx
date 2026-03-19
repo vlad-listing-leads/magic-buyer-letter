@@ -163,10 +163,10 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
         <div className="flex items-center gap-2">
           {isPreSend && campaign.status === 'ready' && currentSelectedCount > 0 && (
-            <Link href={`/new?step=review&campaign_id=${id}`}>
+            <Link href={`/new?step=preview&campaign_id=${id}`}>
               <Button className="bg-[#006AFF] hover:bg-[#0058D4] text-white">
                 <CreditCard className="mr-1.5 h-4 w-4" />
-                Send {currentSelectedCount} Letters
+                Continue Campaign
               </Button>
             </Link>
           )}
