@@ -5,10 +5,12 @@ import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { LetterPreview } from '@/components/mbl/LetterPreview'
 import { ArrowLeft, Send, DollarSign, Loader2, Search } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
-import type { MblCampaign, MblProperty } from '@/types'
+import type { MblCampaign, MblProperty, MblAgent } from '@/types'
 
 export default function AdminCampaignDetailPage({
   params,
@@ -87,51 +89,79 @@ export default function AdminCampaignDetailPage({
         </Card>
       </div>
 
-      {/* Properties table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="p-3 text-left font-medium text-muted-foreground">Address</th>
-                  <th className="p-3 text-left font-medium text-muted-foreground">Details</th>
-                  <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
-                  <th className="p-3 text-left font-medium text-muted-foreground">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {properties.map((prop) => (
-                  <tr key={prop.id} className="border-b border-border/50">
-                    <td className="p-3">
-                      <div>{prop.address_line1}</div>
-                      <div className="text-xs text-muted-foreground">{prop.city}, {prop.state} {prop.zip}</div>
-                    </td>
-                    <td className="p-3 text-xs text-muted-foreground">
-                      {prop.estimated_value ? `$${prop.estimated_value.toLocaleString()}` : '—'}
-                      {' · '}
-                      {prop.bedrooms ?? '?'}bd/{prop.bathrooms ?? '?'}ba
-                      {' · '}
-                      {prop.sqft?.toLocaleString() ?? '?'} sqft
-                    </td>
-                    <td className="p-3">
-                      <Badge variant="secondary" className="text-xs capitalize">{prop.owner_type}</Badge>
-                    </td>
-                    <td className="p-3">
-                      <Badge variant="secondary" className="text-xs capitalize">{prop.status.replace('_', ' ')}</Badge>
-                    </td>
-                  </tr>
-                ))}
-                {properties.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="p-8 text-center text-muted-foreground">No properties</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Tabs: Properties + Letter Preview */}
+      <Tabs defaultValue="properties">
+        <TabsList>
+          <TabsTrigger value="properties">Properties ({properties.length})</TabsTrigger>
+          <TabsTrigger value="letter">Letter Preview</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="properties">
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="p-3 text-left font-medium text-muted-foreground">Address</th>
+                      <th className="p-3 text-left font-medium text-muted-foreground">Details</th>
+                      <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
+                      <th className="p-3 text-left font-medium text-muted-foreground">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {properties.map((prop) => (
+                      <tr key={prop.id} className="border-b border-border/50">
+                        <td className="p-3">
+                          <div>{prop.address_line1}</div>
+                          <div className="text-xs text-muted-foreground">{prop.city}, {prop.state} {prop.zip}</div>
+                        </td>
+                        <td className="p-3 text-xs text-muted-foreground">
+                          {prop.estimated_value ? `$${prop.estimated_value.toLocaleString()}` : '—'}
+                          {' · '}
+                          {prop.bedrooms ?? '?'}bd/{prop.bathrooms ?? '?'}ba
+                          {' · '}
+                          {prop.sqft?.toLocaleString() ?? '?'} sqft
+                        </td>
+                        <td className="p-3">
+                          <Badge variant="secondary" className="text-xs capitalize">{prop.owner_type}</Badge>
+                        </td>
+                        <td className="p-3">
+                          <Badge variant="secondary" className="text-xs capitalize">{prop.status.replace('_', ' ')}</Badge>
+                        </td>
+                      </tr>
+                    ))}
+                    {properties.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="p-8 text-center text-muted-foreground">No properties</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="letter">
+          {(() => {
+            const agent = (campaign as Record<string, unknown>).mbl_agents as MblAgent | null
+            const sampleProp = properties.find(p => p.personalized_content) ?? properties[0] ?? null
+            if (!agent) return <Card><CardContent className="py-12 text-center text-muted-foreground">No agent profile</CardContent></Card>
+            return (
+              <div className="max-w-2xl mx-auto">
+                <LetterPreview
+                  agent={agent}
+                  property={sampleProp}
+                  buyerName={campaign.buyer_name}
+                  bullets={{ b1: campaign.bullet_1, b2: campaign.bullet_2, b3: campaign.bullet_3 }}
+                  templateStyle={campaign.template_style ?? 'warm'}
+                />
+              </div>
+            )
+          })()}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
