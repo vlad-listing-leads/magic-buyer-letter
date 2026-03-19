@@ -8,6 +8,7 @@ import { env } from '@/lib/env'
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params
   const sessionId = request.nextUrl.searchParams.get('session_id')
+  const skillId = request.nextUrl.searchParams.get('skill_id')
 
   if (!sessionId) {
     return NextResponse.redirect(new URL(`/campaigns/${id}`, request.url))
@@ -53,12 +54,17 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     let sentCount = 0
     for (const prop of properties ?? []) {
       try {
-        const personalized = prop.personalized_content as Record<string, string> | null
+        // Use selected skill's content, fall back to personalized_content
+        const bySkill = prop.personalized_content_by_skill as Record<string, Record<string, string>> | null
+        const skillContent = skillId && bySkill?.[skillId] ? bySkill[skillId] : null
+        const personalized = skillContent ?? (prop.personalized_content as Record<string, string> | null)
 
         const mergeVars: Record<string, string> = {
           property_address: `${prop.address_line1}, ${prop.city}`,
           neighborhood: prop.neighborhood || prop.city,
           buyer_name: campaign.buyer_name,
+          letter_body: personalized?.body || '',
+          letter_ps: personalized?.ps || '',
           bullet_1: personalized?.bullet_1 || campaign.bullet_1,
           bullet_2: personalized?.bullet_2 || campaign.bullet_2,
           bullet_3: personalized?.bullet_3 || campaign.bullet_3,

@@ -21,6 +21,8 @@ interface ReviewAndSendProps {
   properties: MblProperty[]
   selectedCount: number
   templateStyle: TemplateStyle
+  selectedSkillId: string | null
+  selectedSkillName?: string
   onBack: () => void
 }
 
@@ -29,6 +31,8 @@ export function ReviewAndSend({
   properties,
   selectedCount,
   templateStyle,
+  selectedSkillId,
+  selectedSkillName,
   onBack,
 }: ReviewAndSendProps) {
   const apiFetch = useApiFetch()
@@ -65,7 +69,7 @@ export function ReviewAndSend({
       const res = await apiFetch(`/api/mbl/campaigns/${campaign.id}/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ letter_count: selectedCount }),
+        body: JSON.stringify({ letter_count: selectedCount, skill_id: selectedSkillId }),
       })
 
       const json = await res.json()
@@ -114,8 +118,8 @@ export function ReviewAndSend({
           <CardContent className="p-4 flex items-center gap-3">
             <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <div>
-              <p className="text-xs text-muted-foreground">Template</p>
-              <p className="text-sm font-medium">{templateName}</p>
+              <p className="text-xs text-muted-foreground">Letter Style</p>
+              <p className="text-sm font-medium">{selectedSkillName || templateName}</p>
             </div>
           </CardContent>
         </Card>

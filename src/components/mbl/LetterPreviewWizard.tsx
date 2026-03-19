@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,8 @@ interface LetterPreviewWizardProps {
   bullets: { b1: string; b2: string; b3: string }
   templateStyle: TemplateStyle
   onTemplateChange: (style: TemplateStyle) => void
+  selectedSkillId: string | null
+  onSkillChange: (skillId: string | null) => void
   onBack: () => void
   onContinue: () => void
 }
@@ -27,14 +29,14 @@ export function LetterPreviewWizard({
   buyerName,
   bullets,
   templateStyle,
+  selectedSkillId,
+  onSkillChange,
   onBack,
   onContinue,
 }: LetterPreviewWizardProps) {
   const apiFetch = useApiFetch()
   const [envelopeType, setEnvelopeType] = useState<'standard' | 'custom'>('standard')
-  const [selectedSkill, setSelectedSkill] = useState<string | null>(null)
 
-  // Fetch active skills
   const { data: skills } = useQuery<{ id: string; name: string; description: string }[]>({
     queryKey: ['active-skills'],
     queryFn: async () => {
@@ -47,23 +49,32 @@ export function LetterPreviewWizard({
   const activeSkills = skills ?? []
   const hasMultipleSkills = activeSkills.length > 1
 
-  // Auto-select first skill when loaded
-  if (activeSkills.length > 0 && selectedSkill === null) {
-    setSelectedSkill(activeSkills[0].id)
-  }
+  React.useEffect(() => {
+    if (activeSkills.length > 0 && selectedSkillId === null) {
+      onSkillChange(activeSkills[0].id)
+    }
+  }, [activeSkills, selectedSkillId, onSkillChange])
 
-  // Find a sample property with per-skill content
   const sampleProperty =
     properties.find((p) => p.personalized_content) ?? properties[0] ?? null
 
-  // Helper to get per-skill content for preview
   const getSkillContent = (skillId: string) => {
     const bySkill = (sampleProperty as unknown as Record<string, unknown>)?.personalized_content_by_skill as Record<string, { body: string; ps: string }> | null
-    const content = bySkill?.[skillId]
-    if (content) {
-      return { body: content.body, ps: content.ps }
-    }
-    return undefined
+    return bySkill?.[skillId] ?? undefined
+  }
+
+  // Loading state
+  if (!skills) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold">Loading preview...</h2>
+        </div>
+        <div className="flex justify-center py-12">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#006AFF] border-t-transparent" />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -79,34 +90,28 @@ export function LetterPreviewWizard({
         </p>
       </div>
 
-      <div className="max-w-2xl mx-auto space-y-4">
-        {/* Wait for skills to load before rendering */}
-        {!skills ? (
-          <div className="flex justify-center py-12">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#006AFF] border-t-transparent" />
-          </div>
-        ) : <>
-        {/* Skill selector — pill buttons, not tabs */}
-        {hasMultipleSkills && (
-          <div className="flex justify-center gap-2">
-            {activeSkills.map((skill) => (
-              <button
-                key={skill.id}
-                type="button"
-                onClick={() => setSelectedSkill(skill.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  selectedSkill === skill.id
-                    ? 'bg-[#006AFF] text-white shadow-md shadow-[#006AFF]/20'
-                    : 'bg-muted text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {skill.name}
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Skill selector — pill buttons */}
+      {hasMultipleSkills && (
+        <div className="flex justify-center gap-2">
+          {activeSkills.map((skill) => (
+            <button
+              key={skill.id}
+              type="button"
+              onClick={() => onSkillChange(skill.id)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                selectedSkillId === skill.id
+                  ? 'bg-[#006AFF] text-white shadow-md shadow-[#006AFF]/20'
+                  : 'bg-muted text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {skill.name}
+            </button>
+          ))}
+        </div>
+      )}
 
-        {/* Preview container — dark background to frame the letter */}
+      {/* Preview container */}
+      <div className="max-w-2xl mx-auto">
         <div className="rounded-xl bg-stone-200 dark:bg-[#282524] px-2 pt-2 pb-2">
           <Tabs defaultValue="letter" className="gap-2">
             <TabsList>
@@ -121,7 +126,7 @@ export function LetterPreviewWizard({
                 buyerName={buyerName}
                 bullets={bullets}
                 templateStyle={templateStyle}
-                editedContent={selectedSkill ? getSkillContent(selectedSkill) : undefined}
+                editedContent={selectedSkillId ? getSkillContent(selectedSkillId) : undefined}
               />
             </TabsContent>
 
@@ -156,7 +161,6 @@ export function LetterPreviewWizard({
           <span className="block text-xs text-muted-foreground">Enterprise tier</span>
         </button>
       </div>
-        </>}
 
       {/* Actions */}
       <div className="max-w-2xl mx-auto flex items-center justify-between">

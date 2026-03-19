@@ -38,7 +38,6 @@ interface ReapiPropertyResult {
   owner1FirstName: string
   owner1LastName: string
   neighborhood: { name: string; id: string } | null
-  // Nested access helpers
   property?: { bedrooms: number; bathrooms: number; sqft: number; lotSqft: number; yearBuilt: number; propertyType: string }
   valuation?: { estimatedValue: number; lastSalePrice: number; lastSaleDate: string; equityPercent: number }
   ownership?: { yearsOwned: number; ownerType: string; absenteeOwner: boolean }
@@ -51,7 +50,7 @@ interface ReapiSkipTraceResult {
     fullName: string
     phones: Array<{ number: string; type: string }> | null
     emails: Array<{ email: string }> | null
-    address: { address: string } | null
+    address?: { address: string }
   }>
 }
 
@@ -75,48 +74,142 @@ async function reapiFetch<T>(path: string, body: Record<string, unknown>): Promi
   return res.json() as Promise<T>
 }
 
+async function searchSingleBatch(
+  params: Record<string, unknown>
+): Promise<ReapiPropertyResult[]> {
+  try {
+    const result = await reapiFetch<{ data: ReapiPropertyResult[] }>('/v2/PropertySearch', params)
+    return result.data ?? []
+  } catch (err) {
+    logger.warn({ err, params }, 'REAPI batch failed')
+    return []
+  }
+}
+
+/**
+ * Search properties with automatic expansion to get past the 250 limit.
+ *
+ * Strategy: first search by city/state. If we hit 250 (cap), search each
+ * unique ZIP found in results individually. Each ZIP can return up to 250.
+ * For single-ZIP areas, we additionally split by value ranges to get more.
+ */
 export async function searchProperties(
   criteria: PropertySearchCriteria
 ): Promise<ReapiPropertyResult[]> {
-  const searchParams: Record<string, unknown> = {
-    size: 250,
+  const { getCityZips } = await import('@/lib/city-zips')
+
+  // Step 1: Initial search by city/state
+  const initialParams: Record<string, unknown> = { size: 250 }
+  if (criteria.city) initialParams.city = criteria.city
+  if (criteria.state) initialParams.state = criteria.state
+  if (criteria.zip) initialParams.zip = criteria.zip
+
+  logger.info({ initialParams }, 'REAPI step 1: initial search')
+  const initialResults = await searchSingleBatch(initialParams)
+  logger.info({ count: initialResults.length }, 'REAPI step 1 results')
+
+  // If under cap, that's everything — no expansion needed
+  if (initialResults.length < 250) {
+    return applyFilters(initialResults, criteria)
   }
 
-  // Location params only — REAPI rejects filter params on this plan
-  if (criteria.city) searchParams.city = criteria.city
-  if (criteria.state) searchParams.state = criteria.state
-  if (criteria.zip) searchParams.zip = criteria.zip
+  // Step 2: Collect all ZIPs to search
+  const allZips = new Set<string>()
+  for (const p of initialResults) {
+    if (p.address?.zip) allZips.add(p.address.zip)
+  }
+  for (const z of getCityZips(criteria.city)) allZips.add(z)
+  if (criteria.zip) allZips.add(criteria.zip)
 
-  logger.info({ searchParams, criteria }, 'REAPI search')
+  const zipsToSearch = Array.from(allZips)
+  logger.info({ zips: zipsToSearch, count: zipsToSearch.length }, 'REAPI step 2: expanding by ZIP')
 
-  const result = await reapiFetch<{ data: ReapiPropertyResult[] }>('/v2/PropertySearch', searchParams)
-  let properties = result.data ?? []
+  // Step 3: Search each ZIP. If a ZIP returns 250, split it by value ranges.
+  let allProperties: ReapiPropertyResult[] = []
 
-  logger.info({ returned: properties.length }, 'REAPI raw results')
+  for (const zip of zipsToSearch) {
+    const baseParams = { size: 250, zip, ...(criteria.state ? { state: criteria.state } : {}) }
+    const zipResults = await searchSingleBatch(baseParams)
+    allProperties = [...allProperties, ...zipResults]
 
-  // Client-side filtering
+    logger.info({ zip, count: zipResults.length }, 'REAPI ZIP result')
+
+    // If this ZIP hit 250, split by value ranges to get more
+    if (zipResults.length >= 250) {
+      logger.info({ zip }, 'REAPI ZIP hit cap, splitting by value ranges')
+
+      // Determine value ranges from what we got
+      const values = zipResults
+        .map(p => p.estimatedValue)
+        .filter(v => v > 0)
+        .sort((a, b) => a - b)
+
+      if (values.length > 0) {
+        // Split into ranges: 0-median, median-max*2
+        const median = values[Math.floor(values.length / 2)]
+        const ranges = [
+          { min: 0, max: Math.floor(median * 0.5) },
+          { min: Math.floor(median * 0.5), max: median },
+          { min: median, max: Math.floor(median * 1.5) },
+          { min: Math.floor(median * 1.5), max: Math.floor(median * 3) },
+          { min: Math.floor(median * 3), max: 99999999 },
+        ]
+
+        for (const range of ranges) {
+          try {
+            const rangeResults = await searchSingleBatch({
+              ...baseParams,
+              estimated_value_min: range.min,
+              estimated_value_max: range.max,
+            })
+            allProperties = [...allProperties, ...rangeResults]
+            logger.info({ zip, range: `${range.min}-${range.max}`, count: rangeResults.length }, 'REAPI value range result')
+          } catch {
+            // If value range params not supported, skip silently
+            logger.info({ zip }, 'REAPI value range params not supported, skipping')
+            break
+          }
+        }
+      }
+    }
+  }
+
+  // Deduplicate by address
+  const seen = new Set<string>()
+  allProperties = allProperties.filter(p => {
+    const key = `${p.address?.street ?? p.address?.address}|${p.address?.zip}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+
+  logger.info({ total: allProperties.length, zips: zipsToSearch.length }, 'REAPI total after dedup')
+
+  return applyFilters(allProperties, criteria)
+}
+
+function applyFilters(properties: ReapiPropertyResult[], criteria: PropertySearchCriteria): ReapiPropertyResult[] {
+  let filtered = properties
   if (criteria.price_min) {
-    properties = properties.filter(p => (p.estimatedValue ?? 0) >= criteria.price_min!)
+    filtered = filtered.filter(p => (p.estimatedValue ?? 0) >= criteria.price_min!)
   }
   if (criteria.price_max) {
-    properties = properties.filter(p => (p.estimatedValue ?? Infinity) <= criteria.price_max!)
+    filtered = filtered.filter(p => (p.estimatedValue ?? Infinity) <= criteria.price_max!)
   }
   if (criteria.beds_min) {
-    properties = properties.filter(p => (p.bedrooms ?? 0) >= criteria.beds_min!)
+    filtered = filtered.filter(p => (p.bedrooms ?? 0) >= criteria.beds_min!)
   }
   if (criteria.baths_min) {
-    properties = properties.filter(p => (p.bathrooms ?? 0) >= criteria.baths_min!)
+    filtered = filtered.filter(p => (p.bathrooms ?? 0) >= criteria.baths_min!)
   }
   if (criteria.sqft_min) {
-    properties = properties.filter(p => (p.squareFeet ?? 0) >= criteria.sqft_min!)
+    filtered = filtered.filter(p => (p.squareFeet ?? 0) >= criteria.sqft_min!)
   }
   if (criteria.sqft_max) {
-    properties = properties.filter(p => (p.squareFeet ?? Infinity) <= criteria.sqft_max!)
+    filtered = filtered.filter(p => (p.squareFeet ?? Infinity) <= criteria.sqft_max!)
   }
-
-  logger.info({ afterFilter: properties.length }, 'REAPI filtered results')
-
-  return properties
+  logger.info({ before: properties.length, after: filtered.length }, 'REAPI filtered')
+  return filtered
 }
 
 /** Skip trace a single property by address. Returns owner contact info. */

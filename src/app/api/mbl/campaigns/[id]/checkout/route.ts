@@ -7,6 +7,7 @@ import { z } from 'zod'
 
 const checkoutSchema = z.object({
   letter_count: z.number().min(1),
+  skill_id: z.string().optional(),
 })
 
 export const POST = withErrorHandler(async (request: NextRequest, context) => {
@@ -35,7 +36,7 @@ export const POST = withErrorHandler(async (request: NextRequest, context) => {
     agentId: campaign.agent_id,
     letterCount: parsed.data.letter_count,
     pricePerLetterCents: campaign.price_per_letter_cents,
-    successUrl: `${appUrl}/api/mbl/campaigns/${id}/send-confirmed?session_id={CHECKOUT_SESSION_ID}`,
+    successUrl: `${appUrl}/api/mbl/campaigns/${id}/send-confirmed?session_id={CHECKOUT_SESSION_ID}${parsed.data.skill_id ? `&skill_id=${parsed.data.skill_id}` : ''}`,
     cancelUrl: `${appUrl}/new?step=audience&campaign_id=${id}`,
   })
 

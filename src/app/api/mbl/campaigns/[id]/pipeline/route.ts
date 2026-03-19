@@ -148,123 +148,14 @@ export async function GET(
 
         await admin
           .from('mbl_campaigns')
-          .update({ properties_verified: verifiedCount, status: 'generating' })
+          .update({ properties_verified: verifiedCount, status: 'ready' })
           .eq('id', campaign.id)
 
-        send({ step: 'verifying', progress: 70, message: `${hasLobKey ? 'Verified' : 'Passed'} ${verifiedCount} addresses`, count: verifiedCount })
+        send({ step: 'verifying', progress: 90, message: `${hasLobKey ? 'Verified' : 'Passed'} ${verifiedCount} addresses`, count: verifiedCount })
 
-        // Step 4: Generate letter templates via Claude — one per active skill
-        send({ step: 'generating', progress: 75, message: 'AI is writing your letters...' })
-
-        const { generateLetterForSkill, fillTemplate } = await import('@/lib/services/claude')
-        const area = `${campaign.criteria_city}${campaign.criteria_state ? `, ${campaign.criteria_state}` : ''}`
-
-        // Fetch active skills
-        const { data: skills } = await admin
-          .from('mbl_skills')
-          .select('id, name, prompt_instructions')
-          .eq('is_active', true)
-          .order('sort_order', { ascending: true })
-
-        const activeSkills = skills ?? []
-        if (activeSkills.length === 0) {
-          // Fallback: use a default prompt if no skills exist
-          activeSkills.push({
-            id: 'default',
-            name: 'Default',
-            prompt_instructions: 'Write in a warm, personal, conversational tone. Be genuine and relatable.',
-          })
-        }
-
-        const campaignContext = {
-          buyer_name: campaign.buyer_name,
-          area,
-          bullet_1: campaign.bullet_1,
-          bullet_2: campaign.bullet_2,
-          bullet_3: campaign.bullet_3,
-        }
-
-        // Generate one template per skill
-        const letterTemplates: Record<string, { body: string; ps?: string }> = {}
-        for (let si = 0; si < activeSkills.length; si++) {
-          const skill = activeSkills[si]
-          send({ step: 'generating', progress: 75 + Math.round(((si + 1) / activeSkills.length) * 10), message: `Writing "${skill.name}" letter...` })
-          const template = await generateLetterForSkill(campaignContext, skill.prompt_instructions)
-          letterTemplates[skill.id] = template
-        }
-
-        // Save templates on campaign
-        await admin
-          .from('mbl_campaigns')
-          .update({ letter_templates: letterTemplates })
-          .eq('id', campaign.id)
-
-        send({ step: 'generating', progress: 87, message: 'Personalizing letters for each property...' })
-
-        // Get agent info for template variables
-        const { data: agentData } = await admin
-          .from('mbl_agents')
-          .select('name, phone')
-          .eq('id', campaign.agent_id)
-          .single()
-
-        // Fill templates per property
-        const { data: verifiedProps } = await admin
-          .from('mbl_properties')
-          .select('id, address_line1, city, neighborhood')
-          .eq('campaign_id', campaign.id)
-          .eq('status', 'verified')
-
-        let generatedCount = 0
-        for (const prop of verifiedProps ?? []) {
-          const vars = {
-            property_address: `${prop.address_line1}, ${prop.city}`,
-            neighborhood: prop.neighborhood || prop.city,
-            buyer_name: campaign.buyer_name,
-            bullet_1: campaign.bullet_1,
-            bullet_2: campaign.bullet_2,
-            bullet_3: campaign.bullet_3,
-            agent_name: agentData?.name ?? '',
-            agent_phone: agentData?.phone ?? '',
-          }
-
-          // Fill all skill templates for this property
-          const contentBySkill: Record<string, { body: string; ps: string }> = {}
-          let firstFilled = null
-          for (const [skillId, template] of Object.entries(letterTemplates)) {
-            const filled = fillTemplate(template, vars)
-            contentBySkill[skillId] = {
-              body: filled.body,
-              ps: filled.ps ?? '',
-            }
-            if (!firstFilled) firstFilled = contentBySkill[skillId]
-          }
-
-          await admin
-            .from('mbl_properties')
-            .update({
-              personalized_content: firstFilled,
-              personalized_content_by_skill: contentBySkill,
-              status: 'generated',
-            })
-            .eq('id', prop.id)
-
-          generatedCount++
-        }
-
-        send({
-          step: 'generating',
-          progress: 95,
-          message: `Personalized ${generatedCount} letters × ${activeSkills.length} style${activeSkills.length > 1 ? 's' : ''}`,
-          count: generatedCount,
-        })
-
-        await admin
-          .from('mbl_campaigns')
-          .update({ properties_generated: generatedCount, status: 'ready' })
-          .eq('id', campaign.id)
-
-        send({ step: 'ready', progress: 100, message: 'Campaign ready!', count: generatedCount, campaignId: campaign.id })
+        // Pipeline stops here — letter generation happens AFTER audience selection
+        const readyCount = verifiedCount || propCount
+        send({ step: 'ready', progress: 100, message: 'Properties ready!', count: readyCount, campaignId: campaign.id })
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Pipeline error'
         send({ step: 'error', progress: 0, message, error: message })

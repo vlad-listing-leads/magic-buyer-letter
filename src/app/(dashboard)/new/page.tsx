@@ -28,9 +28,9 @@ import type {
 const STEP_ORDER: WizardStep[] = [
   'input',
   'profile',
-  'generating',
-  'preview',
-  'audience',
+  'generating',    // pipeline: search + verify (fast, no Claude)
+  'audience',       // user selects properties
+  'preview',        // generates letters for selected only, then shows preview
   'review',
   'confirmation',
 ]
@@ -68,11 +68,13 @@ function NewLetterWizard() {
   })
   const [campaignId, setCampaignId] = useState<string | null>(urlCampaignId)
   const [templateStyle, setTemplateStyle] = useState<TemplateStyle>('warm')
+  const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isGeneratingLetters, setIsGeneratingLetters] = useState(false)
 
   // Fetch campaign + properties when we have a campaignId and need them
   const needsData = step === 'preview' || step === 'audience' || step === 'review' || step === 'confirmation'
-  const { data: campaignData } = useQuery<{
+  const { data: campaignData, refetch: refetchCampaign } = useQuery<{
     campaign: MblCampaign
     properties: MblProperty[]
   }>({
@@ -95,6 +97,18 @@ function NewLetterWizard() {
       return json.data
     },
   })
+
+  // Fetch skills for name display
+  const { data: activeSkills } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ['active-skills'],
+    queryFn: async () => {
+      const res = await apiFetch('/api/mbl/skills')
+      const json = await res.json()
+      return json.data ?? []
+    },
+  })
+
+  const selectedSkillName = activeSkills?.find(s => s.id === selectedSkillId)?.name ?? ''
 
   const campaign = campaignData?.campaign ?? null
   const properties = campaignData?.properties ?? []
@@ -188,8 +202,8 @@ function NewLetterWizard() {
   const handlePipelineComplete = useCallback(
     (id: string, readyCount: number) => {
       setCampaignId(id)
-      toast.success(`Found ${readyCount} properties ready for letters!`)
-      setStep('preview')
+      toast.success(`Found ${readyCount} properties!`)
+      setStep('audience')
     },
     []
   )
@@ -197,6 +211,58 @@ function NewLetterWizard() {
   const handlePipelineError = useCallback((error: string) => {
     toast.error(error)
   }, [])
+
+  const handleGenerateLetters = async () => {
+    if (!campaignId || selectedIds.size === 0) return
+    setIsGeneratingLetters(true)
+
+    try {
+      const res = await apiFetch(`/api/mbl/campaigns/${campaignId}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ property_ids: Array.from(selectedIds) }),
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || 'Generation failed')
+      }
+
+      // Read SSE stream
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('No stream')
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const event = JSON.parse(line.slice(6))
+            if (event.step === 'error') throw new Error(event.error)
+            if (event.step === 'ready') {
+              toast.success(`${event.count} letters generated!`)
+              await refetchCampaign()
+            }
+          } catch (e) {
+            if (e instanceof Error && e.message !== 'ready') throw e
+          }
+        }
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Letter generation failed')
+    } finally {
+      setIsGeneratingLetters(false)
+    }
+  }
 
   // -- Formatting helpers --
 
@@ -270,21 +336,7 @@ function NewLetterWizard() {
         />
       )}
 
-      {/* Step 4: Letter Preview */}
-      {step === 'preview' && agent && (
-        <LetterPreviewWizard
-          agent={agent}
-          properties={properties}
-          buyerName={buyerName || campaign?.buyer_name || ''}
-          bullets={bullets}
-          templateStyle={templateStyle}
-          onTemplateChange={setTemplateStyle}
-          onBack={() => setStep('generating')}
-          onContinue={() => setStep('audience')}
-        />
-      )}
-
-      {/* Step 5: Audience Selection */}
+      {/* Step 4: Audience Selection (before letter generation) */}
       {step === 'audience' && (
         <AudienceSelection
           properties={properties}
@@ -292,7 +344,44 @@ function NewLetterWizard() {
           onSelectedIdsChange={setSelectedIds}
           area={area}
           priceRange={priceRange}
-          onBack={() => setStep('preview')}
+          onBack={() => setStep('generating')}
+          onContinue={() => {
+            // Trigger letter generation for selected properties
+            setStep('preview')
+            handleGenerateLetters()
+          }}
+        />
+      )}
+
+      {/* Step 5: Letter Preview (generates on entry, then shows preview) */}
+      {step === 'preview' && isGeneratingLetters && (
+        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 animate-fade-in">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-[#006AFF]/20 animate-ping" />
+            <div className="relative w-14 h-14 rounded-full bg-[#006AFF]/10 flex items-center justify-center">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#006AFF] border-t-transparent" />
+            </div>
+          </div>
+          <div className="text-center">
+            <h3 className="text-lg font-semibold">Generating letters...</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              AI is writing {selectedIds.size} personalized letter{selectedIds.size !== 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {step === 'preview' && !isGeneratingLetters && agent && (
+        <LetterPreviewWizard
+          agent={agent}
+          properties={properties}
+          buyerName={buyerName || campaign?.buyer_name || ''}
+          bullets={bullets}
+          templateStyle={templateStyle}
+          onTemplateChange={setTemplateStyle}
+          selectedSkillId={selectedSkillId}
+          onSkillChange={setSelectedSkillId}
+          onBack={() => setStep('audience')}
           onContinue={() => setStep('review')}
         />
       )}
@@ -304,7 +393,9 @@ function NewLetterWizard() {
           properties={properties}
           selectedCount={selectedIds.size}
           templateStyle={templateStyle}
-          onBack={() => setStep('audience')}
+          selectedSkillId={selectedSkillId}
+          selectedSkillName={selectedSkillName}
+          onBack={() => setStep('preview')}
         />
       )}
 
