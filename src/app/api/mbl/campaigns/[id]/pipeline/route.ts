@@ -185,7 +185,7 @@ export async function GET(
         }
 
         // Generate one template per skill
-        const letterTemplates: Record<string, { opening: string; body: string; closing: string }> = {}
+        const letterTemplates: Record<string, { body: string; ps?: string }> = {}
         for (let si = 0; si < activeSkills.length; si++) {
           const skill = activeSkills[si]
           send({ step: 'generating', progress: 75 + Math.round(((si + 1) / activeSkills.length) * 10), message: `Writing "${skill.name}" letter...` })
@@ -229,16 +229,13 @@ export async function GET(
           }
 
           // Fill all skill templates for this property
-          const contentBySkill: Record<string, { opening: string; bullet_1: string; bullet_2: string; bullet_3: string; closing: string }> = {}
+          const contentBySkill: Record<string, { body: string; ps: string }> = {}
           let firstFilled = null
           for (const [skillId, template] of Object.entries(letterTemplates)) {
             const filled = fillTemplate(template, vars)
             contentBySkill[skillId] = {
-              opening: filled.opening,
-              bullet_1: campaign.bullet_1,
-              bullet_2: campaign.bullet_2,
-              bullet_3: campaign.bullet_3,
-              closing: filled.closing,
+              body: filled.body,
+              ps: filled.ps ?? '',
             }
             if (!firstFilled) firstFilled = contentBySkill[skillId]
           }

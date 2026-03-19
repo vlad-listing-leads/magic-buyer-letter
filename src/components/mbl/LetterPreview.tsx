@@ -1,24 +1,13 @@
 'use client'
 
-import { useRef, useCallback, useEffect, useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
-import { LETTER_TEMPLATES } from '@/lib/templates'
 
-/** Editable content sections of the letter */
+/** Content from Claude — just body + ps */
 export interface LetterContent {
-  opening: string
-  body_1: string
-  body_2: string
-  bullet_intro: string
-  bullet_1: string
-  bullet_2: string
-  bullet_3: string
-  body_3: string
-  body_4: string
-  phone_line: string
-  closing: string
+  body: string
   ps: string
 }
 
@@ -29,59 +18,8 @@ interface LetterPreviewProps {
   bullets: { b1: string; b2: string; b3: string }
   templateStyle: TemplateStyle
   onTemplateChange?: (style: TemplateStyle) => void
-  editable?: boolean
   editedContent?: Partial<LetterContent>
-  onContentChange?: (content: Partial<LetterContent>) => void
   className?: string
-}
-
-/** A span/div that is contentEditable when editable=true. Looks like normal text. */
-function EditableField({
-  value,
-  field,
-  onUpdate,
-  editable,
-  tag: Tag = 'span',
-  className,
-}: {
-  value: string
-  field: keyof LetterContent
-  onUpdate: (field: keyof LetterContent, value: string) => void
-  editable?: boolean
-  tag?: 'span' | 'p' | 'div'
-  className?: string
-}) {
-  const ref = useRef<HTMLElement>(null)
-
-  const handleBlur = useCallback(() => {
-    if (ref.current) {
-      const newValue = ref.current.innerText.trim()
-      if (newValue !== value) {
-        onUpdate(field, newValue)
-      }
-    }
-  }, [value, field, onUpdate])
-
-  if (!editable) {
-    return <Tag className={className}>{value}</Tag>
-  }
-
-  return (
-    <Tag
-      ref={ref as React.RefObject<never>}
-      contentEditable
-      suppressContentEditableWarning
-      onBlur={handleBlur}
-      className={cn(
-        className,
-        'outline-none rounded-sm px-1 -mx-1 cursor-text transition-colors',
-        'hover:bg-stone-200/50',
-        'focus:bg-white/80 focus:ring-1 focus:ring-[#006AFF]/40',
-      )}
-    >
-      {value}
-    </Tag>
-  )
 }
 
 export function LetterPreview({
@@ -89,98 +27,53 @@ export function LetterPreview({
   property,
   buyerName,
   bullets,
-  templateStyle,
-  onTemplateChange,
-  editable = false,
   editedContent,
-  onContentChange,
   className,
 }: LetterPreviewProps) {
-  const personalized = property?.personalized_content
+  const personalized = property?.personalized_content as Record<string, string> | null
+
   const address = property
     ? `${property.address_line1}, ${property.city}`
     : '123 Main St, Your City'
-  const neighborhood = property?.neighborhood || 'the area'
-
   const phone = agent.phone || '(555) 123-4567'
 
-  const opening = editedContent?.opening
-    ?? personalized?.opening
-    ?? `Your home at ${address} is one of the only properties that my clients, ${buyerName || 'my buyers'}, would seriously consider buying in ${neighborhood}.`
+  // Body — everything from Claude
+  const body = editedContent?.body
+    ?? personalized?.body
+    ?? `Your home at ${address} caught the attention of my clients, ${buyerName || 'my buyers'}. They are actively searching for a home just like yours and would love the opportunity to make you an offer.\n\nI represent serious, qualified buyers who are ready to move forward. Here's what makes them stand out:\n\n• ${bullets.b1 || 'Qualified and ready to purchase'}\n• ${bullets.b2 || 'Flexible on timeline'}\n• ${bullets.b3 || 'Love the neighborhood'}\n\nIf selling is something you'd consider, even casually, I'd welcome the chance to chat. You can reach me directly at ${phone}.`
 
-  const body1 = editedContent?.body_1
-    ?? "We've looked at everything currently on the market. Nothing has been the right fit."
+  const ps = editedContent?.ps ?? personalized?.ps ?? ''
 
-  const body2 = editedContent?.body_2
-    ?? "I promised them I'd do everything in my power to help them find a new home. That's why I'm writing to you."
-
-  const bulletIntro = editedContent?.bullet_intro
-    ?? `Here's what's important to know about ${buyerName || 'my buyers'}:`
-
-  const b1 = editedContent?.bullet_1 ?? personalized?.bullet_1 ?? bullets.b1 ?? 'Pre-approved and ready to buy'
-  const b2 = editedContent?.bullet_2 ?? personalized?.bullet_2 ?? bullets.b2 ?? 'Flexible on closing timeline'
-  const b3 = editedContent?.bullet_3 ?? personalized?.bullet_3 ?? bullets.b3 ?? 'Love the neighborhood'
-
-  const body3 = editedContent?.body_3
-    ?? 'I want to be upfront: there are no guarantees here.'
-
-  const body4 = editedContent?.body_4
-    ?? 'But if the right offer could change your plans, a short conversation is probably worth your time.'
-
-  const phoneLine = editedContent?.phone_line
-    ?? `My personal cell is ${phone}.`
-
-  const closing = editedContent?.closing
-    ?? personalized?.closing
-    ?? 'I look forward to hearing from you,'
-
-  const ps = editedContent?.ps ?? ''
-
-  // Toggle: highlight listing-specific content in the letter
+  // Toggle: highlight listing-specific content
   const [showListingHighlight, setShowListingHighlight] = useState(false)
 
-  // Auto-scale: use CSS transform to shrink content when it overflows
+  // Auto-scale content to fit page
   const cardRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
-  const [contentScale, setContentScale] = useState(1)
 
   useEffect(() => {
     const card = cardRef.current
     const content = contentRef.current
     if (!card || !content) return
 
-    // Reset scale to measure true content height
-    content.style.transform = 'none'
-    content.style.transformOrigin = 'top left'
-
     const measure = () => {
       content.style.transform = 'none'
+      content.style.width = '100%'
       const cardH = card.clientHeight
       const contentH = content.scrollHeight
       if (contentH > cardH) {
         const newScale = Math.max(0.7, cardH / contentH)
-        setContentScale(newScale)
         content.style.transform = `scale(${newScale})`
         content.style.transformOrigin = 'top left'
         content.style.width = `${100 / newScale}%`
-      } else {
-        setContentScale(1)
-        content.style.transform = 'none'
-        content.style.width = '100%'
       }
     }
 
-    // Measure after render
     requestAnimationFrame(measure)
-
     const observer = new MutationObserver(() => requestAnimationFrame(measure))
     observer.observe(content, { childList: true, subtree: true, characterData: true })
     return () => observer.disconnect()
-  }, [opening, body1, body2, b1, b2, b3, closing, ps])
-
-  const handleUpdate = useCallback((field: keyof LetterContent, value: string) => {
-    onContentChange?.({ ...editedContent, [field]: value })
-  }, [editedContent, onContentChange])
+  }, [body, ps])
 
   const initials = agent.name
     .split(' ')
@@ -189,28 +82,11 @@ export function LetterPreview({
     .toUpperCase()
     .slice(0, 2)
 
-  return (
-    <div className={cn('space-y-4', className)}>
-      {/* Template Selector (only in non-wizard usage) */}
-      {onTemplateChange && (
-        <div className="flex gap-2">
-          {LETTER_TEMPLATES.map(t => (
-            <button
-              key={t.id}
-              onClick={() => onTemplateChange(t.id)}
-              className={cn(
-                'px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
-                templateStyle === t.id
-                  ? 'bg-[#006AFF] text-white'
-                  : 'bg-secondary text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {t.name}
-            </button>
-          ))}
-        </div>
-      )}
+  // Split body into paragraphs
+  const paragraphs = body.split('\n').filter(Boolean)
 
+  return (
+    <div className={cn('space-y-3', className)}>
       {/* Personalization toggle + address label */}
       {property && (
         <div className="flex items-center justify-between text-xs">
@@ -239,10 +115,8 @@ export function LetterPreview({
       )}
 
       {/* Letter Card */}
-      <Card className={cn(
-        'bg-[#faf9f7] text-[#1a1a1a] overflow-hidden [aspect-ratio:8.5/11] rounded-lg',
-        editable && 'cursor-text',
-      )} style={{ fontFamily: "Arial, Helvetica, sans-serif" }} ref={cardRef}>
+      <Card className="bg-[#faf9f7] text-[#1a1a1a] overflow-hidden [aspect-ratio:8.5/11] rounded-lg"
+        style={{ fontFamily: "Arial, Helvetica, sans-serif" }} ref={cardRef}>
         <CardContent className="px-12 pb-10 pt-0" ref={contentRef}>
           {/* Letterhead */}
           <div className="flex justify-center pt-10 pb-4">
@@ -255,33 +129,31 @@ export function LetterPreview({
             )}
           </div>
 
-          {/* Letter body */}
+          {/* Letter body — 100% from Claude */}
           <div className="space-y-[0.8em]" style={{ fontSize: '15px', lineHeight: '1.5' }}>
-            {showListingHighlight && property ? (
-              <p dangerouslySetInnerHTML={{
-                __html: opening
-                  .replace(address, `<mark style="background:#fef3c7;padding:1px 3px;border-radius:3px">${address}</mark>`)
-                  .replace(neighborhood, `<mark style="background:#fef3c7;padding:1px 3px;border-radius:3px">${neighborhood}</mark>`)
-              }} />
-            ) : (
-              <EditableField value={opening} field="opening" onUpdate={handleUpdate} editable={editable} tag="p" />
-            )}
-            <EditableField value={body1} field="body_1" onUpdate={handleUpdate} editable={editable} tag="p" />
-            <EditableField value={body2} field="body_2" onUpdate={handleUpdate} editable={editable} tag="p" />
+            {paragraphs.map((para, i) => {
+              // Check if paragraph is a bullet point (starts with •, -, *)
+              const isBullet = /^[•\-\*]\s/.test(para.trim())
+              if (isBullet) {
+                return (
+                  <p key={i} className="pl-4">{para}</p>
+                )
+              }
 
-            <div>
-              <EditableField value={bulletIntro} field="bullet_intro" onUpdate={handleUpdate} editable={editable} tag="p" className="font-bold mb-[0.3em]" />
-              <ul className="list-disc pl-6 space-y-[0.3em]" style={{ lineHeight: '1.35' }}>
-                <li><EditableField value={b1} field="bullet_1" onUpdate={handleUpdate} editable={editable} /></li>
-                {b2 && <li><EditableField value={b2} field="bullet_2" onUpdate={handleUpdate} editable={editable} /></li>}
-                {b3 && <li><EditableField value={b3} field="bullet_3" onUpdate={handleUpdate} editable={editable} /></li>}
-              </ul>
-            </div>
+              // Highlight address in first paragraph if toggle is on
+              if (showListingHighlight && i === 0 && property) {
+                return (
+                  <p key={i} dangerouslySetInnerHTML={{
+                    __html: para.replace(
+                      new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+                      `<mark style="background:#fef3c7;padding:1px 3px;border-radius:3px">${address}</mark>`
+                    )
+                  }} />
+                )
+              }
 
-            <EditableField value={body3} field="body_3" onUpdate={handleUpdate} editable={editable} tag="p" />
-            <EditableField value={body4} field="body_4" onUpdate={handleUpdate} editable={editable} tag="p" />
-            <EditableField value={phoneLine} field="phone_line" onUpdate={handleUpdate} editable={editable} tag="p" />
-            <EditableField value={closing} field="closing" onUpdate={handleUpdate} editable={editable} tag="p" />
+              return <p key={i}>{para}</p>
+            })}
           </div>
 
           {/* Signature block — non-editable */}
@@ -303,13 +175,13 @@ export function LetterPreview({
                   )}
                 </p>
                 {agent.brokerage && <p className="text-[13px] text-[#444]">{agent.brokerage}</p>}
-                <p className="text-[13px] text-[#444]">{agent.phone || '(555) 123-4567'}</p>
+                <p className="text-[13px] text-[#444]">{phone}</p>
                 {agent.email && <p className="text-[13px] text-[#444]">{agent.email}</p>}
               </div>
             </div>
           </div>
 
-          {/* P.S. — only if content exists */}
+          {/* P.S. — only if Claude generated one */}
           {ps && (
             <div className="mt-6 select-none" style={{ fontSize: '13px', lineHeight: '1.4', color: '#555' }}>
               <p><strong>p.s.</strong> {ps}</p>

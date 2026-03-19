@@ -5,9 +5,7 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 
 /** The template Claude generates — uses {{variables}} that the app fills in */
 export interface LetterTemplate {
-  opening: string
   body: string
-  closing: string
   ps?: string
 }
 
@@ -32,22 +30,23 @@ VARIABLES — use these exact placeholders (double curly braces). The app replac
 - {{property_address}} — recipient's street address + city
 - {{neighborhood}} — their neighborhood name
 - {{buyer_name}} — the buyer's name
-- {{bullet_1}}, {{bullet_2}}, {{bullet_3}} — buyer selling points
 - {{agent_name}} — the sending agent's name
 - {{agent_phone}} — agent's phone number
 
 We do NOT have homeowner names. Address them generically.
 
+BUYER INFO (incorporate naturally into the letter):
+- {{bullet_1}}
+- {{bullet_2}}
+- {{bullet_3}}
+
 RESPONSE FORMAT — respond with ONLY a JSON object, no markdown:
 {
-  "opening": "the opening section of the letter",
-  "body": "the middle section, before bullet points",
-  "closing": "the closing section, after bullet points",
+  "body": "the FULL letter content — opening, middle, and closing. Include everything. Use \\n for paragraph breaks.",
   "ps": "optional postscript, or empty string if not needed"
 }
 
-The app will insert bullet points between "body" and "closing" automatically.
-The app will add the agent signature block automatically.`
+The app will add the agent logo at the top and signature block at the bottom automatically. You write EVERYTHING in between.`
 }
 
 function buildUserPrompt(context: CampaignContext): string {
@@ -91,11 +90,7 @@ async function callClaude(systemPrompt: string, userPrompt: string): Promise<Let
     return JSON.parse(jsonMatch[0]) as LetterTemplate
   } catch {
     logger.warn({ text }, 'Failed to parse Claude response as JSON, using raw text')
-    return {
-      opening: text.slice(0, Math.floor(text.length * 0.4)),
-      body: text.slice(Math.floor(text.length * 0.4), Math.floor(text.length * 0.7)),
-      closing: text.slice(Math.floor(text.length * 0.7)),
-    }
+    return { body: text }
   }
 }
 
@@ -124,9 +119,7 @@ export function fillTemplate(
     return text.replace(/\{\{(\w+)\}\}/g, (match, key) => vars[key] ?? match)
   }
   return {
-    opening: fill(template.opening),
     body: fill(template.body),
-    closing: fill(template.closing),
     ps: template.ps ? fill(template.ps) : undefined,
   }
 }

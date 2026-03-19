@@ -57,20 +57,11 @@ export function LetterPreviewWizard({
     properties.find((p) => p.personalized_content) ?? properties[0] ?? null
 
   // Helper to get per-skill content for preview
-  const getSkillBullets = (skillId: string) => {
-    const bySkill = (sampleProperty as unknown as Record<string, unknown>)?.personalized_content_by_skill as Record<string, { opening: string; bullet_1: string; bullet_2: string; bullet_3: string; closing: string }> | null
+  const getSkillContent = (skillId: string) => {
+    const bySkill = (sampleProperty as unknown as Record<string, unknown>)?.personalized_content_by_skill as Record<string, { body: string; ps: string }> | null
     const content = bySkill?.[skillId]
     if (content) {
-      return { b1: content.bullet_1, b2: content.bullet_2, b3: content.bullet_3 }
-    }
-    return bullets
-  }
-
-  const getSkillEditedContent = (skillId: string) => {
-    const bySkill = (sampleProperty as unknown as Record<string, unknown>)?.personalized_content_by_skill as Record<string, { opening: string; closing: string }> | null
-    const content = bySkill?.[skillId]
-    if (content) {
-      return { opening: content.opening, closing: content.closing }
+      return { body: content.body, ps: content.ps }
     }
     return undefined
   }
@@ -122,9 +113,9 @@ export function LetterPreviewWizard({
                 agent={agent}
                 property={sampleProperty}
                 buyerName={buyerName}
-                bullets={selectedSkill ? getSkillBullets(selectedSkill) : bullets}
+                bullets={bullets}
                 templateStyle={templateStyle}
-                editedContent={selectedSkill ? getSkillEditedContent(selectedSkill) : undefined}
+                editedContent={selectedSkill ? getSkillContent(selectedSkill) : undefined}
               />
             </TabsContent>
 
