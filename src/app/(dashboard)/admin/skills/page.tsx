@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Plus, Pencil, Trash2, Loader2, Sparkles } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Sparkles, ArrowUp, ArrowDown } from 'lucide-react'
 import { toast } from 'sonner'
 import type { MblSkill } from '@/types'
 
@@ -83,6 +83,57 @@ export default function AdminSkillsPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const res = await apiFetch(`/api/admin/skills/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error)
+      return json.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-skills'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const swapOrderMutation = useMutation({
+    mutationFn: async ({ skillA, skillB }: { skillA: MblSkill; skillB: MblSkill }) => {
+      const [resA, resB] = await Promise.all([
+        apiFetch(`/api/admin/skills/${skillA.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sort_order: skillB.sort_order }),
+        }),
+        apiFetch(`/api/admin/skills/${skillB.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sort_order: skillA.sort_order }),
+        }),
+      ])
+      const [jsonA, jsonB] = await Promise.all([resA.json(), resB.json()])
+      if (!jsonA.success) throw new Error(jsonA.error)
+      if (!jsonB.success) throw new Error(jsonB.error)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-skills'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const handleMoveUp = (index: number) => {
+    if (!skills || index === 0) return
+    swapOrderMutation.mutate({ skillA: skills[index], skillB: skills[index - 1] })
+  }
+
+  const handleMoveDown = (index: number) => {
+    if (!skills || index >= skills.length - 1) return
+    swapOrderMutation.mutate({ skillA: skills[index], skillB: skills[index + 1] })
+  }
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await apiFetch(`/api/admin/skills/${id}`, { method: 'DELETE' })
@@ -140,10 +191,32 @@ export default function AdminSkillsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {skills?.map((skill) => (
-            <Card key={skill.id}>
+          {skills?.map((skill, index) => (
+            <Card key={skill.id} className={!skill.is_active ? 'opacity-60' : undefined}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
+                  {/* Sort arrows */}
+                  <div className="flex flex-col gap-0.5 flex-shrink-0 pt-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      disabled={index === 0 || swapOrderMutation.isPending}
+                      onClick={() => handleMoveUp(index)}
+                    >
+                      <ArrowUp className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      disabled={index === (skills?.length ?? 0) - 1 || swapOrderMutation.isPending}
+                      onClick={() => handleMoveDown(index)}
+                    >
+                      <ArrowDown className="h-3 w-3" />
+                    </Button>
+                  </div>
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <Sparkles className="h-4 w-4 text-[#006AFF] flex-shrink-0" />
@@ -151,7 +224,6 @@ export default function AdminSkillsPage() {
                       <Badge variant={skill.is_active ? 'default' : 'secondary'} className="text-[10px]">
                         {skill.is_active ? 'Active' : 'Inactive'}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">#{skill.sort_order}</span>
                     </div>
                     {skill.description && (
                       <p className="text-sm text-muted-foreground mb-2">{skill.description}</p>
@@ -160,7 +232,18 @@ export default function AdminSkillsPage() {
                       {skill.prompt_instructions}
                     </p>
                   </div>
+
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Enable/disable toggle */}
+                    <button
+                      type="button"
+                      onClick={() => toggleActiveMutation.mutate({ id: skill.id, is_active: !skill.is_active })}
+                      disabled={toggleActiveMutation.isPending}
+                      className={`w-9 h-5 rounded-full transition-colors flex-shrink-0 ${skill.is_active ? 'bg-[#006AFF]' : 'bg-muted'}`}
+                      title={skill.is_active ? 'Disable skill' : 'Enable skill'}
+                    >
+                      <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform mx-0.5 ${skill.is_active ? 'translate-x-4' : ''}`} />
+                    </button>
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(skill)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
@@ -239,27 +322,15 @@ export default function AdminSkillsPage() {
                 required
               />
             </div>
-            <div className="flex items-center gap-4">
-              <div className="space-y-1.5 flex-1">
-                <label className="text-sm font-medium">Sort Order</label>
-                <Input
-                  type="number"
-                  value={form.sort_order}
-                  onChange={(e) => setForm((p) => ({ ...p, sort_order: Number(e.target.value) }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Active</label>
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setForm((p) => ({ ...p, is_active: !p.is_active }))}
-                    className={`w-10 h-6 rounded-full transition-colors ${form.is_active ? 'bg-[#006AFF]' : 'bg-muted'}`}
-                  >
-                    <div className={`w-4 h-4 rounded-full bg-white transition-transform mx-1 ${form.is_active ? 'translate-x-4' : ''}`} />
-                  </button>
-                </div>
-              </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium">Active</label>
+              <button
+                type="button"
+                onClick={() => setForm((p) => ({ ...p, is_active: !p.is_active }))}
+                className={`w-10 h-6 rounded-full transition-colors ${form.is_active ? 'bg-[#006AFF]' : 'bg-muted'}`}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white transition-transform mx-1 ${form.is_active ? 'translate-x-4' : ''}`} />
+              </button>
             </div>
             <Button
               type="submit"
