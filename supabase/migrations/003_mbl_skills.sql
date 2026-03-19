@@ -11,18 +11,21 @@ CREATE TABLE mbl_skills (
 );
 
 -- Auto-update updated_at
+DROP TRIGGER IF EXISTS update_mbl_skills_updated_at ON mbl_skills;
 CREATE TRIGGER update_mbl_skills_updated_at
   BEFORE UPDATE ON mbl_skills
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- RLS
 ALTER TABLE mbl_skills ENABLE ROW LEVEL SECURITY;
 
 -- Admins can do everything
+DROP POLICY IF EXISTS "Admins manage skills" ON mbl_skills;
 CREATE POLICY "Admins manage skills" ON mbl_skills
   FOR ALL USING (is_admin());
 
 -- Regular users can read active skills
+DROP POLICY IF EXISTS "Users read active skills" ON mbl_skills;
 CREATE POLICY "Users read active skills" ON mbl_skills
   FOR SELECT USING (is_active = TRUE);
 

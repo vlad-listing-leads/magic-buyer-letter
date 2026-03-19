@@ -37,6 +37,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at
   BEFORE UPDATE ON users
   FOR EACH ROW
@@ -48,11 +49,13 @@ CREATE TRIGGER update_users_updated_at
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
 -- Users can read their own profile
+DROP POLICY IF EXISTS "users_select_own" ON users;
 CREATE POLICY "users_select_own" ON users
   FOR SELECT
   USING (auth.uid() = id);
 
 -- Users can update their own profile
+DROP POLICY IF EXISTS "users_update_own" ON users;
 CREATE POLICY "users_update_own" ON users
   FOR UPDATE
   USING (auth.uid() = id);
@@ -70,11 +73,13 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Admins can read all users
+DROP POLICY IF EXISTS "admins_select_all" ON users;
 CREATE POLICY "admins_select_all" ON users
   FOR SELECT
   USING (is_admin());
 
 -- Admins can insert users (for SSO callback)
+DROP POLICY IF EXISTS "admins_insert" ON users;
 CREATE POLICY "admins_insert" ON users
   FOR INSERT
   WITH CHECK (is_admin());

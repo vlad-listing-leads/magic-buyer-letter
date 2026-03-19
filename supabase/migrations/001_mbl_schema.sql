@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS mbl_agents (
 
 CREATE INDEX IF NOT EXISTS idx_mbl_agents_user_id ON mbl_agents(user_id);
 
+DROP TRIGGER IF EXISTS update_mbl_agents_updated_at ON mbl_agents;
 CREATE TRIGGER update_mbl_agents_updated_at
   BEFORE UPDATE ON mbl_agents
   FOR EACH ROW
@@ -110,6 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_mbl_campaigns_user_id ON mbl_campaigns(user_id);
 CREATE INDEX IF NOT EXISTS idx_mbl_campaigns_agent_id ON mbl_campaigns(agent_id);
 CREATE INDEX IF NOT EXISTS idx_mbl_campaigns_status ON mbl_campaigns(status);
 
+DROP TRIGGER IF EXISTS update_mbl_campaigns_updated_at ON mbl_campaigns;
 CREATE TRIGGER update_mbl_campaigns_updated_at
   BEFORE UPDATE ON mbl_campaigns
   FOR EACH ROW
@@ -194,6 +196,7 @@ CREATE INDEX IF NOT EXISTS idx_mbl_properties_campaign_id ON mbl_properties(camp
 CREATE INDEX IF NOT EXISTS idx_mbl_properties_lob_letter_id ON mbl_properties(lob_letter_id);
 CREATE INDEX IF NOT EXISTS idx_mbl_properties_status ON mbl_properties(status);
 
+DROP TRIGGER IF EXISTS update_mbl_properties_updated_at ON mbl_properties;
 CREATE TRIGGER update_mbl_properties_updated_at
   BEFORE UPDATE ON mbl_properties
   FOR EACH ROW
@@ -206,39 +209,49 @@ CREATE TRIGGER update_mbl_properties_updated_at
 -- mbl_agents
 ALTER TABLE mbl_agents ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "agents_select_own" ON mbl_agents;
 CREATE POLICY "agents_select_own" ON mbl_agents
   FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "agents_insert_own" ON mbl_agents;
 CREATE POLICY "agents_insert_own" ON mbl_agents
   FOR INSERT WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "agents_update_own" ON mbl_agents;
 CREATE POLICY "agents_update_own" ON mbl_agents
   FOR UPDATE USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "agents_admin_select" ON mbl_agents;
 CREATE POLICY "agents_admin_select" ON mbl_agents
   FOR SELECT USING (is_admin());
 
 -- mbl_campaigns
 ALTER TABLE mbl_campaigns ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "campaigns_select_own" ON mbl_campaigns;
 CREATE POLICY "campaigns_select_own" ON mbl_campaigns
   FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "campaigns_insert_own" ON mbl_campaigns;
 CREATE POLICY "campaigns_insert_own" ON mbl_campaigns
   FOR INSERT WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "campaigns_update_own" ON mbl_campaigns;
 CREATE POLICY "campaigns_update_own" ON mbl_campaigns
   FOR UPDATE USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "campaigns_delete_own" ON mbl_campaigns;
 CREATE POLICY "campaigns_delete_own" ON mbl_campaigns
   FOR DELETE USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "campaigns_admin_select" ON mbl_campaigns;
 CREATE POLICY "campaigns_admin_select" ON mbl_campaigns
   FOR SELECT USING (is_admin());
 
 -- mbl_properties
 ALTER TABLE mbl_properties ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "properties_select_own" ON mbl_properties;
 CREATE POLICY "properties_select_own" ON mbl_properties
   FOR SELECT USING (
     EXISTS (
@@ -248,6 +261,7 @@ CREATE POLICY "properties_select_own" ON mbl_properties
     )
   );
 
+DROP POLICY IF EXISTS "properties_insert_own" ON mbl_properties;
 CREATE POLICY "properties_insert_own" ON mbl_properties
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -257,6 +271,7 @@ CREATE POLICY "properties_insert_own" ON mbl_properties
     )
   );
 
+DROP POLICY IF EXISTS "properties_update_own" ON mbl_properties;
 CREATE POLICY "properties_update_own" ON mbl_properties
   FOR UPDATE USING (
     EXISTS (
@@ -266,5 +281,6 @@ CREATE POLICY "properties_update_own" ON mbl_properties
     )
   );
 
+DROP POLICY IF EXISTS "properties_admin_select" ON mbl_properties;
 CREATE POLICY "properties_admin_select" ON mbl_properties
   FOR SELECT USING (is_admin());
