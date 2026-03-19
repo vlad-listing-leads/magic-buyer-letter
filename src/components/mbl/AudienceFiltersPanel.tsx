@@ -163,12 +163,12 @@ export function AudienceFiltersPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto w-full sm:max-w-sm">
-        <SheetHeader>
+      <SheetContent className="w-full sm:max-w-sm flex flex-col overflow-hidden">
+        <SheetHeader className="flex-shrink-0">
           <SheetTitle>Filters</SheetTitle>
         </SheetHeader>
 
-        <div className="space-y-5 py-3">
+        <div className="space-y-5 py-3 flex-1 overflow-y-auto">
           {/* Location */}
           {(facets.cities.length > 0 || facets.zips.length > 0) && (
             <div className="space-y-3">
@@ -371,7 +371,7 @@ export function AudienceFiltersPanel({
           </div>
         </div>
 
-        <SheetFooter className="flex-col gap-2 sm:flex-col">
+        <SheetFooter className="flex-col gap-2 sm:flex-col flex-shrink-0 border-t border-border pt-3">
           <div className="flex items-center justify-between w-full">
             <Badge variant="secondary" className="text-xs">
               {matchCount} match{matchCount !== 1 ? 'es' : ''}
