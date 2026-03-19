@@ -17,9 +17,10 @@ interface PipelineLoadingProps {
   buyerName?: string
   onComplete: (campaignId: string, readyCount: number) => void
   onError: (error: string) => void
+  onBack?: () => void
 }
 
-export function PipelineLoading({ campaignId, buyerName, onComplete, onError }: PipelineLoadingProps) {
+export function PipelineLoading({ campaignId, buyerName, onComplete, onError, onBack }: PipelineLoadingProps) {
   const [currentStep, setCurrentStep] = useState<PipelineStep>('searching')
   const [progress, setProgress] = useState(0)
   const [message, setMessage] = useState('Starting pipeline...')
@@ -205,8 +206,19 @@ export function PipelineLoading({ campaignId, buyerName, onComplete, onError }: 
         </div>
 
         {error && (
-          <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm text-center">
-            {error}
+          <div className="space-y-3">
+            <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm text-center">
+              {error}
+            </div>
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="w-full py-2 rounded-lg text-sm font-medium text-[#006AFF] hover:bg-[#006AFF]/10 transition-colors"
+              >
+                Adjust search criteria
+              </button>
+            )}
           </div>
         )}
       </div>

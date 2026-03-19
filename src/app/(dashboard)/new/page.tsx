@@ -266,6 +266,7 @@ function NewLetterWizard() {
           buyerName={buyerName}
           onComplete={handlePipelineComplete}
           onError={handlePipelineError}
+          onBack={() => setStep('profile')}
         />
       )}
 
