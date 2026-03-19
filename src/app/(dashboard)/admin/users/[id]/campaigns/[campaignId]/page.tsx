@@ -145,7 +145,7 @@ export default function AdminCampaignDetailPage({
 
         <TabsContent value="letter">
           {(() => {
-            const agent = (campaign as Record<string, unknown>).mbl_agents as MblAgent | null
+            const agent = (campaign as unknown as Record<string, unknown>).mbl_agents as MblAgent | null
             const sampleProp = properties.find(p => p.personalized_content) ?? properties[0] ?? null
             if (!agent) return <Card><CardContent className="py-12 text-center text-muted-foreground">No agent profile</CardContent></Card>
             return (
