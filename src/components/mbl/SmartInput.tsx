@@ -36,6 +36,7 @@ export function SmartInput({ onComplete }: SmartInputProps) {
   const [isFocused, setIsFocused] = useState(false)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const baseTextRef = useRef('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const apiFetch = useApiFetch()
 
   const handleContinue = async () => {
@@ -183,11 +184,11 @@ export function SmartInput({ onComplete }: SmartInputProps) {
 
           <div className="relative">
             <textarea
+              ref={textareaRef}
               value={text}
               onChange={(e) => {
                 setText(e.target.value)
                 setParsed(null)
-                // Auto-resize
                 e.target.style.height = 'auto'
                 e.target.style.height = `${Math.max(64, e.target.scrollHeight)}px`
               }}
@@ -206,7 +207,7 @@ export function SmartInput({ onComplete }: SmartInputProps) {
               )}
               autoFocus
             />
-            <div className="absolute right-2 top-4 flex items-center gap-1.5">
+            <div className="absolute right-2 bottom-3 flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={toggleVoice}
@@ -324,7 +325,15 @@ export function SmartInput({ onComplete }: SmartInputProps) {
             </p>
             <button
               type="button"
-              onClick={() => setText('Sarah and Mike, $800K-1.2M, 3 bed in Newton MA, pre-approved')}
+              onClick={() => {
+                setText('Sarah and Mike, $800K-1.2M, 3 bed in Newton MA, pre-approved')
+                requestAnimationFrame(() => {
+                  if (textareaRef.current) {
+                    textareaRef.current.style.height = 'auto'
+                    textareaRef.current.style.height = `${Math.max(64, textareaRef.current.scrollHeight)}px`
+                  }
+                })
+              }}
               className="text-xs text-[#006AFF] hover:text-[#0058D4] font-medium"
             >
               Copy
