@@ -139,13 +139,14 @@ const s = StyleSheet.create({
     fontSize: 8,
   },
   colNum: { width: '4%' },
-  colAddress: { width: '30%' },
-  colCity: { width: '22%' },
-  colBeds: { width: '6%' },
-  colBaths: { width: '6%' },
-  colSqft: { width: '10%' },
-  colValue: { width: '12%' },
-  colYears: { width: '10%' },
+  colName: { width: '18%' },
+  colAddress: { width: '24%' },
+  colCity: { width: '20%' },
+  colBeds: { width: '5%' },
+  colBaths: { width: '5%' },
+  colSqft: { width: '8%' },
+  colValue: { width: '10%' },
+  colYears: { width: '6%' },
 })
 
 interface LetterDocProps {
@@ -251,28 +252,33 @@ export function AddressDocument({ properties, buyerName, area }: AddressDocProps
         {/* Header */}
         <View style={s.tableHeader}>
           <Text style={s.colNum}>#</Text>
+          <Text style={s.colName}>Recipient</Text>
           <Text style={s.colAddress}>Address</Text>
           <Text style={s.colCity}>City, State ZIP</Text>
           <Text style={s.colBeds}>Beds</Text>
           <Text style={s.colBaths}>Baths</Text>
           <Text style={s.colSqft}>Sqft</Text>
           <Text style={s.colValue}>Value</Text>
-          <Text style={s.colYears}>Yrs Owned</Text>
+          <Text style={s.colYears}>Yrs</Text>
         </View>
 
         {/* Rows */}
-        {properties.map((prop, i) => (
-          <View key={prop.id} style={s.tableRow} wrap={false}>
-            <Text style={s.colNum}>{i + 1}</Text>
-            <Text style={s.colAddress}>{prop.address_line1}</Text>
-            <Text style={s.colCity}>{prop.city}, {prop.state} {prop.zip}</Text>
-            <Text style={s.colBeds}>{prop.bedrooms ?? '—'}</Text>
-            <Text style={s.colBaths}>{prop.bathrooms ?? '—'}</Text>
-            <Text style={s.colSqft}>{prop.sqft ? prop.sqft.toLocaleString() : '—'}</Text>
-            <Text style={s.colValue}>{prop.estimated_value ? `$${prop.estimated_value.toLocaleString()}` : '—'}</Text>
-            <Text style={s.colYears}>{prop.years_owned ?? '—'}</Text>
-          </View>
-        ))}
+        {properties.map((prop, i) => {
+          const name = `${prop.owner_first_name ?? ''} ${prop.owner_last_name ?? ''}`.trim() || 'Current Resident'
+          return (
+            <View key={prop.id} style={s.tableRow} wrap={false}>
+              <Text style={s.colNum}>{i + 1}</Text>
+              <Text style={s.colName}>{name}</Text>
+              <Text style={s.colAddress}>{prop.address_line1}</Text>
+              <Text style={s.colCity}>{prop.city}, {prop.state} {prop.zip}</Text>
+              <Text style={s.colBeds}>{prop.bedrooms ?? '—'}</Text>
+              <Text style={s.colBaths}>{prop.bathrooms ?? '—'}</Text>
+              <Text style={s.colSqft}>{prop.sqft ? prop.sqft.toLocaleString() : '—'}</Text>
+              <Text style={s.colValue}>{prop.estimated_value ? `$${prop.estimated_value.toLocaleString()}` : '—'}</Text>
+              <Text style={s.colYears}>{prop.years_owned ?? '—'}</Text>
+            </View>
+          )
+        })}
       </Page>
     </Document>
   )
