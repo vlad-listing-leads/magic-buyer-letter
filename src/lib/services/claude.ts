@@ -22,31 +22,17 @@ interface CampaignContext {
  * All creative direction comes from the skill's prompt_instructions.
  */
 function buildSystemPrompt(skillInstructions: string): string {
-  return `You write real estate buyer letters. Follow these instructions for tone, style, and format:
+  return `${skillInstructions}
 
-${skillInstructions}
+DATA — the app will replace these placeholders with real values per recipient:
+{{property_address}}, {{neighborhood}}, {{buyer_name}}, {{agent_name}}, {{agent_phone}}
+Buyer details: {{bullet_1}}, {{bullet_2}}, {{bullet_3}}
+We do NOT have homeowner names.
 
-VARIABLES — use these exact placeholders (double curly braces). The app replaces them per recipient:
-- {{property_address}} — recipient's street address + city
-- {{neighborhood}} — their neighborhood name
-- {{buyer_name}} — the buyer's name
-- {{agent_name}} — the sending agent's name
-- {{agent_phone}} — agent's phone number
+Respond with ONLY a JSON object (no markdown):
+{"body": "your letter content with \\n for line breaks", "ps": "optional postscript or empty string"}
 
-We do NOT have homeowner names. Address them generically.
-
-BUYER INFO (incorporate naturally into the letter):
-- {{bullet_1}}
-- {{bullet_2}}
-- {{bullet_3}}
-
-RESPONSE FORMAT — respond with ONLY a JSON object, no markdown:
-{
-  "body": "the FULL letter content — opening, middle, and closing. Include everything. Use \\n for paragraph breaks.",
-  "ps": "optional postscript, or empty string if not needed"
-}
-
-The app will add the agent logo at the top and signature block at the bottom automatically. You write EVERYTHING in between.`
+The app adds agent logo and signature automatically.`
 }
 
 function buildUserPrompt(context: CampaignContext): string {
