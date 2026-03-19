@@ -34,14 +34,42 @@ export function CampaignSummary({
   const selectedProperties = properties.filter(p => p.selected)
   const area = `${campaign.criteria_city}${campaign.criteria_state ? `, ${campaign.criteria_state}` : ''}`
 
+  /** Convert SVG URL to PNG data URI via canvas */
+  const svgToPngDataUri = async (svgUrl: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth * 2 || 400
+        canvas.height = img.naturalHeight * 2 || 100
+        const ctx = canvas.getContext('2d')
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/png'))
+      }
+      img.onerror = reject
+      img.src = svgUrl
+    })
+  }
+
   const handleDownloadLetters = async () => {
     setIsGeneratingPdf(true)
     try {
       const { pdf } = await import('@react-pdf/renderer')
       const { LetterDocument } = await import('./LetterPdf')
 
+      // Convert SVG logo to PNG if needed
+      let logoDataUri: string | null = null
+      if (agent?.logo_url?.endsWith('.svg') || agent?.logo_url?.includes('.svg?')) {
+        try {
+          logoDataUri = await svgToPngDataUri(agent.logo_url)
+        } catch {
+          // Fall back to text
+        }
+      }
+
       const blob = await pdf(
-        LetterDocument({ properties: selectedProperties, agent, selectedSkillId })
+        LetterDocument({ properties: selectedProperties, agent, selectedSkillId, logoDataUri })
       ).toBlob()
 
       const url = URL.createObjectURL(blob)

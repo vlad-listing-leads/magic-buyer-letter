@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, Image, StyleSheet, Font } from '@react-pdf/renderer'
+import { Document, Page, Text, View, Image, Svg, Path, Rect, Circle, StyleSheet, Font } from '@react-pdf/renderer'
 import type { MblAgent, MblProperty } from '@/types'
 
 // Register Noto Sans — supports wide Unicode range
@@ -13,12 +13,6 @@ Font.register({
 /** Strip emoji and other non-printable chars that crash react-pdf */
 function clean(str: string): string {
   return str.replace(/[\u{1F000}-\u{1FFFF}|\u{2600}-\u{27BF}|\u{FE00}-\u{FEFF}|\u{200D}|\u{20E3}|\u{E0020}-\u{E007F}]/gu, '').trim()
-}
-
-/** Check if URL is SVG (react-pdf Image doesn't support SVG) */
-function isSvgUrl(url?: string | null): boolean {
-  if (!url) return false
-  return url.endsWith('.svg') || url.includes('.svg?')
 }
 
 const s = StyleSheet.create({
@@ -48,9 +42,20 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   paragraph: {
-    marginBottom: 10,
+    marginBottom: 8,
     fontSize: 11,
-    lineHeight: 1.5,
+    lineHeight: 1.6,
+  },
+  bulletItem: {
+    marginBottom: 4,
+    fontSize: 11,
+    lineHeight: 1.4,
+    paddingLeft: 12,
+  },
+  bulletDot: {
+    position: 'absolute' as const,
+    left: 0,
+    top: 0,
   },
   sigBlock: {
     flexDirection: 'row' as const,
@@ -147,9 +152,10 @@ interface LetterDocProps {
   properties: MblProperty[]
   agent: MblAgent | null
   selectedSkillId: string | null
+  logoDataUri?: string | null
 }
 
-export function LetterDocument({ properties, agent, selectedSkillId }: LetterDocProps) {
+export function LetterDocument({ properties, agent, selectedSkillId, logoDataUri }: LetterDocProps) {
   const agentName = agent?.name ?? ''
   const initials = agentName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 
@@ -166,9 +172,11 @@ export function LetterDocument({ properties, agent, selectedSkillId }: LetterDoc
 
         return (
           <Page key={prop.id} size="LETTER" style={s.page}>
-            {/* Logo — skip SVG (not supported by react-pdf Image) */}
+            {/* Logo */}
             <View style={s.logoWrap}>
-              {agent?.logo_url && !isSvgUrl(agent.logo_url) ? (
+              {logoDataUri ? (
+                <Image src={logoDataUri} style={s.logo} />
+              ) : agent?.logo_url && !agent.logo_url.endsWith('.svg') ? (
                 <Image src={agent.logo_url} style={s.logo} />
               ) : (
                 <Text style={s.logoText}>{clean(agent?.brokerage || agentName)}</Text>
@@ -177,14 +185,23 @@ export function LetterDocument({ properties, agent, selectedSkillId }: LetterDoc
 
             {/* Body paragraphs */}
             <View style={s.body}>
-              {paragraphs.map((para, i) => (
-                <Text key={i} style={s.paragraph}>{clean(para)}</Text>
-              ))}
+              {paragraphs.map((para, i) => {
+                const isBullet = /^[•\-\*]\s/.test(para.trim())
+                if (isBullet) {
+                  return (
+                    <View key={i} style={s.bulletItem}>
+                      <Text style={s.bulletDot}>•</Text>
+                      <Text>{clean(para.replace(/^[•\-\*]\s*/, ''))}</Text>
+                    </View>
+                  )
+                }
+                return <Text key={i} style={s.paragraph}>{clean(para)}</Text>
+              })}
             </View>
 
             {/* Signature */}
             <View style={s.sigBlock}>
-              {agent?.headshot_url && !isSvgUrl(agent.headshot_url) ? (
+              {agent?.headshot_url && !agent.headshot_url.endsWith('.svg') ? (
                 <Image src={agent.headshot_url} style={s.headshot} />
               ) : (
                 <View style={s.initialsBox}>
