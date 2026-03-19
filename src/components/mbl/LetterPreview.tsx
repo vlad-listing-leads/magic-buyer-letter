@@ -140,31 +140,44 @@ export function LetterPreview({
   // Toggle: highlight listing-specific content in the letter
   const [showListingHighlight, setShowListingHighlight] = useState(false)
 
-  // Auto-scale: shrink font/spacing when content overflows
+  // Auto-scale: use CSS transform to shrink content when it overflows
   const cardRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
-  const [scale, setScale] = useState(1)
+  const [contentScale, setContentScale] = useState(1)
 
   useEffect(() => {
     const card = cardRef.current
     const content = contentRef.current
     if (!card || !content) return
 
-    const check = () => {
+    // Reset scale to measure true content height
+    content.style.transform = 'none'
+    content.style.transformOrigin = 'top left'
+
+    const measure = () => {
+      content.style.transform = 'none'
       const cardH = card.clientHeight
       const contentH = content.scrollHeight
-      if (contentH > cardH && scale > 0.75) {
-        setScale(Math.max(0.75, cardH / contentH))
-      } else if (contentH <= cardH * 0.95 && scale < 1) {
-        setScale(Math.min(1, cardH / contentH))
+      if (contentH > cardH) {
+        const newScale = Math.max(0.7, cardH / contentH)
+        setContentScale(newScale)
+        content.style.transform = `scale(${newScale})`
+        content.style.transformOrigin = 'top left'
+        content.style.width = `${100 / newScale}%`
+      } else {
+        setContentScale(1)
+        content.style.transform = 'none'
+        content.style.width = '100%'
       }
     }
 
-    check()
-    const observer = new ResizeObserver(check)
-    observer.observe(content)
+    // Measure after render
+    requestAnimationFrame(measure)
+
+    const observer = new MutationObserver(() => requestAnimationFrame(measure))
+    observer.observe(content, { childList: true, subtree: true, characterData: true })
     return () => observer.disconnect()
-  })
+  }, [opening, body1, body2, b1, b2, b3, closing, ps])
 
   const handleUpdate = useCallback((field: keyof LetterContent, value: string) => {
     onContentChange?.({ ...editedContent, [field]: value })
@@ -231,7 +244,7 @@ export function LetterPreview({
         'bg-[#faf9f7] text-[#1a1a1a] overflow-hidden [aspect-ratio:8.5/11] rounded-lg',
         editable && 'cursor-text',
       )} style={{ fontFamily: "Arial, Helvetica, sans-serif" }} ref={cardRef}>
-        <CardContent className="px-12 pb-10 pt-0" ref={contentRef} style={{ fontSize: `${Math.round(15 * scale)}px`, lineHeight: scale < 1 ? 1.35 : 1.5 }}>
+        <CardContent className="px-12 pb-10 pt-0" ref={contentRef}>
           {/* Letterhead */}
           <div className="flex justify-center pt-10 pb-4">
             {agent.logo_url ? (
