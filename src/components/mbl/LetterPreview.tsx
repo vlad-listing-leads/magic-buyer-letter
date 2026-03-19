@@ -137,6 +137,9 @@ export function LetterPreview({
   const ps = editedContent?.ps
     ?? `If you'd also like to know what your home is realistically worth in today's market, I'm happy to put together a complimentary home value report — no cost, no obligation. Just text or call me at ${phone}.`
 
+  // Toggle: highlight listing-specific content in the letter
+  const [showListingHighlight, setShowListingHighlight] = useState(false)
+
   // Auto-scale: shrink font/spacing when content overflows
   const cardRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -196,6 +199,33 @@ export function LetterPreview({
         </div>
       )}
 
+      {/* Personalization toggle + address label */}
+      {property && (
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">
+            Preview for <span className="font-medium text-foreground">{address}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowListingHighlight(!showListingHighlight)}
+            className={cn(
+              'flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors text-xs font-medium',
+              showListingHighlight
+                ? 'bg-amber-500/10 text-amber-500'
+                : 'bg-muted text-muted-foreground'
+            )}
+          >
+            <div className={cn(
+              'w-3 h-3 rounded-sm border transition-colors flex items-center justify-center',
+              showListingHighlight ? 'bg-amber-500 border-amber-500' : 'border-muted-foreground'
+            )}>
+              {showListingHighlight && <span className="text-white text-[8px]">✓</span>}
+            </div>
+            Show listing details
+          </button>
+        </div>
+      )}
+
       {/* Letter Card */}
       <Card className={cn(
         'bg-[#faf9f7] text-[#1a1a1a] overflow-hidden [aspect-ratio:8.5/11] rounded-lg',
@@ -215,7 +245,15 @@ export function LetterPreview({
 
           {/* Letter body */}
           <div className="space-y-[0.8em]" style={{ fontSize: '15px', lineHeight: '1.5' }}>
-            <EditableField value={opening} field="opening" onUpdate={handleUpdate} editable={editable} tag="p" />
+            {showListingHighlight && property ? (
+              <p dangerouslySetInnerHTML={{
+                __html: opening
+                  .replace(address, `<mark style="background:#fef3c7;padding:1px 3px;border-radius:3px">${address}</mark>`)
+                  .replace(neighborhood, `<mark style="background:#fef3c7;padding:1px 3px;border-radius:3px">${neighborhood}</mark>`)
+              }} />
+            ) : (
+              <EditableField value={opening} field="opening" onUpdate={handleUpdate} editable={editable} tag="p" />
+            )}
             <EditableField value={body1} field="body_1" onUpdate={handleUpdate} editable={editable} tag="p" />
             <EditableField value={body2} field="body_2" onUpdate={handleUpdate} editable={editable} tag="p" />
 
