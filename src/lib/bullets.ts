@@ -56,7 +56,5 @@ function formatPriceRange(range?: { min?: number; max?: number }): string {
 }
 
 function formatK(val: number): string {
-  if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(1)}M`
-  if (val >= 1000) return `${Math.round(val / 1000)}K`
-  return String(val)
+  return val.toLocaleString()
 }

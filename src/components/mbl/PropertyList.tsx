@@ -196,7 +196,7 @@ export function PropertyList({
                     </div>
                   </td>
                   <td className="p-3 font-mono">
-                    {prop.estimated_value ? `$${(prop.estimated_value / 1000).toFixed(0)}K` : '—'}
+                    {prop.estimated_value ? `$${prop.estimated_value.toLocaleString()}` : '—'}
                   </td>
                   <td className="p-3">{prop.bedrooms ?? '—'}</td>
                   <td className="p-3 font-mono">{prop.sqft?.toLocaleString() ?? '—'}</td>

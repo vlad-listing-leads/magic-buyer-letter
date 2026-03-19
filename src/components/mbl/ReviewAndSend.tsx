@@ -43,7 +43,7 @@ export function ReviewAndSend({
 
   const priceRange =
     campaign.criteria_price_min || campaign.criteria_price_max
-      ? `$${campaign.criteria_price_min ? Math.round(campaign.criteria_price_min / 1000) : '?'}K–$${campaign.criteria_price_max ? Math.round(campaign.criteria_price_max / 1000) : '?'}K`
+      ? `${campaign.criteria_price_min ? `$${campaign.criteria_price_min.toLocaleString()}` : '?'} – ${campaign.criteria_price_max ? `$${campaign.criteria_price_max.toLocaleString()}` : '?'}`
       : 'Any price'
 
   const totalSearched = properties.length

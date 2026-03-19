@@ -16,7 +16,7 @@ import {
   TooltipProvider,
 } from '@/components/ui/tooltip'
 import {
-  Mail, Send, CheckCircle, DollarSign, Plus, ChevronRight,
+  Mail, Send, DollarSign, Plus, ChevronRight,
   Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -63,7 +63,6 @@ function StatusBadge({ status }: { status: CampaignStatus }) {
 function CampaignCard({ campaign }: { campaign: MblCampaign }) {
   const area = `${campaign.criteria_city}${campaign.criteria_state ? `, ${campaign.criteria_state}` : ''}`
   const cost = (campaign.total_cost_cents / 100).toFixed(2)
-  const hasReturns = campaign.properties_returned > 0
 
   return (
     <Link href={`/campaigns/${campaign.id}`} className="block group">
@@ -94,28 +93,6 @@ function CampaignCard({ campaign }: { campaign: MblCampaign }) {
                   <TooltipContent>Letters sent via Lob</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger className="text-center min-w-[3rem]">
-                    <p className="text-lg font-bold font-mono leading-none text-emerald-400">{campaign.properties_delivered}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">delivered</p>
-                  </TooltipTrigger>
-                  <TooltipContent>Confirmed delivered by USPS</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              {hasReturns && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger className="text-center min-w-[3rem]">
-                      <p className="text-lg font-bold font-mono leading-none text-red-400">{campaign.properties_returned}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">returned</p>
-                    </TooltipTrigger>
-                    <TooltipContent>Letters returned by USPS</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
 
               <Separator orientation="vertical" className="h-8 hidden sm:block" />
 
@@ -182,7 +159,6 @@ export default function DashboardPage() {
 
   const totalCampaigns = campaigns?.length ?? 0
   const totalSent = campaigns?.reduce((sum, c) => sum + c.properties_sent, 0) ?? 0
-  const totalDelivered = campaigns?.reduce((sum, c) => sum + c.properties_delivered, 0) ?? 0
   const totalSpend = campaigns?.reduce((sum, c) => sum + c.total_cost_cents, 0) ?? 0
 
   const tabCounts = useMemo(() => {
@@ -214,7 +190,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats — same style as campaign detail */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Campaigns</CardTitle>
@@ -231,15 +207,6 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalSent}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Delivered</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalDelivered}</div>
           </CardContent>
         </Card>
         <Card>

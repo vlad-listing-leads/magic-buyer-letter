@@ -91,9 +91,7 @@ function getCityZips(city?: string): string[] {
 }
 
 function formatPrice(val: number): string {
-  if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`
-  if (val >= 1000) return `$${Math.round(val / 1000)}K`
-  return `$${val}`
+  return `$${val.toLocaleString()}`
 }
 
 export function BuyerProfile({

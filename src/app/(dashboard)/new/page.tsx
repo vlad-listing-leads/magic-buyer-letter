@@ -203,7 +203,7 @@ function NewLetterWizard() {
   const area = `${criteria.city ?? ''}${criteria.state ? `, ${criteria.state}` : ''}`
   const priceRange =
     criteria.price_min || criteria.price_max
-      ? `$${criteria.price_min ? Math.round(criteria.price_min / 1000) : '?'}K–$${criteria.price_max ? Math.round(criteria.price_max / 1000) : '?'}K`
+      ? `${criteria.price_min ? `$${criteria.price_min.toLocaleString()}` : '?'} – ${criteria.price_max ? `$${criteria.price_max.toLocaleString()}` : '?'}`
       : ''
 
   const currentStepIndex = STEP_ORDER.indexOf(step)

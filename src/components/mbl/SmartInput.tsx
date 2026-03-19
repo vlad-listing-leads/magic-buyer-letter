@@ -153,10 +153,10 @@ export function SmartInput({ onComplete }: SmartInputProps) {
       items.push({ icon: MapPin, label: 'ZIP', value: parsed.zip, color: 'text-emerald-400' })
     }
     if (parsed.price_min || parsed.price_max) {
-      const fmtK = (n: number) => n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n / 1000)}K`
+      const fmtPrice = (n: number) => `$${n.toLocaleString()}`
       const price = parsed.price_min && parsed.price_max
-        ? `${fmtK(parsed.price_min)}–${fmtK(parsed.price_max)}`
-        : parsed.price_min ? `${fmtK(parsed.price_min)}+` : `up to ${fmtK(parsed.price_max!)}`
+        ? `${fmtPrice(parsed.price_min)} – ${fmtPrice(parsed.price_max)}`
+        : parsed.price_min ? `${fmtPrice(parsed.price_min)}+` : `up to ${fmtPrice(parsed.price_max!)}`
       items.push({ icon: DollarSign, label: 'Price', value: price, color: 'text-amber-400' })
     }
     if (parsed.beds_min) {
