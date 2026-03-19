@@ -32,6 +32,12 @@ export function LetterPreviewWizard({
 }: LetterPreviewWizardProps) {
   const apiFetch = useApiFetch()
   const [envelopeType, setEnvelopeType] = useState<'standard' | 'custom'>('standard')
+  const [selectedSkill, setSelectedSkill] = useState<string | null>(null)
+
+  // Auto-select first skill when loaded
+  if (activeSkills.length > 0 && selectedSkill === null) {
+    setSelectedSkill(activeSkills[0].id)
+  }
 
   // Fetch active skills
   const { data: skills } = useQuery<{ id: string; name: string; description: string }[]>({
@@ -82,67 +88,49 @@ export function LetterPreviewWizard({
         </p>
       </div>
 
-      <div className="max-w-2xl mx-auto">
-        {hasMultipleSkills ? (
-          /* Multiple skills — outer tabs for skills, inner tabs for letter/envelope */
-          <Tabs defaultValue={activeSkills[0]?.id}>
-            <TabsList>
-              {activeSkills.map((skill) => (
-                <TabsTrigger key={skill.id} value={skill.id}>
-                  {skill.name}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
+      <div className="max-w-2xl mx-auto space-y-4">
+        {/* Skill selector — pill buttons, not tabs */}
+        {hasMultipleSkills && (
+          <div className="flex justify-center gap-2">
             {activeSkills.map((skill) => (
-              <TabsContent key={skill.id} value={skill.id}>
-                <Tabs defaultValue="letter">
-                  <TabsList>
-                    <TabsTrigger value="letter">Letter Page 1</TabsTrigger>
-                    <TabsTrigger value="envelope">Envelope Front</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="letter">
-                    <LetterPreview
-                      agent={agent}
-                      property={sampleProperty}
-                      buyerName={buyerName}
-                      bullets={getSkillBullets(skill.id)}
-                      templateStyle={templateStyle}
-                      editedContent={getSkillEditedContent(skill.id)}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="envelope">
-                    <EnvelopeMockup agent={agent} property={sampleProperty} />
-                  </TabsContent>
-                </Tabs>
-              </TabsContent>
+              <button
+                key={skill.id}
+                type="button"
+                onClick={() => setSelectedSkill(skill.id)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  selectedSkill === skill.id
+                    ? 'bg-[#006AFF] text-white shadow-md shadow-[#006AFF]/20'
+                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {skill.name}
+              </button>
             ))}
-          </Tabs>
-        ) : (
-          /* Single skill — just letter/envelope tabs */
-          <Tabs defaultValue="letter">
-            <TabsList>
-              <TabsTrigger value="letter">Letter Page 1</TabsTrigger>
-              <TabsTrigger value="envelope">Envelope Front</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="letter">
-              <LetterPreview
-                agent={agent}
-                property={sampleProperty}
-                buyerName={buyerName}
-                bullets={bullets}
-                templateStyle={templateStyle}
-              />
-            </TabsContent>
-
-            <TabsContent value="envelope">
-              <EnvelopeMockup agent={agent} property={sampleProperty} />
-            </TabsContent>
-          </Tabs>
+          </div>
         )}
+
+        {/* Letter / Envelope tabs */}
+        <Tabs defaultValue="letter">
+          <TabsList>
+            <TabsTrigger value="letter">Letter Page 1</TabsTrigger>
+            <TabsTrigger value="envelope">Envelope Front</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="letter">
+            <LetterPreview
+              agent={agent}
+              property={sampleProperty}
+              buyerName={buyerName}
+              bullets={selectedSkill ? getSkillBullets(selectedSkill) : bullets}
+              templateStyle={templateStyle}
+              editedContent={selectedSkill ? getSkillEditedContent(selectedSkill) : undefined}
+            />
+          </TabsContent>
+
+          <TabsContent value="envelope">
+            <EnvelopeMockup agent={agent} property={sampleProperty} />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Envelope type selector */}
