@@ -63,8 +63,8 @@ const s = StyleSheet.create({
     textTransform: 'uppercase' as const,
   },
   miniMap: {
-    width: 64,
-    height: 44,
+    width: 77,
+    height: 53,
     borderRadius: 3,
     objectFit: 'cover' as const,
   },
@@ -257,9 +257,9 @@ export function LetterDocument({ properties, agent, selectedSkillId, logoDataUri
                     <Text style={s.logoText}>{clean(agent?.brokerage || agentName)}</Text>
                   )}
                 </View>
-                {prop.latitude && prop.longitude && (
+                {prop.latitude && prop.longitude && process.env.NEXT_PUBLIC_GEOAPIFY_KEY && (
                   <Image
-                    src={`https://staticmap.openstreetmap.de/staticmap.php?center=${prop.latitude},${prop.longitude}&zoom=13&size=128x88&maptype=osmarenderer`}
+                    src={`https://maps.geoapify.com/v1/staticmap?style=osm-bright-smooth&width=160&height=110&center=lonlat:${prop.longitude},${prop.latitude}&zoom=13&apiKey=${process.env.NEXT_PUBLIC_GEOAPIFY_KEY}`}
                     style={s.miniMap}
                   />
                 )}
