@@ -78,114 +78,88 @@ async function searchSingleBatch(
   params: Record<string, unknown>
 ): Promise<ReapiPropertyResult[]> {
   try {
+    logger.info({ params }, 'REAPI request params')
     const result = await reapiFetch<{ data: ReapiPropertyResult[] }>('/v2/PropertySearch', params)
+    logger.info({ resultKeys: Object.keys(result ?? {}), dataLength: result?.data?.length ?? 0 }, 'REAPI response shape')
     return result.data ?? []
   } catch (err) {
-    logger.warn({ err, params }, 'REAPI batch failed')
+    logger.error({ err, params }, 'REAPI batch FAILED — check params and API key')
     return []
   }
 }
 
-/**
- * Search properties with automatic expansion to get past the 250 limit.
- *
- * Strategy: first search by city/state. If we hit 250 (cap), search each
- * unique ZIP found in results individually. Each ZIP can return up to 250.
- * For single-ZIP areas, we additionally split by value ranges to get more.
- */
-export async function searchProperties(
-  criteria: PropertySearchCriteria
-): Promise<ReapiPropertyResult[]> {
-  const { getCityZips } = await import('@/lib/city-zips')
-
-  // Step 1: Initial search by city/state
-  const initialParams: Record<string, unknown> = { size: 250 }
-  if (criteria.city) initialParams.city = criteria.city
-  if (criteria.state) initialParams.state = criteria.state
-  if (criteria.zip) initialParams.zip = criteria.zip
-
-  logger.info({ initialParams }, 'REAPI step 1: initial search')
-  const initialResults = await searchSingleBatch(initialParams)
-  logger.info({ count: initialResults.length }, 'REAPI step 1 results')
-
-  // If under cap, that's everything — no expansion needed
-  if (initialResults.length < 250) {
-    return applyFilters(initialResults, criteria)
-  }
-
-  // Step 2: Collect all ZIPs to search
-  const allZips = new Set<string>()
-  for (const p of initialResults) {
-    if (p.address?.zip) allZips.add(p.address.zip)
-  }
-  for (const z of getCityZips(criteria.city)) allZips.add(z)
-  if (criteria.zip) allZips.add(criteria.zip)
-
-  const zipsToSearch = Array.from(allZips)
-  logger.info({ zips: zipsToSearch, count: zipsToSearch.length }, 'REAPI step 2: expanding by ZIP')
-
-  // Step 3: Search each ZIP. If a ZIP returns 250, split it by value ranges.
-  let allProperties: ReapiPropertyResult[] = []
-
-  for (const zip of zipsToSearch) {
-    const baseParams = { size: 250, zip, ...(criteria.state ? { state: criteria.state } : {}) }
-    const zipResults = await searchSingleBatch(baseParams)
-    allProperties = [...allProperties, ...zipResults]
-
-    logger.info({ zip, count: zipResults.length }, 'REAPI ZIP result')
-
-    // If this ZIP hit 250, split by value ranges to get more
-    if (zipResults.length >= 250) {
-      logger.info({ zip }, 'REAPI ZIP hit cap, splitting by value ranges')
-
-      // Determine value ranges from what we got
-      const values = zipResults
-        .map(p => p.estimatedValue)
-        .filter(v => v > 0)
-        .sort((a, b) => a - b)
-
-      if (values.length > 0) {
-        // Split into ranges: 0-median, median-max*2
-        const median = values[Math.floor(values.length / 2)]
-        const ranges = [
-          { min: 0, max: Math.floor(median * 0.5) },
-          { min: Math.floor(median * 0.5), max: median },
-          { min: median, max: Math.floor(median * 1.5) },
-          { min: Math.floor(median * 1.5), max: Math.floor(median * 3) },
-          { min: Math.floor(median * 3), max: 99999999 },
-        ]
-
-        for (const range of ranges) {
-          try {
-            const rangeResults = await searchSingleBatch({
-              ...baseParams,
-              estimated_value_min: range.min,
-              estimated_value_max: range.max,
-            })
-            allProperties = [...allProperties, ...rangeResults]
-            logger.info({ zip, range: `${range.min}-${range.max}`, count: rangeResults.length }, 'REAPI value range result')
-          } catch {
-            // If value range params not supported, skip silently
-            logger.info({ zip }, 'REAPI value range params not supported, skipping')
-            break
-          }
-        }
-      }
-    }
-  }
-
-  // Deduplicate by address
+/** Deduplicate properties by street address + ZIP */
+function deduplicateProperties(properties: ReapiPropertyResult[]): ReapiPropertyResult[] {
   const seen = new Set<string>()
-  allProperties = allProperties.filter(p => {
+  return properties.filter(p => {
     const key = `${p.address?.street ?? p.address?.address}|${p.address?.zip}`
     if (seen.has(key)) return false
     seen.add(key)
     return true
   })
+}
 
-  logger.info({ total: allProperties.length, zips: zipsToSearch.length }, 'REAPI total after dedup')
+/** Build REAPI query params from our criteria using correct REAPI v2 parameter names */
+function buildReapiParams(criteria: PropertySearchCriteria): Record<string, unknown> {
+  const params: Record<string, unknown> = { size: 250 }
+  if (criteria.city) params.city = criteria.city
+  if (criteria.state) params.state = criteria.state
+  if (criteria.zip) params.zip = criteria.zip
+  if (criteria.beds_min) params.beds_min = criteria.beds_min
+  if (criteria.baths_min) params.baths_min = criteria.baths_min
+  if (criteria.price_min) params.value_min = criteria.price_min
+  if (criteria.price_max) params.value_max = criteria.price_max
+  if (criteria.sqft_min) params.building_size_min = criteria.sqft_min
+  if (criteria.sqft_max) params.building_size_max = criteria.sqft_max
+  if (criteria.years_owned_min) {
+    params.years_owned = criteria.years_owned_min
+    params.years_owned_operator = 'gte'
+  }
+  return params
+}
 
-  return applyFilters(allProperties, criteria)
+/**
+ * Page through all REAPI results using resultIndex.
+ * Returns up to MAX_PAGES * 250 properties.
+ */
+async function fetchAllPages(params: Record<string, unknown>): Promise<ReapiPropertyResult[]> {
+  const MAX_PAGES = 20 // safety cap: 20 × 250 = 5,000 max
+  let allResults: ReapiPropertyResult[] = []
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const pageParams = { ...params, resultIndex: page * 250 }
+    const batch = await searchSingleBatch(pageParams)
+    allResults = [...allResults, ...batch]
+
+    logger.info({ page, resultIndex: page * 250, count: batch.length }, 'REAPI page result')
+
+    // If we got fewer than 250, we've exhausted all results
+    if (batch.length < 250) break
+  }
+
+  return allResults
+}
+
+/**
+ * Search properties using correct REAPI v2 parameter names and pagination.
+ *
+ * Strategy:
+ * 1. Send all filters server-side (beds_min, baths_min, value_min, etc.)
+ * 2. Use resultIndex pagination to get past the 250-per-page limit
+ * 3. Deduplicate and apply local filters as safety net
+ */
+export async function searchProperties(
+  criteria: PropertySearchCriteria
+): Promise<ReapiPropertyResult[]> {
+  const params = buildReapiParams(criteria)
+
+  logger.info({ params }, 'REAPI search: fetching all pages')
+  const allProperties = await fetchAllPages(params)
+
+  const deduplicated = deduplicateProperties(allProperties)
+  logger.info({ total: deduplicated.length, raw: allProperties.length }, 'REAPI search complete')
+
+  return applyFilters(deduplicated, criteria)
 }
 
 function applyFilters(properties: ReapiPropertyResult[], criteria: PropertySearchCriteria): ReapiPropertyResult[] {

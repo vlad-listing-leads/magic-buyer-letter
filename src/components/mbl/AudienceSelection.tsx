@@ -46,9 +46,12 @@ export function AudienceSelection({
 }: AudienceSelectionProps) {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [filters, setFilters] = useState<AudienceFilters>(DEFAULT_FILTERS)
+  const [polygonFilterIds, setPolygonFilterIds] = useState<Set<string> | null>(null)
 
   const filteredProperties = useMemo(() => {
     return properties.filter((p) => {
+      // Polygon draw filter — only show properties inside the drawn area
+      if (polygonFilterIds && !polygonFilterIds.has(p.id)) return false
       if (filters.cities.length > 0 && !filters.cities.includes(p.city)) return false
       if (filters.neighborhoods.length > 0 && !filters.neighborhoods.includes(p.neighborhood)) return false
       if (filters.zips.length > 0 && !filters.zips.includes(p.zip)) return false
@@ -63,7 +66,7 @@ export function AudienceSelection({
       if (filters.owner_types.length > 0 && !filters.owner_types.includes(p.owner_type)) return false
       return true
     })
-  }, [properties, filters])
+  }, [properties, filters, polygonFilterIds])
 
   const toggleSelect = useCallback(
     (id: string) => {
@@ -84,9 +87,17 @@ export function AudienceSelection({
   }, [onSelectedIdsChange])
 
   const selectMany = useCallback(
-    (ids: string[]) => onSelectedIdsChange(new Set(ids)),
+    (ids: string[]) => {
+      const idSet = new Set(ids)
+      onSelectedIdsChange(idSet)
+      setPolygonFilterIds(idSet)
+    },
     [onSelectedIdsChange]
   )
+
+  const clearPolygonFilter = useCallback(() => {
+    setPolygonFilterIds(null)
+  }, [])
 
   const allSelected = filteredProperties.length > 0 && filteredProperties.every(p => selectedIds.has(p.id))
   const hasActiveFilters = Object.values(filters).some((v) => Array.isArray(v) ? v.length > 0 : v !== null)
@@ -134,6 +145,12 @@ export function AudienceSelection({
             <button onClick={allSelected ? deselectAll : selectAll} className="text-[11px] text-[#006AFF] hover:underline font-medium">
               {allSelected ? 'Deselect all' : 'Select all'}
             </button>
+            {polygonFilterIds && (
+              <button onClick={clearPolygonFilter} className="text-[11px] text-amber-500 hover:underline font-medium flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                Area filter active · Show all
+              </button>
+            )}
           </div>
         </div>
 

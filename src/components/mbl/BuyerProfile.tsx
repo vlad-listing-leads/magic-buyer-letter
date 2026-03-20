@@ -71,7 +71,7 @@ export function BuyerProfile({
   const hasLocation = !!(criteria.city && criteria.state) || !!criteria.zip
   const hasPrice = !!(criteria.price_min && criteria.price_max)
   const priceGapOk = !hasPrice || ((criteria.price_max! - criteria.price_min!) <= 600000)
-  const hasYearsOwned = !!criteria.years_owned_min
+  const hasYearsOwned = criteria.years_owned_min !== undefined
   const hasBeds = !!criteria.beds_min
   const hasBaths = !!criteria.baths_min
   const canContinue = hasLocation && hasPrice && priceGapOk
@@ -161,14 +161,14 @@ export function BuyerProfile({
           <ChipSelector
             label="Years owned *"
             options={[
+              { value: 'any', label: 'Any' },
               { value: '3', label: '3+' },
               { value: '5', label: '5+' },
               { value: '10', label: '10+' },
               { value: '20', label: '20+' },
             ]}
-            value={criteria.years_owned_min ? String(criteria.years_owned_min) : ''}
-            onChange={(v) => onCriteriaChange({ ...criteria, years_owned_min: v ? Number(v) : undefined })}
-            error
+            value={criteria.years_owned_min === 0 ? 'any' : criteria.years_owned_min ? String(criteria.years_owned_min) : ''}
+            onChange={(v) => onCriteriaChange({ ...criteria, years_owned_min: v === 'any' ? 0 : v ? Number(v) : undefined })}
           />
           <ChipSelector
             label="Beds *"

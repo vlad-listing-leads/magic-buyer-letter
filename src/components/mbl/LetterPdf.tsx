@@ -1,12 +1,22 @@
 import { Document, Page, Text, View, Image, Svg, Path, Rect, Circle, StyleSheet, Font } from '@react-pdf/renderer'
 import type { MblAgent, MblProperty } from '@/types'
 
-// Register Noto Sans — supports wide Unicode range
+// Register Noto Sans — for address list and sans-serif elements
 Font.register({
   family: 'Noto',
   fonts: [
     { src: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans/files/noto-sans-latin-400-normal.woff', fontWeight: 'normal' },
     { src: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans/files/noto-sans-latin-700-normal.woff', fontWeight: 'bold' },
+  ],
+})
+
+// Register Libre Baskerville — editorial serif for letter body
+Font.register({
+  family: 'Baskerville',
+  fonts: [
+    { src: 'https://cdn.jsdelivr.net/npm/@fontsource/libre-baskerville/files/libre-baskerville-latin-400-normal.woff', fontWeight: 'normal' },
+    { src: 'https://cdn.jsdelivr.net/npm/@fontsource/libre-baskerville/files/libre-baskerville-latin-400-italic.woff', fontWeight: 'normal', fontStyle: 'italic' },
+    { src: 'https://cdn.jsdelivr.net/npm/@fontsource/libre-baskerville/files/libre-baskerville-latin-700-normal.woff', fontWeight: 'bold' },
   ],
 })
 
@@ -16,93 +26,121 @@ function clean(str: string): string {
 }
 
 const s = StyleSheet.create({
+  // ── Letter page — editorial serif ──
   page: {
     padding: '1in',
-    fontFamily: 'Noto',
+    paddingLeft: '1.1in',
+    paddingRight: '1.1in',
+    fontFamily: 'Baskerville',
     fontSize: 11,
-    lineHeight: 1.5,
-    color: '#1a1a1a',
-    backgroundColor: '#faf9f7',
+    lineHeight: 1.7,
+    color: '#2a2a2a',
+    backgroundColor: '#ffffff',
   },
   logoWrap: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 8,
   },
   logo: {
-    height: 44,
-    maxWidth: 200,
+    height: 40,
+    maxWidth: 180,
     objectFit: 'contain' as const,
   },
   logoText: {
-    fontSize: 16,
+    fontSize: 13,
+    fontFamily: 'Noto',
     fontWeight: 'bold',
-    color: '#2d2d2d',
+    color: '#333',
+    letterSpacing: 2,
+    textTransform: 'uppercase' as const,
+  },
+  rule: {
+    width: 36,
+    height: 0.75,
+    backgroundColor: '#ccc',
+    marginBottom: 24,
+    alignSelf: 'center' as const,
   },
   body: {
     marginBottom: 8,
   },
   paragraph: {
-    marginBottom: 8,
+    marginBottom: 10,
     fontSize: 11,
-    lineHeight: 1.6,
+    lineHeight: 1.7,
   },
   bulletItem: {
-    marginBottom: 4,
+    marginBottom: 5,
     fontSize: 11,
-    lineHeight: 1.4,
-    paddingLeft: 12,
+    lineHeight: 1.6,
+    paddingLeft: 14,
   },
   bulletDot: {
     position: 'absolute' as const,
     left: 0,
     top: 0,
   },
+  sigRule: {
+    width: 28,
+    height: 0.5,
+    backgroundColor: '#d0d0d0',
+    marginBottom: 14,
+  },
   sigBlock: {
     flexDirection: 'row' as const,
     alignItems: 'flex-start',
-    gap: 10,
-    marginTop: 32,
+    gap: 12,
+    marginTop: 36,
   },
   headshot: {
     width: 48,
     height: 48,
-    borderRadius: 4,
+    borderRadius: 24,
     objectFit: 'cover' as const,
   },
   initialsBox: {
     width: 48,
     height: 48,
-    borderRadius: 4,
-    backgroundColor: '#e5e2dd',
+    borderRadius: 24,
+    backgroundColor: '#f0eeeb',
     justifyContent: 'center',
     alignItems: 'center',
   },
   initialsText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#555',
+    fontSize: 13,
+    fontFamily: 'Noto',
+    color: '#777',
   },
   sigName: {
     fontSize: 11,
+    fontFamily: 'Noto',
     fontWeight: 'bold',
+    color: '#2a2a2a',
   },
   sigLicense: {
-    fontSize: 8,
+    fontSize: 7.5,
     fontWeight: 'normal',
-    color: '#888',
+    color: '#999',
   },
   sigDetail: {
-    fontSize: 10,
-    color: '#444',
+    fontSize: 9.5,
+    fontFamily: 'Noto',
+    color: '#666',
   },
   ps: {
-    marginTop: 20,
-    fontSize: 9,
-    lineHeight: 1.4,
-    color: '#555',
+    marginTop: 24,
+    fontSize: 9.5,
+    lineHeight: 1.5,
+    color: '#777',
+    fontStyle: 'italic' as const,
   },
-  psBold: {
+  psLabel: {
+    fontStyle: 'normal' as const,
+    fontFamily: 'Noto',
     fontWeight: 'bold',
+    fontSize: 8,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase' as const,
   },
   // Address list styles
   listPage: {
@@ -183,6 +221,8 @@ export function LetterDocument({ properties, agent, selectedSkillId, logoDataUri
                 <Text style={s.logoText}>{clean(agent?.brokerage || agentName)}</Text>
               )}
             </View>
+            {/* Editorial rule */}
+            <View style={s.rule} />
 
             {/* Body paragraphs */}
             <View style={s.body}>
@@ -202,6 +242,9 @@ export function LetterDocument({ properties, agent, selectedSkillId, logoDataUri
 
             {/* Signature */}
             <View style={s.sigBlock}>
+              <View style={s.sigRule} />
+            </View>
+            <View style={{ flexDirection: 'row' as const, alignItems: 'flex-start', gap: 12 }}>
               {agent?.headshot_url && !agent.headshot_url.endsWith('.svg') ? (
                 <Image src={agent.headshot_url} style={s.headshot} />
               ) : (
@@ -213,7 +256,7 @@ export function LetterDocument({ properties, agent, selectedSkillId, logoDataUri
                 <Text style={s.sigName}>
                   {clean(agentName)}
                   {agent?.license_number ? (
-                    <Text style={s.sigLicense}> ({agent.license_number})</Text>
+                    <Text style={s.sigLicense}>  #{agent.license_number}</Text>
                   ) : null}
                 </Text>
                 {agent?.brokerage ? <Text style={s.sigDetail}>{clean(agent.brokerage)}</Text> : null}
@@ -225,7 +268,7 @@ export function LetterDocument({ properties, agent, selectedSkillId, logoDataUri
             {/* P.S. */}
             {ps ? (
               <Text style={s.ps}>
-                <Text style={s.psBold}>p.s. </Text>
+                <Text style={s.psLabel}>P.S.  </Text>
                 {clean(ps)}
               </Text>
             ) : null}

@@ -418,7 +418,7 @@ function NewLetterWizard() {
                   ((criteria.city && criteria.state) || criteria.zip) &&
                   criteria.price_min && criteria.price_max &&
                   (criteria.price_max - criteria.price_min <= 600000) &&
-                  criteria.years_owned_min &&
+                  criteria.years_owned_min !== undefined &&
                   criteria.beds_min && criteria.baths_min &&
                   buyerProfile.financing
                 )}

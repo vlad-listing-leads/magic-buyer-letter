@@ -112,33 +112,36 @@ export function LetterPreview({
         </div>
       )}
 
-      {/* Letter Card */}
-      <Card className="bg-[#faf9f7] text-[#1a1a1a] overflow-hidden [aspect-ratio:8.5/11] rounded-lg"
-        style={{ fontFamily: "Arial, Helvetica, sans-serif" }} ref={cardRef}>
-        <CardContent className="px-12 pb-10 pt-0" ref={contentRef}>
+      {/* Letter Card — Editorial design */}
+      <Card className="bg-white text-[#2a2a2a] overflow-hidden [aspect-ratio:8.5/11] rounded-lg shadow-md"
+        style={{ fontFamily: "Georgia, 'Times New Roman', serif" }} ref={cardRef}>
+        <CardContent className="px-14 pb-10 pt-0" ref={contentRef}>
           {/* Letterhead */}
-          <div className="flex justify-center pt-10 pb-4">
+          <div className="flex justify-center pt-10 pb-3">
             {agent.logo_url ? (
-              <img src={agent.logo_url} alt={agent.name} className="h-14 max-w-[220px] object-contain" />
+              <img src={agent.logo_url} alt={agent.name} className="h-12 max-w-[200px] object-contain" />
             ) : (
-              <div className="h-14 flex items-center text-xl font-bold text-[#2d2d2d] tracking-tight">
+              <div className="h-12 flex items-center text-lg tracking-[0.15em] uppercase text-[#333]"
+                style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 500 }}>
                 {agent.brokerage || agent.name}
               </div>
             )}
           </div>
+          {/* Thin editorial rule */}
+          <div className="mx-auto mb-8" style={{ width: '40px', height: '1px', backgroundColor: '#ccc' }} />
 
-          {/* Letter body — 100% from Claude */}
-          <div className="space-y-[0.8em]" style={{ fontSize: '15px', lineHeight: '1.5' }}>
+          {/* Letter body */}
+          <div className="space-y-[1em]" style={{ fontSize: '14.5px', lineHeight: '1.7', letterSpacing: '0.01em' }}>
             {paragraphs.map((para, i) => {
-              // Check if paragraph is a bullet point (starts with •, -, *)
               const isBullet = /^[•\-\*]\s/.test(para.trim())
               if (isBullet) {
                 return (
-                  <p key={i} className="pl-4">{para}</p>
+                  <p key={i} className="pl-6" style={{ fontSize: '14px', lineHeight: '1.6' }}>
+                    {para}
+                  </p>
                 )
               }
 
-              // Highlight address in first paragraph if toggle is on
               if (showListingHighlight && i === 0 && property) {
                 return (
                   <p key={i} dangerouslySetInnerHTML={{
@@ -154,35 +157,36 @@ export function LetterPreview({
             })}
           </div>
 
-          {/* Signature block — non-editable */}
-          <div className="mt-8 select-none">
-            <div className="h-8" />
-            <div className="flex items-start gap-3">
+          {/* Signature block */}
+          <div className="mt-10 select-none">
+            <div className="mb-5" style={{ width: '32px', height: '1px', backgroundColor: '#d0d0d0' }} />
+            <div className="flex items-start gap-4">
               {agent.headshot_url ? (
-                <img src={agent.headshot_url} alt={agent.name} className="w-14 h-14 rounded object-cover flex-shrink-0" />
+                <img src={agent.headshot_url} alt={agent.name} className="w-14 h-14 rounded-full object-cover flex-shrink-0" style={{ border: '1px solid #e0e0e0' }} />
               ) : (
-                <div className="w-14 h-14 rounded bg-[#e5e2dd] flex items-center justify-center text-[15px] font-bold text-[#555] flex-shrink-0">
-                  {initials}
+                <div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: '#f0eeeb', border: '1px solid #e0ddd8', fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
+                  <span className="text-[14px] font-medium text-[#777]">{initials}</span>
                 </div>
               )}
-              <div style={{ lineHeight: '1.4' }}>
-                <p className="font-bold text-[15px]">
+              <div style={{ lineHeight: '1.5', fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
+                <p className="font-semibold text-[14px] text-[#2a2a2a]">
                   {agent.name}
                   {agent.license_number && (
-                    <span className="font-normal text-[11px] text-[#888] ml-1">({agent.license_number})</span>
+                    <span className="font-normal text-[10px] text-[#999] ml-1.5">#{agent.license_number}</span>
                   )}
                 </p>
-                {agent.brokerage && <p className="text-[13px] text-[#444]">{agent.brokerage}</p>}
-                <p className="text-[13px] text-[#444]">{phone}</p>
-                {agent.email && <p className="text-[13px] text-[#444]">{agent.email}</p>}
+                {agent.brokerage && <p className="text-[12px] text-[#666] mt-0.5">{agent.brokerage}</p>}
+                <p className="text-[12px] text-[#666]">{phone}</p>
+                {agent.email && <p className="text-[12px] text-[#666]">{agent.email}</p>}
               </div>
             </div>
           </div>
 
-          {/* P.S. — only if Claude generated one */}
+          {/* P.S. */}
           {ps && (
-            <div className="mt-6 select-none" style={{ fontSize: '13px', lineHeight: '1.4', color: '#555' }}>
-              <p><strong>p.s.</strong> {ps}</p>
+            <div className="mt-8 select-none" style={{ fontSize: '12.5px', lineHeight: '1.5', color: '#777', fontStyle: 'italic' }}>
+              <p><span style={{ fontStyle: 'normal', fontWeight: 600, letterSpacing: '0.05em', fontSize: '10px', textTransform: 'uppercase' as const }}>P.S.</span>&ensp;{ps}</p>
             </div>
           )}
         </CardContent>
