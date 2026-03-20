@@ -119,22 +119,40 @@ export function LetterPreview({
                 const x = Math.floor(((lng + 180) / 360) * Math.pow(2, z))
                 const y = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z))
                 return (
-                  <div className="flex-shrink-0 relative" style={{ width: '96px', height: '68px', borderRadius: '5px', overflow: 'hidden', border: '0.5px solid #e2ded8' }}>
+                  <div className="flex-shrink-0 relative" style={{ width: '96px', height: '80px', borderRadius: '5px', overflow: 'hidden', border: '0.5px solid #e2ded8' }}>
                     <img
                       src={`https://tile.openstreetmap.org/${z}/${x}/${y}.png`}
                       alt="Location"
                       className="w-full h-full object-cover"
                       style={{ opacity: 0.85, filter: 'saturate(0.7) brightness(1.05)' }}
                     />
-                    {/* Pin */}
+                    {/* Arrow + label overlay */}
                     <div style={{
-                      position: 'absolute', top: '50%', left: '50%',
-                      transform: 'translate(-50%, -100%)',
-                      width: '10px', height: '10px',
-                      backgroundColor: '#1a2744', borderRadius: '50%',
-                      border: '2px solid white',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                    }} />
+                      position: 'absolute', bottom: '4px', left: '0', right: '0',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    }}>
+                      {/* Curved arrow pointing down */}
+                      <svg width="16" height="12" viewBox="0 0 16 12" style={{ marginBottom: '1px' }}>
+                        <path d="M8 0 C8 6, 8 6, 8 9" stroke="#1a2744" strokeWidth="1.2" fill="none" />
+                        <path d="M5.5 7 L8 10 L10.5 7" stroke="#1a2744" strokeWidth="1.2" fill="none" strokeLinejoin="round" />
+                      </svg>
+                      <div style={{
+                        fontSize: '5.5px',
+                        fontFamily: "'Helvetica Neue', Arial, sans-serif",
+                        fontWeight: 600,
+                        color: '#1a2744',
+                        textTransform: 'uppercase' as const,
+                        letterSpacing: '0.04em',
+                        backgroundColor: 'rgba(255,255,255,0.85)',
+                        padding: '1px 3px',
+                        borderRadius: '2px',
+                        lineHeight: '1.2',
+                        textAlign: 'center' as const,
+                        whiteSpace: 'nowrap' as const,
+                      }}>
+                        Area we&apos;re<br />interested in
+                      </div>
+                    </div>
                   </div>
                 )
               })()}
