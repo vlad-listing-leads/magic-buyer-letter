@@ -257,12 +257,14 @@ export function LetterDocument({ properties, agent, selectedSkillId, logoDataUri
                     <Text style={s.logoText}>{clean(agent?.brokerage || agentName)}</Text>
                   )}
                 </View>
-                {prop.latitude && prop.longitude && process.env.NEXT_PUBLIC_GEOAPIFY_KEY && (
-                  <Image
-                    src={`https://maps.geoapify.com/v1/staticmap?style=osm-bright-smooth&width=160&height=110&center=lonlat:${prop.longitude},${prop.latitude}&zoom=13&apiKey=${process.env.NEXT_PUBLIC_GEOAPIFY_KEY}`}
-                    style={s.miniMap}
-                  />
-                )}
+                {prop.latitude && prop.longitude && (() => {
+                  const z = 14
+                  const lat = prop.latitude!
+                  const lng = prop.longitude!
+                  const x = Math.floor(((lng + 180) / 360) * Math.pow(2, z))
+                  const y = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z))
+                  return <Image src={`https://tile.openstreetmap.org/${z}/${x}/${y}.png`} style={s.miniMap} />
+                })()}
               </View>
 
               {/* Ornamental divider */}

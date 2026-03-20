@@ -111,26 +111,33 @@ export function LetterPreview({
                   </div>
                 )}
               </div>
-              {/* Mini static map — free OSM tile server */}
-              {property?.latitude && property?.longitude && (
-                <div className="flex-shrink-0 relative" style={{ width: '96px', height: '68px', borderRadius: '5px', overflow: 'hidden', border: '0.5px solid #e2ded8' }}>
-                  <img
-                    src={`https://maps.geoapify.com/v1/staticmap?style=osm-bright-smooth&width=192&height=136&center=lonlat:${property.longitude},${property.latitude}&zoom=13&apiKey=${process.env.NEXT_PUBLIC_GEOAPIFY_KEY || ''}`}
-                    alt="Location"
-                    className="w-full h-full object-cover"
-                    style={{ opacity: 0.85, filter: 'grayscale(0.2)' }}
-                  />
-                  {/* Pin overlay */}
-                  <div style={{
-                    position: 'absolute', top: '50%', left: '50%',
-                    transform: 'translate(-50%, -100%)',
-                    width: '10px', height: '10px',
-                    backgroundColor: '#1a2744', borderRadius: '50%',
-                    border: '2px solid white',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                  }} />
-                </div>
-              )}
+              {/* Mini static map — free OSM tiles, no API key */}
+              {property?.latitude && property?.longitude && (() => {
+                const z = 14
+                const lat = property.latitude!
+                const lng = property.longitude!
+                const x = Math.floor(((lng + 180) / 360) * Math.pow(2, z))
+                const y = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z))
+                return (
+                  <div className="flex-shrink-0 relative" style={{ width: '96px', height: '68px', borderRadius: '5px', overflow: 'hidden', border: '0.5px solid #e2ded8' }}>
+                    <img
+                      src={`https://tile.openstreetmap.org/${z}/${x}/${y}.png`}
+                      alt="Location"
+                      className="w-full h-full object-cover"
+                      style={{ opacity: 0.85, filter: 'saturate(0.7) brightness(1.05)' }}
+                    />
+                    {/* Pin */}
+                    <div style={{
+                      position: 'absolute', top: '50%', left: '50%',
+                      transform: 'translate(-50%, -100%)',
+                      width: '10px', height: '10px',
+                      backgroundColor: '#1a2744', borderRadius: '50%',
+                      border: '2px solid white',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                    }} />
+                  </div>
+                )
+              })()}
             </div>
             {/* Ornamental divider */}
             <div className="flex items-center justify-center gap-1.5 py-3 mb-3">
