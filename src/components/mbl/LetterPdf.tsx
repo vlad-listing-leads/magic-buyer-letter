@@ -28,107 +28,139 @@ function clean(str: string): string {
 const s = StyleSheet.create({
   // ── Letter page — editorial serif ──
   page: {
-    padding: '1in',
-    paddingLeft: '1.1in',
-    paddingRight: '1.1in',
+    padding: 18,
     fontFamily: 'Baskerville',
     fontSize: 11,
-    lineHeight: 1.7,
-    color: '#2a2a2a',
-    backgroundColor: '#ffffff',
+    lineHeight: 1.75,
+    color: '#333',
+    backgroundColor: '#fdfcfa',
+  },
+  insetBorder: {
+    borderWidth: 0.5,
+    borderColor: '#e2ded8',
+    paddingHorizontal: 48,
+    paddingBottom: 36,
+    paddingTop: 0,
+    flexGrow: 1,
   },
   logoWrap: {
     alignItems: 'center',
-    marginBottom: 8,
+    paddingTop: 28,
+    paddingBottom: 4,
   },
   logo: {
-    height: 40,
-    maxWidth: 180,
+    height: 36,
+    maxWidth: 160,
     objectFit: 'contain' as const,
   },
   logoText: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: 'Noto',
-    fontWeight: 'bold',
-    color: '#333',
-    letterSpacing: 2,
+    color: '#555',
+    letterSpacing: 2.5,
     textTransform: 'uppercase' as const,
   },
-  rule: {
-    width: 36,
-    height: 0.75,
-    backgroundColor: '#ccc',
-    marginBottom: 24,
-    alignSelf: 'center' as const,
+  dividerRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 14,
+    marginBottom: 14,
+  },
+  dividerLine: {
+    width: 18,
+    height: 0.5,
+    backgroundColor: '#c5bfb5',
+  },
+  dividerDot: {
+    width: 3.5,
+    height: 3.5,
+    borderRadius: 2,
+    backgroundColor: '#c5bfb5',
   },
   body: {
     marginBottom: 8,
   },
+  dropCap: {
+    fontSize: 38,
+    lineHeight: 0.85,
+    fontWeight: 'bold',
+    color: '#1a2744',
+    fontFamily: 'Baskerville',
+  },
   paragraph: {
     marginBottom: 10,
     fontSize: 11,
-    lineHeight: 1.7,
+    lineHeight: 1.75,
   },
   bulletItem: {
     marginBottom: 5,
-    fontSize: 11,
-    lineHeight: 1.6,
+    fontSize: 10.5,
+    lineHeight: 1.65,
     paddingLeft: 14,
+    color: '#444',
   },
   bulletDot: {
     position: 'absolute' as const,
     left: 0,
     top: 0,
   },
-  sigRule: {
-    width: 28,
-    height: 0.5,
-    backgroundColor: '#d0d0d0',
+  warmRegards: {
+    fontStyle: 'italic' as const,
+    fontSize: 11,
+    color: '#555',
+    marginTop: 28,
     marginBottom: 14,
   },
   sigBlock: {
     flexDirection: 'row' as const,
     alignItems: 'flex-start',
     gap: 12,
-    marginTop: 36,
   },
   headshot: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 6,
     objectFit: 'cover' as const,
   },
   initialsBox: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#f0eeeb',
+    borderRadius: 6,
+    backgroundColor: '#1a2744',
     justifyContent: 'center',
     alignItems: 'center',
   },
   initialsText: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: 'Noto',
-    color: '#777',
+    color: '#e8dfd0',
+    letterSpacing: 1,
   },
   sigName: {
     fontSize: 11,
     fontFamily: 'Noto',
     fontWeight: 'bold',
-    color: '#2a2a2a',
+    color: '#1a2744',
   },
   sigLicense: {
     fontSize: 7.5,
     fontWeight: 'normal',
-    color: '#999',
+    color: '#aaa',
   },
   sigDetail: {
     fontSize: 9.5,
     fontFamily: 'Noto',
-    color: '#666',
+    color: '#777',
+  },
+  psWrap: {
+    marginTop: 20,
+    paddingLeft: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: '#c5bfb5',
   },
   ps: {
-    marginTop: 24,
     fontSize: 9.5,
     lineHeight: 1.5,
     color: '#777',
@@ -138,9 +170,10 @@ const s = StyleSheet.create({
     fontStyle: 'normal' as const,
     fontFamily: 'Noto',
     fontWeight: 'bold',
-    fontSize: 8,
-    letterSpacing: 0.5,
+    fontSize: 7.5,
+    letterSpacing: 0.8,
     textTransform: 'uppercase' as const,
+    color: '#999',
   },
   // Address list styles
   listPage: {
@@ -211,67 +244,80 @@ export function LetterDocument({ properties, agent, selectedSkillId, logoDataUri
 
         return (
           <Page key={prop.id} size="LETTER" style={s.page}>
-            {/* Logo */}
-            <View style={s.logoWrap}>
-              {logoDataUri ? (
-                <Image src={logoDataUri} style={s.logo} />
-              ) : agent?.logo_url && !agent.logo_url.endsWith('.svg') ? (
-                <Image src={agent.logo_url} style={s.logo} />
-              ) : (
-                <Text style={s.logoText}>{clean(agent?.brokerage || agentName)}</Text>
-              )}
-            </View>
-            {/* Editorial rule */}
-            <View style={s.rule} />
-
-            {/* Body paragraphs */}
-            <View style={s.body}>
-              {paragraphs.map((para, i) => {
-                const isBullet = /^[•\-\*]\s/.test(para.trim())
-                if (isBullet) {
-                  return (
-                    <View key={i} style={s.bulletItem}>
-                      <Text style={s.bulletDot}>•</Text>
-                      <Text>{clean(para.replace(/^[•\-\*]\s*/, ''))}</Text>
-                    </View>
-                  )
-                }
-                return <Text key={i} style={s.paragraph}>{clean(para)}</Text>
-              })}
-            </View>
-
-            {/* Signature */}
-            <View style={s.sigBlock}>
-              <View style={s.sigRule} />
-            </View>
-            <View style={{ flexDirection: 'row' as const, alignItems: 'flex-start', gap: 12 }}>
-              {agent?.headshot_url && !agent.headshot_url.endsWith('.svg') ? (
-                <Image src={agent.headshot_url} style={s.headshot} />
-              ) : (
-                <View style={s.initialsBox}>
-                  <Text style={s.initialsText}>{initials}</Text>
-                </View>
-              )}
-              <View>
-                <Text style={s.sigName}>
-                  {clean(agentName)}
-                  {agent?.license_number ? (
-                    <Text style={s.sigLicense}>  #{agent.license_number}</Text>
-                  ) : null}
-                </Text>
-                {agent?.brokerage ? <Text style={s.sigDetail}>{clean(agent.brokerage)}</Text> : null}
-                <Text style={s.sigDetail}>{agent?.phone ?? ''}</Text>
-                {agent?.email ? <Text style={s.sigDetail}>{agent.email}</Text> : null}
+            <View style={s.insetBorder}>
+              {/* Logo */}
+              <View style={s.logoWrap}>
+                {logoDataUri ? (
+                  <Image src={logoDataUri} style={s.logo} />
+                ) : agent?.logo_url && !agent.logo_url.endsWith('.svg') ? (
+                  <Image src={agent.logo_url} style={s.logo} />
+                ) : (
+                  <Text style={s.logoText}>{clean(agent?.brokerage || agentName)}</Text>
+                )}
               </View>
-            </View>
 
-            {/* P.S. */}
-            {ps ? (
-              <Text style={s.ps}>
-                <Text style={s.psLabel}>P.S.  </Text>
-                {clean(ps)}
-              </Text>
-            ) : null}
+              {/* Ornamental divider */}
+              <View style={s.dividerRow}>
+                <View style={s.dividerLine} />
+                <View style={s.dividerDot} />
+                <View style={s.dividerLine} />
+              </View>
+
+              {/* Body paragraphs with drop cap */}
+              <View style={s.body}>
+                {paragraphs.map((para, i) => {
+                  const cleaned = clean(para)
+                  const isBullet = /^[•\-\*]\s/.test(para.trim())
+                  if (isBullet) {
+                    return (
+                      <View key={i} style={s.bulletItem}>
+                        <Text style={s.bulletDot}>•</Text>
+                        <Text>{clean(para.replace(/^[•\-\*]\s*/, ''))}</Text>
+                      </View>
+                    )
+                  }
+                  {/* Drop cap on first paragraph */}
+                  if (i === 0 && cleaned.length > 1) {
+                    return (
+                      <Text key={i} style={s.paragraph}>
+                        <Text style={s.dropCap}>{cleaned[0]}</Text>
+                        {cleaned.slice(1)}
+                      </Text>
+                    )
+                  }
+                  return <Text key={i} style={s.paragraph}>{cleaned}</Text>
+                })}
+              </View>
+
+              {/* Signature */}
+              <Text style={s.warmRegards}>With warm regards,</Text>
+              <View style={s.sigBlock}>
+                {agent?.headshot_url && !agent.headshot_url.endsWith('.svg') ? (
+                  <Image src={agent.headshot_url} style={s.headshot} />
+                ) : (
+                  <View style={s.initialsBox}>
+                    <Text style={s.initialsText}>{initials}</Text>
+                  </View>
+                )}
+                <View>
+                  <Text style={s.sigName}>{clean(agentName)}</Text>
+                  {agent?.brokerage ? <Text style={s.sigDetail}>{clean(agent.brokerage)}</Text> : null}
+                  <Text style={s.sigDetail}>{agent?.phone ?? ''}</Text>
+                  {agent?.email ? <Text style={s.sigDetail}>{agent.email}</Text> : null}
+                  {agent?.license_number ? <Text style={{ ...s.sigDetail, fontSize: 7.5, color: '#aaa' }}>License #{agent.license_number}</Text> : null}
+                </View>
+              </View>
+
+              {/* P.S. — pull-quote style with left border */}
+              {ps ? (
+                <View style={s.psWrap}>
+                  <Text style={s.ps}>
+                    <Text style={s.psLabel}>P.S.  </Text>
+                    {clean(ps)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           </Page>
         )
       })}
