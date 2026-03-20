@@ -43,22 +43,30 @@ const s = StyleSheet.create({
     paddingTop: 0,
     flexGrow: 1,
   },
-  logoWrap: {
-    alignItems: 'center',
-    paddingTop: 28,
-    paddingBottom: 4,
+  headerRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingTop: 24,
+    paddingBottom: 6,
   },
   logo: {
-    height: 36,
-    maxWidth: 160,
+    height: 32,
+    maxWidth: 140,
     objectFit: 'contain' as const,
   },
   logoText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: 'Noto',
     color: '#555',
     letterSpacing: 2.5,
     textTransform: 'uppercase' as const,
+  },
+  miniMap: {
+    width: 64,
+    height: 44,
+    borderRadius: 3,
+    objectFit: 'cover' as const,
   },
   dividerRow: {
     flexDirection: 'row' as const,
@@ -82,22 +90,15 @@ const s = StyleSheet.create({
   body: {
     marginBottom: 8,
   },
-  dropCap: {
-    fontSize: 38,
-    lineHeight: 0.85,
-    fontWeight: 'bold',
-    color: '#1a2744',
-    fontFamily: 'Baskerville',
-  },
   paragraph: {
-    marginBottom: 10,
+    marginBottom: 9,
     fontSize: 11,
-    lineHeight: 1.75,
+    lineHeight: 1.25,
   },
   bulletItem: {
-    marginBottom: 5,
+    marginBottom: 4,
     fontSize: 10.5,
-    lineHeight: 1.65,
+    lineHeight: 1.25,
     paddingLeft: 14,
     color: '#444',
   },
@@ -245,14 +246,22 @@ export function LetterDocument({ properties, agent, selectedSkillId, logoDataUri
         return (
           <Page key={prop.id} size="LETTER" style={s.page}>
             <View style={s.insetBorder}>
-              {/* Logo */}
-              <View style={s.logoWrap}>
-                {logoDataUri ? (
-                  <Image src={logoDataUri} style={s.logo} />
-                ) : agent?.logo_url && !agent.logo_url.endsWith('.svg') ? (
-                  <Image src={agent.logo_url} style={s.logo} />
-                ) : (
-                  <Text style={s.logoText}>{clean(agent?.brokerage || agentName)}</Text>
+              {/* Header — logo left, mini map right */}
+              <View style={s.headerRow}>
+                <View>
+                  {logoDataUri ? (
+                    <Image src={logoDataUri} style={s.logo} />
+                  ) : agent?.logo_url && !agent.logo_url.endsWith('.svg') ? (
+                    <Image src={agent.logo_url} style={s.logo} />
+                  ) : (
+                    <Text style={s.logoText}>{clean(agent?.brokerage || agentName)}</Text>
+                  )}
+                </View>
+                {prop.latitude && prop.longitude && (
+                  <Image
+                    src={`https://staticmap.openstreetmap.de/staticmap.php?center=${prop.latitude},${prop.longitude}&zoom=13&size=128x88&maptype=osmarenderer`}
+                    style={s.miniMap}
+                  />
                 )}
               </View>
 
@@ -263,10 +272,9 @@ export function LetterDocument({ properties, agent, selectedSkillId, logoDataUri
                 <View style={s.dividerLine} />
               </View>
 
-              {/* Body paragraphs with drop cap */}
+              {/* Body paragraphs */}
               <View style={s.body}>
                 {paragraphs.map((para, i) => {
-                  const cleaned = clean(para)
                   const isBullet = /^[•\-\*]\s/.test(para.trim())
                   if (isBullet) {
                     return (
@@ -276,16 +284,7 @@ export function LetterDocument({ properties, agent, selectedSkillId, logoDataUri
                       </View>
                     )
                   }
-                  {/* Drop cap on first paragraph */}
-                  if (i === 0 && cleaned.length > 1) {
-                    return (
-                      <Text key={i} style={s.paragraph}>
-                        <Text style={s.dropCap}>{cleaned[0]}</Text>
-                        {cleaned.slice(1)}
-                      </Text>
-                    )
-                  }
-                  return <Text key={i} style={s.paragraph}>{cleaned}</Text>
+                  return <Text key={i} style={s.paragraph}>{clean(para)}</Text>
                 })}
               </View>
 

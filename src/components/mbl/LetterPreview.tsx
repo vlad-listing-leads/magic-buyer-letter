@@ -42,9 +42,6 @@ export function LetterPreview({
 
   const ps = editedContent?.ps ?? personalized?.ps ?? ''
 
-  // Toggle: highlight listing-specific content
-  const [showListingHighlight, setShowListingHighlight] = useState(false)
-
   // Auto-scale content to fit page
   const cardRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -85,30 +82,12 @@ export function LetterPreview({
 
   return (
     <div className={cn('space-y-3', className)}>
-      {/* Personalization toggle + address label */}
+      {/* Address label */}
       {property && (
-        <div className="flex items-center justify-between text-xs">
+        <div className="text-xs">
           <span className="text-muted-foreground">
             Preview for <span className="font-medium text-foreground">{address}</span>
           </span>
-          <button
-            type="button"
-            onClick={() => setShowListingHighlight(!showListingHighlight)}
-            className={cn(
-              'flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors text-xs font-medium',
-              showListingHighlight
-                ? 'bg-amber-500/10 text-amber-500'
-                : 'bg-muted text-muted-foreground'
-            )}
-          >
-            <div className={cn(
-              'w-3 h-3 rounded-sm border transition-colors flex items-center justify-center',
-              showListingHighlight ? 'bg-amber-500 border-amber-500' : 'border-muted-foreground'
-            )}>
-              {showListingHighlight && <span className="text-white text-[8px]">✓</span>}
-            </div>
-            Show listing details
-          </button>
         </div>
       )}
 
@@ -120,69 +99,82 @@ export function LetterPreview({
           {/* Inset stationery border */}
           <div className="h-full" style={{ margin: '18px', border: '0.5px solid #e2ded8', padding: '0 36px 32px 36px' }}>
 
-            {/* Letterhead with accent line */}
-            <div className="flex flex-col items-center pt-8 pb-1">
-              {agent.logo_url ? (
-                <img src={agent.logo_url} alt={agent.name} className="h-11 max-w-[180px] object-contain" />
-              ) : (
-                <div className="flex items-center text-[13px] tracking-[0.2em] uppercase"
-                  style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 400, color: '#555' }}>
-                  {agent.brokerage || agent.name}
+            {/* Letterhead — logo left, mini map right */}
+            <div className="flex items-start justify-between pt-7 pb-2">
+              <div className="flex-shrink-0">
+                {agent.logo_url ? (
+                  <img src={agent.logo_url} alt={agent.name} className="h-10 max-w-[160px] object-contain" />
+                ) : (
+                  <div className="text-[12px] tracking-[0.2em] uppercase"
+                    style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 400, color: '#555' }}>
+                    {agent.brokerage || agent.name}
+                  </div>
+                )}
+              </div>
+              {/* Mini static map — free OSM tiles, no API key */}
+              {property?.latitude && property?.longitude && (
+                <div className="flex-shrink-0 relative" style={{ width: '80px', height: '56px', borderRadius: '4px', overflow: 'hidden', border: '0.5px solid #e2ded8' }}>
+                  <img
+                    src={`https://staticmap.openstreetmap.de/staticmap.php?center=${property.latitude},${property.longitude}&zoom=13&size=160x112&maptype=osmarenderer`}
+                    alt="Location"
+                    className="w-full h-full object-cover"
+                    style={{ opacity: 0.8, filter: 'grayscale(0.3)' }}
+                  />
+                  {/* Pin overlay */}
+                  <div style={{
+                    position: 'absolute', top: '50%', left: '50%',
+                    transform: 'translate(-50%, -100%)',
+                    width: '8px', height: '8px',
+                    backgroundColor: '#1a2744', borderRadius: '50%',
+                    border: '1.5px solid white',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                  }} />
                 </div>
               )}
             </div>
-            {/* Ornamental divider — three dots */}
-            <div className="flex items-center justify-center gap-1.5 py-4 mb-4">
+            {/* Ornamental divider */}
+            <div className="flex items-center justify-center gap-1.5 py-3 mb-3">
               <div style={{ width: '20px', height: '0.5px', backgroundColor: '#c5bfb5' }} />
               <div style={{ width: '4px', height: '4px', backgroundColor: '#c5bfb5', borderRadius: '50%' }} />
               <div style={{ width: '20px', height: '0.5px', backgroundColor: '#c5bfb5' }} />
             </div>
 
-            {/* Letter body with drop cap */}
-            <div style={{ fontSize: '14px', lineHeight: '1.75', color: '#333', letterSpacing: '0.01em' }}>
+            {/* Letter body */}
+            <div style={{ fontSize: '14px', lineHeight: '1.25', color: '#333', letterSpacing: '0.01em' }}>
               {paragraphs.map((para, i) => {
                 const isBullet = /^[•\-\*]\s/.test(para.trim())
                 if (isBullet) {
+                  const bulletText = para.replace(/^[•\-\*]\s*/, '')
                   return (
-                    <p key={i} style={{ paddingLeft: '20px', marginBottom: '6px', fontSize: '13.5px', lineHeight: '1.65', color: '#444' }}>
-                      {para}
+                    <p key={i} style={{ paddingLeft: '16px', marginBottom: '5px', fontSize: '13px', lineHeight: '1.25', color: '#444', position: 'relative' }}>
+                      <span style={{ position: 'absolute', left: '0', color: '#1a2744', fontWeight: 'bold' }}>•</span>
+                      {bulletText}
                     </p>
                   )
                 }
 
-                if (showListingHighlight && i === 0 && property) {
-                  return (
-                    <p key={i} style={{ marginBottom: '14px' }} dangerouslySetInnerHTML={{
-                      __html: para.replace(
-                        new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
-                        `<mark style="background:#fef3c7;padding:1px 3px;border-radius:3px">${address}</mark>`
-                      )
-                    }} />
+                // Highlight property address and dollar amounts
+                const highlightPara = (text: string) => {
+                  let html = text
+                  // Highlight address
+                  if (property) {
+                    html = html.replace(
+                      new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+                      `<span style="background:linear-gradient(180deg, transparent 60%, rgba(26,39,68,0.08) 60%);font-weight:600">${address}</span>`
+                    )
+                  }
+                  // Highlight dollar amounts
+                  html = html.replace(
+                    /\$[\d,]+(?:\.\d{2})?/g,
+                    (match) => `<span style="background:linear-gradient(180deg, transparent 60%, rgba(26,39,68,0.08) 60%);font-weight:600">${match}</span>`
                   )
+                  return html
                 }
 
-                {/* Drop cap on first paragraph */}
-                if (i === 0 && para.length > 1) {
-                  const firstChar = para[0]
-                  const rest = para.slice(1)
-                  return (
-                    <p key={i} style={{ marginBottom: '14px' }}>
-                      <span style={{
-                        float: 'left',
-                        fontSize: '52px',
-                        lineHeight: '0.8',
-                        fontWeight: 'bold',
-                        color: '#1a2744',
-                        marginRight: '6px',
-                        marginTop: '4px',
-                        fontFamily: "Georgia, 'Times New Roman', serif",
-                      }}>{firstChar}</span>
-                      {rest}
-                    </p>
-                  )
-                }
-
-                return <p key={i} style={{ marginBottom: '14px' }}>{para}</p>
+                return (
+                  <p key={i} style={{ marginBottom: '12px' }}
+                    dangerouslySetInnerHTML={{ __html: highlightPara(para) }} />
+                )
               })}
             </div>
 
