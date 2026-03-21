@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/tooltip'
 import {
   Mail, Send, DollarSign, Plus, ChevronRight,
-  Sparkles,
+  Sparkles, Home,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -84,6 +84,18 @@ function CampaignCard({ campaign }: { campaign: MblCampaign }) {
             </div>
 
             <div className="flex items-center gap-5 shrink-0">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger className="text-center min-w-[3rem]">
+                    <p className="text-lg font-bold font-mono leading-none">{campaign.total_properties}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">found</p>
+                  </TooltipTrigger>
+                  <TooltipContent>Homes found matching criteria</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <Separator orientation="vertical" className="h-8 hidden sm:block" />
+
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger className="text-center min-w-[3rem]">
@@ -158,6 +170,7 @@ export default function DashboardPage() {
   })
 
   const totalCampaigns = campaigns?.length ?? 0
+  const totalFound = campaigns?.reduce((sum, c) => sum + c.total_properties, 0) ?? 0
   const totalSent = campaigns?.reduce((sum, c) => sum + c.properties_sent, 0) ?? 0
   const totalSpend = campaigns?.reduce((sum, c) => sum + c.total_cost_cents, 0) ?? 0
 
@@ -190,7 +203,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats — same style as campaign detail */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Campaigns</CardTitle>
@@ -198,6 +211,15 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalCampaigns}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Homes Found</CardTitle>
+            <Home className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalFound}</div>
           </CardContent>
         </Card>
         <Card>
