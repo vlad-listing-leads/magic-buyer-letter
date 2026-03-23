@@ -33,5 +33,7 @@ export async function GET() {
     memberstackId: user.memberstack_id,
     role: user.role,
     isAdmin: ['admin', 'superadmin'].includes(user.role),
+    activePlanIds: user.active_plan_ids ?? [],
+    isTeamMember: user.is_team_member ?? false,
   })
 }

@@ -9,6 +9,8 @@ interface CurrentUser {
   memberstackId: string
   role: string
   isAdmin: boolean
+  activePlanIds: string[]
+  isTeamMember: boolean
 }
 
 async function fetchCurrentUser(): Promise<CurrentUser> {
