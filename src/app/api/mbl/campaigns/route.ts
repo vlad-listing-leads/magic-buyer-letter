@@ -28,6 +28,7 @@ const campaignCreateSchema = z.object({
   closing_flexibility: z.string().optional(),
   condition_tolerance: z.string().optional(),
   additional_notes: z.string().optional(),
+  selected_channels: z.array(z.string()).optional().default([]),
 })
 
 // GET — list campaigns
@@ -80,7 +81,8 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: user.id,
         agent_id: agent.id,
-        status: 'searching',
+        status: data.selected_channels.includes('letter') ? 'searching' : 'ready',
+        selected_channels: data.selected_channels,
         buyer_name: data.buyer_name,
         buyer_description: data.buyer_description,
         criteria_price_min: data.criteria.price_min ?? null,

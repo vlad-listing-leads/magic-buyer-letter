@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { PenLine, Mail, Sparkles, Users, Trophy, Shield } from 'lucide-react'
+import { UserPlus, Users as UsersIcon, Sparkles, Users, Trophy, Shield } from 'lucide-react'
 
 import {
   Sidebar,
@@ -22,8 +22,8 @@ import {
 } from '@/components/ui/sidebar'
 
 const navItems = [
-  { href: '/', label: 'Campaigns', icon: Mail },
-  { href: '/new', label: 'New Letter', icon: PenLine },
+  { href: '/', label: 'Buyers', icon: UsersIcon },
+  { href: '/new', label: 'New Buyer', icon: UserPlus },
 ]
 
 const adminItems = [

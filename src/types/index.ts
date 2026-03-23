@@ -138,6 +138,7 @@ export interface MblCampaign {
   closing_flexibility: string | null
   condition_tolerance: string | null
   additional_notes: string | null
+  selected_channels: string[]
   error_message: string | null
   created_at: string
   updated_at: string
@@ -351,6 +352,7 @@ export interface BuyerProfileData {
 export type WizardStep =
   | 'input'
   | 'profile'
+  | 'channels'
   | 'generating'
   | 'preview'
   | 'audience'

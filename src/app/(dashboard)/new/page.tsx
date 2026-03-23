@@ -10,6 +10,7 @@ import { PipelineLoading } from '@/components/mbl/PipelineLoading'
 import { LetterPreviewWizard } from '@/components/mbl/LetterPreviewWizard'
 import { AudienceSelection } from '@/components/mbl/AudienceSelection'
 import { CampaignSummary } from '@/components/mbl/CampaignSummary'
+import { ChannelSelector } from '@/components/mbl/ChannelSelector'
 import { generateBullets } from '@/lib/bullets'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
@@ -29,22 +30,23 @@ import type {
 const STEP_ORDER: WizardStep[] = [
   'input',
   'profile',
-  'generating',    // pipeline: search + verify (fast, no Claude)
+  'channels',       // choose touchpoints
+  'generating',     // pipeline: search + verify (only if letter selected)
   'audience',       // user selects properties
   'preview',        // generates letters for selected only, then shows preview
   'review',
   'confirmation',
 ]
 
-export default function NewLetterPage() {
+export default function NewBuyerPage() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="h-6 w-6 animate-spin rounded-full border-2 border-[#006AFF] border-t-transparent" /></div>}>
-      <NewLetterWizard />
+      <NewBuyerWizard />
     </Suspense>
   )
 }
 
-function NewLetterWizard() {
+function NewBuyerWizard() {
   const searchParams = useSearchParams()
   const apiFetch = useApiFetch()
   const router = useRouter()
@@ -77,6 +79,7 @@ function NewLetterWizard() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isGeneratingLetters, setIsGeneratingLetters] = useState(false)
   const [propertyCount, setPropertyCount] = useState<number | null>(null)
+  const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set(['letter']))
 
   // Fetch campaign + properties when we have a campaignId and need them
   const needsData = step === 'preview' || step === 'audience' || step === 'review' || step === 'confirmation'
@@ -169,18 +172,21 @@ function NewLetterWizard() {
     setStep('profile')
   }
 
-  const handleProfileComplete = async (profile: BuyerProfileData) => {
+  const handleProfileComplete = (profile: BuyerProfileData) => {
     setBuyerProfile(profile)
-    setStep('generating')
+    setStep('channels')
+  }
 
-    // Compute bullets fresh from the profile parameter (state hasn't re-rendered yet)
-    const freshBullets = generateBullets(profile, {
+  const handleChannelSubmit = async () => {
+    const freshBullets = generateBullets(buyerProfile, {
       min: criteria.price_min,
       max: criteria.price_max,
     })
 
+    const hasLetter = selectedChannels.has('letter')
+
     try {
-      const payload: CampaignCreateData = {
+      const payload = {
         buyer_name: buyerName || 'My Buyer',
         buyer_description: description,
         criteria,
@@ -188,6 +194,11 @@ function NewLetterWizard() {
         bullet_1: freshBullets[0] || 'Serious buyer ready to purchase',
         bullet_2: freshBullets[1] || '',
         bullet_3: freshBullets[2] || '',
+        financing: buyerProfile.financing || undefined,
+        closing_flexibility: buyerProfile.closing_flexibility || undefined,
+        condition_tolerance: buyerProfile.condition_tolerance || undefined,
+        additional_notes: buyerProfile.additional_notes || undefined,
+        selected_channels: Array.from(selectedChannels),
       }
 
       const res = await apiFetch('/api/mbl/campaigns', {
@@ -198,14 +209,22 @@ function NewLetterWizard() {
 
       if (!res.ok) {
         const json = await res.json()
-        throw new Error(json.error || 'Failed to create campaign')
+        throw new Error(json.error || 'Failed to create buyer')
       }
 
       const { data: result } = await res.json()
       setCampaignId(result.id)
+
+      if (hasLetter) {
+        // Letter selected → go to property search pipeline
+        setStep('generating')
+      } else {
+        // No letter → go straight to buyer detail page
+        sileo.success({ title: 'Buyer created!' })
+        router.push(`/campaigns/${result.id}`)
+      }
     } catch (err) {
-      sileo.error({ title: err instanceof Error ? err.message : 'Failed to start campaign' })
-      setStep('profile')
+      sileo.error({ title: err instanceof Error ? err.message : 'Failed to create buyer' })
     }
   }
 
@@ -287,6 +306,7 @@ function NewLetterWizard() {
   const STEP_LABELS: Record<WizardStep, string> = {
     input: 'Describe',
     profile: 'Profile',
+    channels: 'Channels',
     generating: 'Generate',
     preview: 'Preview',
     audience: 'Audience',
@@ -318,7 +338,15 @@ function NewLetterWizard() {
         />
       )}
 
-      {/* Step 3: Pipeline Loading */}
+      {/* Step 3: Channel Selection */}
+      {step === 'channels' && (
+        <ChannelSelector
+          selected={selectedChannels}
+          onChange={setSelectedChannels}
+        />
+      )}
+
+      {/* Step 4: Pipeline Loading */}
       {step === 'generating' && (
         <PipelineLoading
           campaignId={campaignId}
@@ -410,6 +438,7 @@ function NewLetterWizard() {
               size="sm"
               onClick={() => {
                 if (step === 'profile') setStep('input')
+                else if (step === 'channels') setStep('profile')
                 else if (step === 'preview') setStep('audience')
               }}
             >
@@ -432,7 +461,19 @@ function NewLetterWizard() {
                 className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-6 gap-2 font-semibold shadow-lg shadow-[#006AFF]/20"
                 size="lg"
               >
-                Find Properties
+                Continue
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            )}
+
+            {step === 'channels' && (
+              <Button
+                onClick={handleChannelSubmit}
+                disabled={selectedChannels.size === 0}
+                className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-6 gap-2 font-semibold shadow-lg shadow-[#006AFF]/20"
+                size="lg"
+              >
+                {selectedChannels.has('letter') ? 'Find Properties' : 'Create Buyer'}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             )}

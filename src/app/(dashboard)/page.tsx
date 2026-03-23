@@ -191,13 +191,13 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Campaigns</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Manage your buyer letter campaigns</p>
+          <h1 className="text-2xl font-bold tracking-tight">Buyers</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Manage your buyer campaigns</p>
         </div>
         <Link href="/new">
           <Button className="bg-[#006AFF] hover:bg-[#0058D4] text-white gap-1.5">
             <Plus className="h-4 w-4" />
-            New Letter
+            New Buyer
           </Button>
         </Link>
       </div>
@@ -206,7 +206,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Campaigns</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Buyers</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -290,7 +290,7 @@ export default function DashboardPage() {
             <Link href="/new">
               <Button className="bg-[#006AFF] hover:bg-[#0058D4] text-white gap-1.5">
                 <Plus className="h-4 w-4" />
-                New Letter
+                New Buyer
               </Button>
             </Link>
           </CardContent>
