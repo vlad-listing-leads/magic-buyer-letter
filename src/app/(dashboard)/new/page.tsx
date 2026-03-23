@@ -461,11 +461,13 @@ function NewBuyerWizard() {
 
           {/* Email / Text / Call Script tabs */}
           {(previewTab === 'email' || previewTab === 'text' || previewTab === 'call_script') && campaignId && (
-            <ChannelContent
-              campaignId={campaignId}
-              channel={previewTab as ChannelType}
-              channelData={generatedChannels.find((c) => c.channel === previewTab)}
-            />
+            <div className="max-w-[740px] mx-auto">
+              <ChannelContent
+                campaignId={campaignId}
+                channel={previewTab as ChannelType}
+                channelData={generatedChannels.find((c) => c.channel === previewTab)}
+              />
+            </div>
           )}
 
           {/* Social post — coming soon */}

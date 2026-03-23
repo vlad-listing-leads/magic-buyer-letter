@@ -106,7 +106,7 @@ export function LetterPreviewWizard({
       )}
 
       {/* Letter preview */}
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-[740px] mx-auto">
         <div className="rounded-xl bg-stone-200 dark:bg-[#282524] px-2 pt-2 pb-2">
           <LetterPreview
             agent={agent}

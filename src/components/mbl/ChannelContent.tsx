@@ -1,12 +1,10 @@
 'use client'
 
-import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { MergeVariableHighlight } from './MergeVariableHighlight'
-import { Copy, Loader2, Sparkles } from 'lucide-react'
+import { Copy, Loader2, Sparkles, RotateCcw } from 'lucide-react'
 import { sileo } from 'sileo'
 import type { MblCampaignChannel, ChannelType } from '@/types'
 
@@ -58,7 +56,6 @@ export function ChannelContent({ campaignId, channel, channelData }: ChannelCont
         <h3 className="text-lg font-semibold">{CHANNEL_LABELS[channel]}</h3>
         <p className="text-sm text-muted-foreground mt-1 mb-5 max-w-sm">
           Generate a {CHANNEL_LABELS[channel].toLowerCase()} template based on your buyer&apos;s profile.
-          Uses the same story as your letter.
         </p>
         <Button
           onClick={() => generateMutation.mutate()}
@@ -75,35 +72,54 @@ export function ChannelContent({ campaignId, channel, channelData }: ChannelCont
     )
   }
 
-  // Generated — show content
-  return (
-    <div className="space-y-4">
-      {/* Status + copy buttons */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-amber-500" />
-          <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-            {channel === 'call_script' ? 'Script ready' : 'Ready to send'}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          {channel === 'email' && channelData.subject && (
-            <>
+  // Email layout — subject header + body + copy buttons at bottom
+  if (channel === 'email') {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          {/* Subject line header */}
+          {channelData.subject && (
+            <div className="border-b border-border px-6 py-4">
+              <span className="text-sm text-muted-foreground mr-3">Subject:</span>
+              <span className="text-[15px] font-medium">
+                <MergeVariableHighlight text={channelData.subject} />
+              </span>
+            </div>
+          )}
+
+          {/* Email body */}
+          <div className="px-6 py-6">
+            <div className="space-y-4 text-[15px] leading-relaxed text-foreground/90">
+              {channelData.body.split('\n').map((line, i) => {
+                if (!line.trim()) return <div key={i} className="h-3" />
+                return (
+                  <p key={i}>
+                    <MergeVariableHighlight text={line} />
+                  </p>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Bottom bar with copy buttons */}
+          <div className="border-t border-border px-6 py-3 flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => generateMutation.mutate()}
+              disabled={generateMutation.isPending}
+              className="text-muted-foreground text-xs gap-1.5"
+            >
+              <RotateCcw className="h-3 w-3" /> Regenerate
+            </Button>
+            <div className="flex items-center gap-2">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => copyToClipboard(channelData.subject!, 'Subject')}
-                className="gap-1.5"
-              >
-                <Copy className="h-3.5 w-3.5" /> Copy subject
-              </Button>
-              <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => copyToClipboard(channelData.body, 'Body')}
-                className="gap-1.5"
+                className="text-xs gap-1.5"
               >
-                <Copy className="h-3.5 w-3.5" /> Copy body
+                <Copy className="h-3 w-3" /> Copy body
               </Button>
               <Button
                 variant="outline"
@@ -114,48 +130,78 @@ export function ChannelContent({ campaignId, channel, channelData }: ChannelCont
                     'Email'
                   )
                 }
-                className="gap-1.5"
+                className="text-xs gap-1.5"
               >
-                <Copy className="h-3.5 w-3.5" /> Copy all
+                <Copy className="h-3 w-3" /> Copy all
               </Button>
-            </>
-          )}
-          {channel !== 'email' && (
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Text message layout — single bubble-like card
+  if (channel === 'text') {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="px-6 py-6">
+            <div className="space-y-4 text-[15px] leading-relaxed text-foreground/90">
+              {channelData.body.split('\n').map((line, i) => {
+                if (!line.trim()) return <div key={i} className="h-3" />
+                return (
+                  <p key={i}>
+                    <MergeVariableHighlight text={line} />
+                  </p>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="border-t border-border px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => generateMutation.mutate()}
+                disabled={generateMutation.isPending}
+                className="text-muted-foreground text-xs gap-1.5"
+              >
+                <RotateCcw className="h-3 w-3" /> Regenerate
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {channelData.body.length} chars · Follow up in 48 hrs if no response
+              </span>
+            </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => copyToClipboard(channelData.body, CHANNEL_LABELS[channel])}
-              className="gap-1.5"
+              onClick={() => copyToClipboard(channelData.body, 'Text')}
+              className="text-xs gap-1.5"
             >
-              <Copy className="h-3.5 w-3.5" /> Copy
+              <Copy className="h-3 w-3" /> Copy
             </Button>
-          )}
+          </div>
         </div>
       </div>
+    )
+  }
 
-      {/* Email subject */}
-      {channel === 'email' && channelData.subject && (
-        <Card className="bg-muted/50">
-          <CardContent className="py-3 px-4">
-            <p className="text-xs text-muted-foreground mb-1">Subject line</p>
-            <p className="text-base font-medium">
-              <MergeVariableHighlight text={channelData.subject} />
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Body content */}
-      <Card>
-        <CardContent className="py-6 px-6">
-          <div className="space-y-4 text-[15px] leading-relaxed">
+  // Call script layout — sections with colored headers
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-6 py-6">
+          <div className="space-y-4 text-[15px] leading-relaxed text-foreground/90">
             {channelData.body.split('\n').map((line, i) => {
-              if (!line.trim()) return <div key={i} className="h-2" />
+              if (!line.trim()) return <div key={i} className="h-3" />
 
-              // Call script section headers
+              // Section headers like [OPENING], [IF YES — THE HOOK]
               if (line.match(/^\[.+\]$/)) {
                 return (
-                  <p key={i} className="font-semibold text-amber-600 dark:text-amber-400 text-sm uppercase tracking-wide">
+                  <p key={i} className="font-semibold text-amber-600 dark:text-amber-400 text-xs uppercase tracking-widest pt-2">
                     {line}
                   </p>
                 )
@@ -168,35 +214,29 @@ export function ChannelContent({ campaignId, channel, channelData }: ChannelCont
               )
             })}
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Channel-specific hints */}
-      {channel === 'text' && (
-        <p className="text-xs text-muted-foreground">
-          {channelData.body.length} chars ideal for first text · Follow up in 48 hrs if no response
-        </p>
-      )}
-      {channel === 'call_script' && (
-        <p className="text-xs text-muted-foreground">
-          Tip: Practice the script 2-3 times before calling. Sound natural, not scripted.
-        </p>
-      )}
-
-      {/* Regenerate */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => generateMutation.mutate()}
-        disabled={generateMutation.isPending}
-        className="text-muted-foreground"
-      >
-        {generateMutation.isPending ? (
-          <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Regenerating...</>
-        ) : (
-          <><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Regenerate</>
-        )}
-      </Button>
+        {/* Bottom bar */}
+        <div className="border-t border-border px-6 py-3 flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => generateMutation.mutate()}
+            disabled={generateMutation.isPending}
+            className="text-muted-foreground text-xs gap-1.5"
+          >
+            <RotateCcw className="h-3 w-3" /> Regenerate
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => copyToClipboard(channelData.body, 'Call Script')}
+            className="text-xs gap-1.5"
+          >
+            <Copy className="h-3 w-3" /> Copy
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

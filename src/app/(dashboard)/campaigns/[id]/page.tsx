@@ -293,7 +293,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
             <TabsContent value="letter">
               {agent ? (
-                <div className="max-w-2xl mx-auto">
+                <div className="max-w-[740px] mx-auto">
                   <LetterPreview
                     agent={agent}
                     property={properties.find(p => p.personalized_content) ?? properties[0] ?? null}
@@ -312,27 +312,33 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
             </TabsContent>
 
             <TabsContent value="email">
-              <ChannelContent
-                campaignId={id}
-                channel="email"
-                channelData={channels.find((c) => c.channel === 'email')}
-              />
+              <div className="max-w-[740px] mx-auto">
+                <ChannelContent
+                  campaignId={id}
+                  channel="email"
+                  channelData={channels.find((c) => c.channel === 'email')}
+                />
+              </div>
             </TabsContent>
 
             <TabsContent value="text">
-              <ChannelContent
-                campaignId={id}
-                channel="text"
-                channelData={channels.find((c) => c.channel === 'text')}
-              />
+              <div className="max-w-[740px] mx-auto">
+                <ChannelContent
+                  campaignId={id}
+                  channel="text"
+                  channelData={channels.find((c) => c.channel === 'text')}
+                />
+              </div>
             </TabsContent>
 
             <TabsContent value="call_script">
-              <ChannelContent
-                campaignId={id}
-                channel="call_script"
-                channelData={channels.find((c) => c.channel === 'call_script')}
-              />
+              <div className="max-w-[740px] mx-auto">
+                <ChannelContent
+                  campaignId={id}
+                  channel="call_script"
+                  channelData={channels.find((c) => c.channel === 'call_script')}
+                />
+              </div>
             </TabsContent>
 
             <TabsContent value="social_post">
