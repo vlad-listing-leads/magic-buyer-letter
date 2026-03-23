@@ -338,12 +338,12 @@ export function SmartInput({ onComplete }: SmartInputProps) {
         {!text && !isListening && (
           <div className="flex items-center justify-center gap-2">
             <p className="text-xs text-muted-foreground/60">
-              Try: &ldquo;Sarah and Mike, 3 bed 2 bath in Auburn NH, $900K-$910K, flexible closing, major reno ok, any years owned&rdquo;
+              Try: &ldquo;Sarah and Mike, 3 bed 2 bath in Auburn NH, $900K-$912K, pre-approved, flexible closing, major reno ok, any years owned&rdquo;
             </p>
             <button
               type="button"
               onClick={() => {
-                setText('Sarah and Mike, 3 bed 2 bath in Auburn NH, $900K-$910K, flexible closing, major reno ok, any years owned')
+                setText('Sarah and Mike, 3 bed 2 bath in Auburn NH, $900K-$912K, pre-approved, flexible closing, major reno ok, any years owned')
                 requestAnimationFrame(() => {
                   if (textareaRef.current) {
                     textareaRef.current.style.height = 'auto'
