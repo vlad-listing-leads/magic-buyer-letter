@@ -26,7 +26,7 @@ export function ChannelTabs({ activeTab, onTabChange, letterSent, channels }: Ch
   const channelMap = new Map(channels.map((c) => [c.channel as string, c]))
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center justify-center gap-2 flex-wrap">
       {TABS.map((tab) => {
         const isActive = activeTab === tab.id
         const isGenerated = tab.id === 'letter' ? letterSent : !!channelMap.get(tab.id)
