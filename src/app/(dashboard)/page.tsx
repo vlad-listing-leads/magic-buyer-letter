@@ -39,9 +39,7 @@ function relativeTime(dateStr: string): string {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  delivered: { label: 'Delivered', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' },
-  sent: { label: 'Sent', className: 'bg-blue-500/15 text-blue-400 border-blue-500/20' },
-  sending: { label: 'Sending', className: 'bg-amber-500/15 text-amber-400 border-amber-500/20' },
+  delivered: { label: 'Completed', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' },
   ready: { label: 'Ready', className: 'bg-violet-500/15 text-violet-400 border-violet-500/20' },
   generating: { label: 'Generating', className: 'bg-amber-500/15 text-amber-400 border-amber-500/20' },
   searching: { label: 'Searching', className: 'bg-amber-500/15 text-amber-400 border-amber-500/20' },
@@ -94,25 +92,6 @@ function CampaignCard({ campaign }: { campaign: MblCampaign }) {
                 </Tooltip>
               </TooltipProvider>
 
-              <Separator orientation="vertical" className="h-8 hidden sm:block" />
-
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger className="text-center min-w-[3rem]">
-                    <p className="text-lg font-bold font-mono leading-none">{campaign.properties_sent}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">sent</p>
-                  </TooltipTrigger>
-                  <TooltipContent>Letters sent via Lob</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              <Separator orientation="vertical" className="h-8 hidden sm:block" />
-
-              <div className="text-right hidden sm:block min-w-[4.5rem]">
-                <p className="text-sm font-mono font-semibold">${cost}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">cost</p>
-              </div>
-
               <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-foreground transition-colors" />
             </div>
           </div>
@@ -147,11 +126,10 @@ function CampaignSkeleton() {
 
 function filterCampaigns(campaigns: MblCampaign[], tab: string): MblCampaign[] {
   if (tab === 'all') return campaigns
-  if (tab === 'delivered') return campaigns.filter((c) => c.status === 'delivered')
-  if (tab === 'sent') return campaigns.filter((c) => c.status === 'sent')
+  if (tab === 'completed') return campaigns.filter((c) => c.status === 'delivered')
   if (tab === 'in_progress') {
     return campaigns.filter((c) =>
-      ['sending', 'ready', 'generating', 'searching', 'skip_tracing', 'verifying'].includes(c.status)
+      ['ready', 'generating', 'searching', 'skip_tracing', 'verifying'].includes(c.status)
     )
   }
   return campaigns
@@ -171,8 +149,6 @@ export default function DashboardPage() {
 
   const totalCampaigns = campaigns?.length ?? 0
   const totalFound = campaigns?.reduce((sum, c) => sum + c.total_properties, 0) ?? 0
-  const totalSent = campaigns?.reduce((sum, c) => sum + c.properties_sent, 0) ?? 0
-  const totalSpend = campaigns?.reduce((sum, c) => sum + c.total_cost_cents, 0) ?? 0
 
   const tabCounts = useMemo(() => {
     if (!campaigns) return { all: 0, delivered: 0, sent: 0, in_progress: 0 }
@@ -203,7 +179,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats — same style as campaign detail */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Buyers</CardTitle>
@@ -222,24 +198,6 @@ export default function DashboardPage() {
             <div className="text-2xl font-bold">{totalFound}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Letters Sent</CardTitle>
-            <Send className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalSent}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Spend</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${(totalSpend / 100).toFixed(2)}</div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Campaigns with tab filters */}
@@ -253,12 +211,11 @@ export default function DashboardPage() {
         <Tabs defaultValue="all">
           <TabsList>
             <TabsTrigger value="all">All ({tabCounts.all})</TabsTrigger>
-            <TabsTrigger value="delivered">Delivered ({tabCounts.delivered})</TabsTrigger>
-            <TabsTrigger value="sent">Sent ({tabCounts.sent})</TabsTrigger>
             <TabsTrigger value="in_progress">In Progress ({tabCounts.in_progress})</TabsTrigger>
+            <TabsTrigger value="completed">Completed ({tabCounts.delivered})</TabsTrigger>
           </TabsList>
 
-          {['all', 'delivered', 'sent', 'in_progress'].map((tab) => (
+          {['all', 'in_progress', 'completed'].map((tab) => (
             <TabsContent key={tab} value={tab}>
               {filterCampaigns(campaigns, tab).length > 0 ? (
                 <div className="space-y-2">

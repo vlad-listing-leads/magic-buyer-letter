@@ -145,9 +145,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       : ''
   const canDelete = campaign.status !== 'sent' && campaign.status !== 'sending' && campaign.status !== 'delivered'
 
-  // Post-send metrics
-  const sentCount = campaign.properties_sent
-  const totalCost = (campaign.total_cost_cents / 100).toFixed(2)
 
   // Pre-send metrics
   const generatedCount = properties.filter(p => p.status === 'generated' || p.status === 'verified').length
@@ -245,7 +242,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       {isPreSend ? (
         <>
           {/* Pre-send stats */}
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Properties Found</CardTitle>
@@ -271,15 +268,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{currentSelectedCount}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Est. Cost</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${(currentSelectedCount * 1.12).toFixed(2)}</div>
               </CardContent>
             </Card>
           </div>
@@ -397,27 +385,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
               {/* Letter tab — existing recipients view */}
               {activeChannel === 'letter' && (
                 <>
-                  <div className="grid gap-4 md:grid-cols-2 mb-6">
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Sent</CardTitle>
-                        <Send className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{sentCount}</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Cost</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">${totalCost}</div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">Recipients ({properties.length})</CardTitle>

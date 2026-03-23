@@ -30,8 +30,8 @@ export function ChannelSidebar({ campaign, channels, letterSent }: ChannelSideba
   function getStatus(id: string): { label: string; color: string } {
     if (id === 'letter') {
       return letterSent
-        ? { label: 'Sent', color: 'bg-green-500' }
-        : { label: 'Not sent', color: 'bg-zinc-400' }
+        ? { label: 'Generated', color: 'bg-green-500' }
+        : { label: 'Not generated', color: 'bg-zinc-400' }
     }
     if (id === 'social_post') return { label: 'Coming soon', color: 'bg-zinc-400' }
     const ch = channelMap.get(id)
