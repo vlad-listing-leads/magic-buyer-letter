@@ -214,6 +214,18 @@ function NewBuyerWizard() {
 
       const { data: result } = await res.json()
       setCampaignId(result.id)
+
+      // Auto-generate non-letter channels in background (client-side)
+      const nonLetterChannels = Array.from(selectedChannels).filter(
+        (ch) => ch !== 'letter' && ch !== 'social_post'
+      )
+      for (const channel of nonLetterChannels) {
+        apiFetch(`/api/mbl/campaigns/${result.id}/generate-channel`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channel }),
+        }).catch(() => {}) // fire-and-forget from client
+      }
     } catch (err) {
       sileo.error({ title: err instanceof Error ? err.message : 'Failed to create buyer' })
       setStep('channels')

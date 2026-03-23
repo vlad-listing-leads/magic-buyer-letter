@@ -1,9 +1,6 @@
 import { NextRequest } from 'next/server'
 import { apiSuccess, apiError } from '@/lib/api/response'
 import { requireAuth, createAdminClient } from '@/lib/supabase/server'
-import { generateChannelContent } from '@/lib/services/claude'
-import { logger } from '@/lib/logger'
-import type { ChannelContext } from '@/lib/services/claude'
 import { z } from 'zod'
 
 const campaignCreateSchema = z.object({
@@ -114,51 +111,6 @@ export async function POST(request: NextRequest) {
 
     if (createError || !campaign) {
       return apiError('Failed to create campaign', 500)
-    }
-
-    // Auto-generate non-letter channels in background
-    const nonLetterChannels = data.selected_channels.filter(
-      (ch: string) => ch !== 'letter' && ch !== 'social_post'
-    )
-    if (nonLetterChannels.length > 0) {
-      const area = [data.criteria.city, data.criteria.state].filter(Boolean).join(', ')
-      const priceMin = data.criteria.price_min ? `$${(data.criteria.price_min / 1000).toFixed(0)}K` : ''
-      const priceMax = data.criteria.price_max ? `$${(data.criteria.price_max / 1000).toFixed(0)}K` : ''
-
-      const channelContext: ChannelContext = {
-        buyer_name: data.buyer_name,
-        area,
-        city: data.criteria.city || '',
-        state: data.criteria.state || '',
-        price_range: [priceMin, priceMax].filter(Boolean).join('–'),
-        financing: data.financing || '',
-        closing_flexibility: data.closing_flexibility || '',
-        condition_tolerance: data.condition_tolerance || '',
-        agent_name: agent.name || '',
-        agent_phone: agent.phone || '',
-        agent_brokerage: agent.brokerage || '',
-      }
-
-      // Fire-and-forget — don't block response
-      Promise.all(
-        nonLetterChannels.map(async (channel: string) => {
-          try {
-            const result = await generateChannelContent(channel, channelContext)
-            await admin
-              .from('mbl_campaign_channels')
-              .upsert({
-                campaign_id: campaign.id,
-                channel,
-                subject: result.subject ?? null,
-                body: result.body,
-                status: 'ready',
-              }, { onConflict: 'campaign_id,channel' })
-            logger.info({ campaignId: campaign.id, channel }, 'Auto-generated channel')
-          } catch (err) {
-            logger.error({ err, channel, campaignId: campaign.id }, 'Failed to auto-generate channel')
-          }
-        })
-      ).catch(() => {})  // swallow unhandled rejection
     }
 
     return apiSuccess({ id: campaign.id }, 201)
