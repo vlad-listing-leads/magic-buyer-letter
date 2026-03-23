@@ -36,28 +36,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'CROSS_APP_AUTH_SECRET not set' }, { status: 500 })
   }
 
-  // 1. Validate JWT
-  let payload: CrossAppTokenPayload
-  try {
-    const result = await jwtVerify(token, new TextEncoder().encode(secret))
-    payload = result.payload as unknown as CrossAppTokenPayload
-  } catch (err) {
-    log.warn({ err }, 'll-callback: invalid or expired token')
-    return NextResponse.json(
-      { error: 'JWT verification failed', details: String(err) },
-      { status: 401 }
-    )
-  }
-
-  const { memberstackId, email, role, name } = payload
-  if (!memberstackId || !email) {
-    return NextResponse.json(
-      { error: 'JWT missing required fields', payload },
-      { status: 400 }
-    )
-  }
-
-  // 1b. Fetch plan data from satellite verify endpoint (must happen early — JWT expires in 60s)
+  // 1. Call satellite verify FIRST (before anything else — JWT expires in 60s)
   let activePlanIds: string[] = []
   let isTeamMember = false
   let verifyDebug = ''
@@ -78,6 +57,27 @@ export async function GET(request: NextRequest) {
     }
   } catch (err) {
     verifyDebug = `exception:${String(err).slice(0, 300)}`
+  }
+
+  // 2. Validate JWT locally
+  let payload: CrossAppTokenPayload
+  try {
+    const result = await jwtVerify(token, new TextEncoder().encode(secret))
+    payload = result.payload as unknown as CrossAppTokenPayload
+  } catch (err) {
+    log.warn({ err }, 'll-callback: invalid or expired token')
+    return NextResponse.json(
+      { error: 'JWT verification failed', details: String(err) },
+      { status: 401 }
+    )
+  }
+
+  const { memberstackId, email, role, name } = payload
+  if (!memberstackId || !email) {
+    return NextResponse.json(
+      { error: 'JWT missing required fields', payload },
+      { status: 400 }
+    )
   }
 
   // 1c. Resolve plan name from LL database (solo_plan_ids → solo_plans)
