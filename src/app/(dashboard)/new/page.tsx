@@ -214,18 +214,6 @@ function NewBuyerWizard() {
 
       const { data: result } = await res.json()
       setCampaignId(result.id)
-
-      // Auto-generate non-letter channels in background (client-side)
-      const nonLetterChannels = Array.from(selectedChannels).filter(
-        (ch) => ch !== 'letter' && ch !== 'social_post'
-      )
-      for (const channel of nonLetterChannels) {
-        apiFetch(`/api/mbl/campaigns/${result.id}/generate-channel`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ channel }),
-        }).catch(() => {}) // fire-and-forget from client
-      }
     } catch (err) {
       sileo.error({ title: err instanceof Error ? err.message : 'Failed to create buyer' })
       setStep('channels')
@@ -245,53 +233,69 @@ function NewBuyerWizard() {
     sileo.error({ title: error })
   }, [])
 
-  const handleGenerateLetters = async () => {
+  const handleGenerateAll = async () => {
     if (!campaignId || selectedIds.size === 0) return
     setIsGeneratingLetters(true)
 
     try {
-      const res = await apiFetch(`/api/mbl/campaigns/${campaignId}/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ property_ids: Array.from(selectedIds) }),
-      })
+      // Generate letters (SSE stream)
+      const letterPromise = (async () => {
+        const res = await apiFetch(`/api/mbl/campaigns/${campaignId}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ property_ids: Array.from(selectedIds) }),
+        })
 
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || 'Generation failed')
-      }
+        if (!res.ok) {
+          const text = await res.text()
+          throw new Error(text || 'Generation failed')
+        }
 
-      // Read SSE stream
-      const reader = res.body?.getReader()
-      if (!reader) throw new Error('No stream')
+        const reader = res.body?.getReader()
+        if (!reader) throw new Error('No stream')
 
-      const decoder = new TextDecoder()
-      let buffer = ''
+        const decoder = new TextDecoder()
+        let buffer = ''
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
 
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
 
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          try {
-            const event = JSON.parse(line.slice(6))
-            if (event.step === 'error') throw new Error(event.error)
-            if (event.step === 'ready') {
-              sileo.success({ title: `${event.count} letters generated!` })
-              await refetchCampaign()
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            try {
+              const event = JSON.parse(line.slice(6))
+              if (event.step === 'error') throw new Error(event.error)
+              if (event.step === 'ready') {
+                await refetchCampaign()
+              }
+            } catch (e) {
+              if (e instanceof Error && e.message !== 'ready') throw e
             }
-          } catch (e) {
-            if (e instanceof Error && e.message !== 'ready') throw e
           }
         }
-      }
+      })()
+
+      // Generate non-letter channels in parallel
+      const nonLetterChannels = Array.from(selectedChannels).filter(
+        (ch) => ch !== 'letter' && ch !== 'social_post'
+      )
+      const channelPromises = nonLetterChannels.map((channel) =>
+        apiFetch(`/api/mbl/campaigns/${campaignId}/generate-channel`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channel }),
+        }).catch(() => {}) // don't fail the whole thing if one channel fails
+      )
+
+      await Promise.all([letterPromise, ...channelPromises])
+      sileo.success({ title: 'All content generated!' })
     } catch (err) {
-      sileo.error({ title: err instanceof Error ? err.message : 'Letter generation failed' })
+      sileo.error({ title: err instanceof Error ? err.message : 'Generation failed' })
     } finally {
       setIsGeneratingLetters(false)
     }
@@ -373,9 +377,10 @@ function NewBuyerWizard() {
             </div>
           </div>
           <div className="text-center">
-            <h3 className="text-lg font-semibold">Generating letters...</h3>
+            <h3 className="text-lg font-semibold">Generating content...</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              AI is writing {selectedIds.size} personalized letter{selectedIds.size !== 1 ? 's' : ''}
+              AI is creating {selectedIds.size} personalized letter{selectedIds.size !== 1 ? 's' : ''}
+              {selectedChannels.size > 1 ? ` + ${selectedChannels.size - (selectedChannels.has('letter') ? 1 : 0)} other channel${selectedChannels.size > 2 ? 's' : ''}` : ''}
             </p>
           </div>
         </div>
@@ -428,7 +433,7 @@ function NewBuyerWizard() {
           onBack={() => setStep('generating')}
           onContinue={() => {
             setStep('preview')
-            handleGenerateLetters()
+            handleGenerateAll()
           }}
         />
       )}
