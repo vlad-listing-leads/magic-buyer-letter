@@ -5,6 +5,17 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { ChipSelector } from './ChipSelector'
 import { cn } from '@/lib/utils'
+
+/** Format a number as currency string (no decimals) */
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
+}
+
+/** Parse a currency string back to a number (strips $, commas) */
+function parseCurrency(value: string): number | undefined {
+  const cleaned = value.replace(/[^0-9]/g, '')
+  return cleaned ? Number(cleaned) : undefined
+}
 import type {
   BuyerProfileData,
   FinancingType,
@@ -166,17 +177,15 @@ export function BuyerProfile({
           <label className={cn('text-sm font-medium mb-2 block', !hasPrice ? 'text-destructive' : 'text-muted-foreground')}>Value &amp; Size</label>
           <div className="grid grid-cols-4 gap-2">
             <Input
-              type="number"
-              value={criteria.price_min ? criteria.price_min / 1000 : ''}
-              onChange={(e) => onCriteriaChange({ ...criteria, price_min: e.target.value ? Number(e.target.value) * 1000 : undefined })}
-              placeholder="Min $K"
+              value={criteria.price_min ? formatCurrency(criteria.price_min) : ''}
+              onChange={(e) => onCriteriaChange({ ...criteria, price_min: parseCurrency(e.target.value) })}
+              placeholder="Min price"
               className="h-8 text-sm"
             />
             <Input
-              type="number"
-              value={criteria.price_max ? criteria.price_max / 1000 : ''}
-              onChange={(e) => onCriteriaChange({ ...criteria, price_max: e.target.value ? Number(e.target.value) * 1000 : undefined })}
-              placeholder="Max $K"
+              value={criteria.price_max ? formatCurrency(criteria.price_max) : ''}
+              onChange={(e) => onCriteriaChange({ ...criteria, price_max: parseCurrency(e.target.value) })}
+              placeholder="Max price"
               className="h-8 text-sm"
             />
             <Input
