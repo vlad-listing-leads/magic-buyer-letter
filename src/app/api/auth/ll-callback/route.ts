@@ -36,40 +36,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'CROSS_APP_AUTH_SECRET not set' }, { status: 500 })
   }
 
-  // 1. Decode JWT to check timing, then call satellite verify
+  // 1. Call satellite verify FIRST (JWT expires in 60s, must be first network call)
   let activePlanIds: string[] = []
   let isTeamMember = false
-  let verifyDebug = ''
-
-  // Decode JWT payload (base64) to inspect timestamp/exp without verification
-  try {
-    const payloadB64 = token.split('.')[1]
-    const decoded = JSON.parse(Buffer.from(payloadB64, 'base64').toString())
-    const now = Date.now()
-    const tokenAge = decoded.timestamp ? now - decoded.timestamp : 'no-timestamp'
-    const expIn = decoded.exp ? (decoded.exp * 1000) - now : 'no-exp'
-    verifyDebug = `age:${tokenAge}ms exp_in:${expIn}ms `
-  } catch {
-    verifyDebug = 'decode-failed '
-  }
-
   try {
     const verifyRes = await fetch('https://www.listingleads.com/api/auth/satellite/verify', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    verifyDebug += `status:${verifyRes.status}`
     if (verifyRes.ok) {
-      const verifyBody = await verifyRes.json()
-      verifyDebug += ` body:${JSON.stringify(verifyBody).slice(0, 500)}`
-      const { user: verifiedUser } = verifyBody
+      const { user: verifiedUser } = await verifyRes.json()
       activePlanIds = verifiedUser.activePlanIds ?? []
       isTeamMember = verifiedUser.isTeamMember ?? false
+      log.info({ activePlanIds, isTeamMember }, 'll-callback: fetched plan data')
     } else {
-      const errBody = await verifyRes.text()
-      verifyDebug += ` err:${errBody.slice(0, 300)}`
+      log.warn({ status: verifyRes.status }, 'll-callback: satellite verify failed (non-fatal)')
     }
   } catch (err) {
-    verifyDebug = `exception:${String(err).slice(0, 300)}`
+    log.warn({ error: String(err) }, 'll-callback: satellite verify error (non-fatal)')
   }
 
   // 2. Validate JWT locally
@@ -93,22 +76,40 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // 1c. Resolve plan name from LL database (solo_plan_ids → solo_plans)
+  // 1c. Resolve plan name from LL database (solo or team plans)
   let planName: string | null = null
   if (activePlanIds.length > 0) {
     try {
       const llClient = createListingLeadsClient()
-      const { data: planIdRow } = await llClient
+
+      // Try solo plans first (solo_plan_ids → solo_plans)
+      const { data: soloRow } = await llClient
         .from('solo_plan_ids')
-        .select('plan_id, solo_plans!inner(plan_name)')
+        .select('solo_plans!inner(plan_name)')
         .in('memberstack_plan_id', activePlanIds)
         .limit(1)
-        .single()
+        .maybeSingle()
 
-      if (planIdRow) {
-        const soloPlans = planIdRow.solo_plans as unknown as { plan_name: string }
-        planName = soloPlans?.plan_name ?? null
+      if (soloRow) {
+        const solo = soloRow.solo_plans as unknown as { plan_name: string }
+        planName = solo?.plan_name ?? null
       }
+
+      // If not found in solo, try team plans (team_plan_ids → team_seat_tiers → team_plans)
+      if (!planName) {
+        const { data: teamRow } = await llClient
+          .from('team_plan_ids')
+          .select('team_seat_tiers!inner(team_plans!inner(plan_name))')
+          .in('memberstack_plan_id', activePlanIds)
+          .limit(1)
+          .maybeSingle()
+
+        if (teamRow) {
+          const tiers = teamRow.team_seat_tiers as unknown as { team_plans: { plan_name: string } }
+          planName = tiers?.team_plans?.plan_name ?? null
+        }
+      }
+
       log.info({ email, planName }, 'll-callback: resolved plan name')
     } catch (err) {
       log.warn({ error: String(err) }, 'll-callback: failed to resolve plan name (non-fatal)')
@@ -287,7 +288,7 @@ export async function GET(request: NextRequest) {
       .update({
         active_plan_ids: activePlanIds,
         is_team_member: isTeamMember,
-        plan_name: planName || `DEBUG:${verifyDebug}`,
+        plan_name: planName,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
