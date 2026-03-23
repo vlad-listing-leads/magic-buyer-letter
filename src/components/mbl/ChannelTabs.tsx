@@ -11,8 +11,8 @@ const TABS: Array<{ id: ChannelTab; label: string; icon: typeof Mail; comingSoon
   { id: 'letter', label: 'Letter', icon: Mail },
   { id: 'email', label: 'Email', icon: FileText },
   { id: 'text', label: 'Text', icon: MessageSquare },
-  { id: 'social_post', label: 'Social post', icon: Camera, comingSoon: true },
   { id: 'call_script', label: 'Call script', icon: Phone },
+  { id: 'social_post', label: 'Social post', icon: Camera, comingSoon: true },
 ]
 
 interface ChannelTabsProps {

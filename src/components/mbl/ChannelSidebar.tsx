@@ -14,8 +14,8 @@ const ALL_CHANNELS = [
   { id: 'letter', label: 'Letter' },
   { id: 'email', label: 'Email' },
   { id: 'text', label: 'Text' },
-  { id: 'social_post', label: 'Social post' },
   { id: 'call_script', label: 'Call script' },
+  { id: 'social_post', label: 'Social post' },
 ]
 
 interface ChannelSidebarProps {

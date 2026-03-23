@@ -18,7 +18,7 @@ import { CampaignSummary } from '@/components/mbl/CampaignSummary'
 import { ChannelSelector } from '@/components/mbl/ChannelSelector'
 import { generateBullets } from '@/lib/bullets'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Download } from 'lucide-react'
 import { sileo } from 'sileo'
 import { cn } from '@/lib/utils'
 import type {
@@ -113,7 +113,10 @@ function NewBuyerWizard() {
     },
   })
 
-  // Fetch generated channels
+  // Fetch generated channels (refetch until all expected channels arrive)
+  const expectedNonLetterCount = Array.from(selectedChannels).filter(
+    (ch) => ch !== 'letter' && ch !== 'social_post'
+  ).length
   const { data: generatedChannels = [] } = useQuery<MblCampaignChannel[]>({
     queryKey: ['campaign-channels', campaignId],
     queryFn: async () => {
@@ -122,6 +125,10 @@ function NewBuyerWizard() {
       return json.data ?? []
     },
     enabled: !!campaignId && (step === 'preview' || step === 'review'),
+    refetchInterval: (query) => {
+      const data = query.state.data ?? []
+      return data.length < expectedNonLetterCount ? 2000 : false
+    },
   })
 
   // Fetch skills for name display
@@ -423,18 +430,33 @@ function NewBuyerWizard() {
 
           {/* Letter tab */}
           {previewTab === 'letter' && (
-            <LetterPreviewWizard
-              agent={agent}
-              properties={properties}
-              buyerName={buyerName || campaign?.buyer_name || ''}
-              bullets={bullets}
-              templateStyle={templateStyle}
-              onTemplateChange={setTemplateStyle}
-              selectedSkillId={selectedSkillId}
-              onSkillChange={setSelectedSkillId}
-              onBack={() => setStep('audience')}
-              onContinue={() => setStep('review')}
-            />
+            <>
+              {campaignId && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`/api/mbl/campaigns/${campaignId}/export`, '_blank')}
+                    className="gap-1.5"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download Addresses
+                  </Button>
+                </div>
+              )}
+              <LetterPreviewWizard
+                agent={agent}
+                properties={properties}
+                buyerName={buyerName || campaign?.buyer_name || ''}
+                bullets={bullets}
+                templateStyle={templateStyle}
+                onTemplateChange={setTemplateStyle}
+                selectedSkillId={selectedSkillId}
+                onSkillChange={setSelectedSkillId}
+                onBack={() => setStep('audience')}
+                onContinue={() => setStep('review')}
+              />
+            </>
           )}
 
           {/* Email / Text / Call Script tabs */}
@@ -544,11 +566,11 @@ function NewBuyerWizard() {
 
             {step === 'preview' && !isGeneratingLetters && (
               <Button
-                onClick={() => setStep('review')}
+                onClick={() => campaignId ? router.push(`/campaigns/${campaignId}`) : setStep('review')}
                 className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-6 gap-2 font-semibold shadow-lg shadow-[#006AFF]/20"
                 size="lg"
               >
-                Continue
+                Go to Campaign Page
                 <ArrowRight className="h-4 w-4" />
               </Button>
             )}
