@@ -8,6 +8,7 @@ const skillSchema = z.object({
   name: z.string().min(1),
   description: z.string().default(''),
   prompt_instructions: z.string().min(1),
+  channel: z.enum(['letter', 'email', 'text', 'call_script']).default('letter'),
   is_active: z.boolean().default(true),
   sort_order: z.number().default(0),
 })

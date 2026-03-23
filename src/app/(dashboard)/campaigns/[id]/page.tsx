@@ -176,13 +176,37 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="flex items-center gap-2">
-          {isPreSend && campaign.status === 'ready' && currentSelectedCount > 0 && (
-            <Link href={`/new?step=preview&campaign_id=${id}`}>
-              <Button className="bg-[#006AFF] hover:bg-[#0058D4] text-white">
-                <CreditCard className="mr-1.5 h-4 w-4" />
-                Continue Campaign
-              </Button>
-            </Link>
+          {campaign.status !== 'cancelled' && campaign.status !== 'delivered' && (
+            <AlertDialog>
+              <AlertDialogTrigger className="inline-flex items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 h-8 text-sm font-medium hover:bg-accent transition-colors">
+                <CheckCircle className="h-4 w-4" />
+                Complete
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Complete this buyer campaign?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Did you find a seller for {campaign.buyer_name}? Completing this campaign will mark it as done.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Not yet</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      await apiFetch(`/api/mbl/campaigns/${id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'delivered' }),
+                      })
+                      window.location.reload()
+                    }}
+                    className="bg-[#006AFF] hover:bg-[#0058D4] text-white"
+                  >
+                    Yes, found a seller!
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="mr-1 h-4 w-4" />
@@ -262,7 +286,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
           {/* Tabs: Properties + Content Channels */}
           <Tabs defaultValue="properties">
-            <TabsList className="flex-wrap h-auto gap-1 p-1 w-full justify-center">
+            <TabsList className="flex-wrap h-auto gap-1 p-1">
               <TabsTrigger value="properties">Properties ({properties.length})</TabsTrigger>
               <TabsTrigger value="letter">Letter</TabsTrigger>
               <TabsTrigger value="email">Email</TabsTrigger>

@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Sheet,
   SheetContent,
@@ -28,10 +29,18 @@ import { Plus, Pencil, Trash2, Loader2, Sparkles, ArrowUp, ArrowDown } from 'luc
 import { sileo } from 'sileo'
 import type { MblSkill } from '@/types'
 
+const CHANNEL_TABS = [
+  { id: 'letter', label: 'Letter' },
+  { id: 'email', label: 'Email' },
+  { id: 'text', label: 'Text' },
+  { id: 'call_script', label: 'Call Script' },
+]
+
 interface SkillFormData {
   name: string
   description: string
   prompt_instructions: string
+  channel: string
   is_active: boolean
   sort_order: number
 }
@@ -40,6 +49,7 @@ const EMPTY_FORM: SkillFormData = {
   name: '',
   description: '',
   prompt_instructions: '',
+  channel: 'letter',
   is_active: true,
   sort_order: 0,
 }
@@ -50,6 +60,7 @@ export default function AdminSkillsPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<SkillFormData>(EMPTY_FORM)
+  const [activeTab, setActiveTab] = useState('letter')
 
   const { data: skills, isLoading } = useQuery<MblSkill[]>({
     queryKey: ['admin-skills'],
@@ -59,6 +70,8 @@ export default function AdminSkillsPage() {
       return json.data ?? []
     },
   })
+
+  const filteredSkills = skills?.filter((s) => (s.channel ?? 'letter') === activeTab) ?? []
 
   const saveMutation = useMutation({
     mutationFn: async (data: SkillFormData & { id?: string }) => {
@@ -125,13 +138,13 @@ export default function AdminSkillsPage() {
   })
 
   const handleMoveUp = (index: number) => {
-    if (!skills || index === 0) return
-    swapOrderMutation.mutate({ skillA: skills[index], skillB: skills[index - 1] })
+    if (index === 0) return
+    swapOrderMutation.mutate({ skillA: filteredSkills[index], skillB: filteredSkills[index - 1] })
   }
 
   const handleMoveDown = (index: number) => {
-    if (!skills || index >= skills.length - 1) return
-    swapOrderMutation.mutate({ skillA: skills[index], skillB: skills[index + 1] })
+    if (index >= filteredSkills.length - 1) return
+    swapOrderMutation.mutate({ skillA: filteredSkills[index], skillB: filteredSkills[index + 1] })
   }
 
   const deleteMutation = useMutation({
@@ -153,6 +166,7 @@ export default function AdminSkillsPage() {
       name: skill.name,
       description: skill.description,
       prompt_instructions: skill.prompt_instructions,
+      channel: skill.channel ?? 'letter',
       is_active: skill.is_active,
       sort_order: skill.sort_order,
     })
@@ -161,7 +175,7 @@ export default function AdminSkillsPage() {
 
   const handleCreate = () => {
     setEditingId(null)
-    setForm({ ...EMPTY_FORM, sort_order: (skills?.length ?? 0) })
+    setForm({ ...EMPTY_FORM, channel: activeTab, sort_order: filteredSkills.length })
     setSheetOpen(true)
   }
 
@@ -170,127 +184,168 @@ export default function AdminSkillsPage() {
     saveMutation.mutate({ ...form, ...(editingId ? { id: editingId } : {}) })
   }
 
+  const channelLabel = CHANNEL_TABS.find((t) => t.id === activeTab)?.label ?? 'Letter'
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Skills</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Configure letter writing styles for Claude AI
+            Configure AI writing styles for each channel
           </p>
         </div>
         <Button onClick={handleCreate} className="bg-[#006AFF] hover:bg-[#0058D4] text-white gap-1.5">
           <Plus className="h-4 w-4" />
-          New Skill
+          New {channelLabel} Skill
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {skills?.map((skill, index) => (
-            <Card key={skill.id} className={!skill.is_active ? 'opacity-60' : undefined}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  {/* Sort arrows */}
-                  <div className="flex flex-col gap-0.5 flex-shrink-0 pt-0.5">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      disabled={index === 0 || swapOrderMutation.isPending}
-                      onClick={() => handleMoveUp(index)}
-                    >
-                      <ArrowUp className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      disabled={index === (skills?.length ?? 0) - 1 || swapOrderMutation.isPending}
-                      onClick={() => handleMoveDown(index)}
-                    >
-                      <ArrowDown className="h-3 w-3" />
-                    </Button>
-                  </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          {CHANNEL_TABS.map((tab) => {
+            const count = skills?.filter((s) => (s.channel ?? 'letter') === tab.id).length ?? 0
+            return (
+              <TabsTrigger key={tab.id} value={tab.id}>
+                {tab.label} ({count})
+              </TabsTrigger>
+            )
+          })}
+        </TabsList>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Sparkles className="h-4 w-4 text-[#006AFF] flex-shrink-0" />
-                      <h3 className="font-semibold">{skill.name}</h3>
-                      <Badge variant={skill.is_active ? 'default' : 'secondary'} className="text-[10px]">
-                        {skill.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
-                    {skill.description && (
-                      <p className="text-sm text-muted-foreground mb-2">{skill.description}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground bg-muted rounded px-2 py-1 line-clamp-2">
-                      {skill.prompt_instructions}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {/* Enable/disable toggle */}
-                    <button
-                      type="button"
-                      onClick={() => toggleActiveMutation.mutate({ id: skill.id, is_active: !skill.is_active })}
-                      disabled={toggleActiveMutation.isPending}
-                      className={`w-9 h-5 rounded-full transition-colors flex-shrink-0 ${skill.is_active ? 'bg-[#006AFF]' : 'bg-muted'}`}
-                      title={skill.is_active ? 'Disable skill' : 'Enable skill'}
-                    >
-                      <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform mx-0.5 ${skill.is_active ? 'translate-x-4' : ''}`} />
-                    </button>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(skill)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger className="inline-flex items-center justify-center rounded-md h-8 w-8 text-destructive hover:bg-accent transition-colors">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete &ldquo;{skill.name}&rdquo;?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This skill will be permanently deleted. Letters already generated with this skill won&apos;t be affected.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteMutation.mutate(skill.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        {CHANNEL_TABS.map((tab) => (
+          <TabsContent key={tab.id} value={tab.id}>
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredSkills.map((skill, index) => (
+                  <Card key={skill.id} className={!skill.is_active ? 'opacity-60' : undefined}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        {/* Sort arrows */}
+                        <div className="flex flex-col gap-0.5 flex-shrink-0 pt-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            disabled={index === 0 || swapOrderMutation.isPending}
+                            onClick={() => handleMoveUp(index)}
                           >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {skills?.length === 0 && (
-            <Card className="border-dashed">
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">No skills created yet</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
+                            <ArrowUp className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            disabled={index === filteredSkills.length - 1 || swapOrderMutation.isPending}
+                            onClick={() => handleMoveDown(index)}
+                          >
+                            <ArrowDown className="h-3 w-3" />
+                          </Button>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Sparkles className="h-4 w-4 text-[#006AFF] flex-shrink-0" />
+                            <h3 className="font-semibold">{skill.name}</h3>
+                            <Badge variant={skill.is_active ? 'default' : 'secondary'} className="text-[10px]">
+                              {skill.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </div>
+                          {skill.description && (
+                            <p className="text-sm text-muted-foreground mb-2">{skill.description}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground bg-muted rounded px-2 py-1 line-clamp-2">
+                            {skill.prompt_instructions}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => toggleActiveMutation.mutate({ id: skill.id, is_active: !skill.is_active })}
+                            disabled={toggleActiveMutation.isPending}
+                            className={`w-9 h-5 rounded-full transition-colors flex-shrink-0 ${skill.is_active ? 'bg-[#006AFF]' : 'bg-muted'}`}
+                            title={skill.is_active ? 'Disable skill' : 'Enable skill'}
+                          >
+                            <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform mx-0.5 ${skill.is_active ? 'translate-x-4' : ''}`} />
+                          </button>
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(skill)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger className="inline-flex items-center justify-center rounded-md h-8 w-8 text-destructive hover:bg-accent transition-colors">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete &ldquo;{skill.name}&rdquo;?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This skill will be permanently deleted. Content already generated with this skill won&apos;t be affected.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteMutation.mutate(skill.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {filteredSkills.length === 0 && (
+                  <Card className="border-dashed">
+                    <CardContent className="py-12 text-center">
+                      <p className="text-muted-foreground">No {tab.label.toLowerCase()} skills yet</p>
+                      <Button onClick={handleCreate} variant="outline" className="mt-3 gap-1.5">
+                        <Plus className="h-4 w-4" />
+                        Create {tab.label} Skill
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+          </TabsContent>
+        ))}
+      </Tabs>
 
       {/* Create/Edit Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>{editingId ? 'Edit Skill' : 'New Skill'}</SheetTitle>
+            <SheetTitle>{editingId ? 'Edit Skill' : `New ${channelLabel} Skill`}</SheetTitle>
           </SheetHeader>
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Channel</label>
+              <div className="flex gap-2 flex-wrap">
+                {CHANNEL_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setForm((p) => ({ ...p, channel: tab.id }))}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      form.channel === tab.id
+                        ? 'bg-[#006AFF] text-white'
+                        : 'bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Name</label>
               <Input
@@ -311,7 +366,7 @@ export default function AdminSkillsPage() {
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Prompt Instructions</label>
               <p className="text-xs text-muted-foreground">
-                These instructions tell Claude how to write the letter. Define the tone, style, and approach.
+                These instructions tell AI how to write the content. Define the tone, style, and approach.
               </p>
               <textarea
                 value={form.prompt_instructions}
