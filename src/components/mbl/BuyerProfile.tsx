@@ -45,6 +45,7 @@ interface BuyerProfileProps {
   onProfileChange?: (profile: BuyerProfileData) => void
   onBack: () => void
   onComplete: (profile: BuyerProfileData) => void
+  onCountChange?: (count: number | null) => void
 }
 
 export function BuyerProfile({
@@ -56,6 +57,7 @@ export function BuyerProfile({
   onProfileChange,
   onBack,
   onComplete,
+  onCountChange,
 }: BuyerProfileProps) {
   const [profile, setProfile] = useState<BuyerProfileData>({
     financing: initialProfile?.financing ?? '',
@@ -104,12 +106,18 @@ export function BuyerProfile({
   useEffect(() => {
     if (!canCount) {
       setPropertyCount(null)
+      onCountChange?.(null)
       return
     }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => fetchCount(criteria), 800)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [criteria, canCount, fetchCount])
+  }, [criteria, canCount, fetchCount]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Notify parent of count changes
+  useEffect(() => {
+    onCountChange?.(propertyCount)
+  }, [propertyCount]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="max-w-2xl mx-auto space-y-5 animate-fade-in pb-20">
@@ -237,7 +245,7 @@ export function BuyerProfile({
           countLoading ? 'border-border text-muted-foreground' :
           propertyCount === null ? 'border-border text-muted-foreground' :
           propertyCount < 25 ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300' :
-          propertyCount > 2000 ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300' :
+          propertyCount > 150 ? 'border-red-300 bg-red-50 text-red-800 dark:border-red-700 dark:bg-red-950/30 dark:text-red-300' :
           'border-green-300 bg-green-50 text-green-800 dark:border-green-700 dark:bg-green-950/30 dark:text-green-300'
         )}>
           {countLoading ? (
@@ -248,8 +256,8 @@ export function BuyerProfile({
             'No properties found — try expanding your search area or price range.'
           ) : propertyCount < 25 ? (
             <><strong>{propertyCount.toLocaleString()}</strong> properties found — consider expanding your criteria for better results.</>
-          ) : propertyCount > 2000 ? (
-            <><strong>{propertyCount.toLocaleString()}</strong> properties found — consider narrowing your price range or area to refine results.</>
+          ) : propertyCount > 150 ? (
+            <><strong>{propertyCount.toLocaleString()}</strong> properties found — too many. Please narrow your price range or area before continuing.</>
           ) : (
             <><strong>{propertyCount.toLocaleString()}</strong> properties found</>
           )}

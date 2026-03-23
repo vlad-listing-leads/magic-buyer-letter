@@ -76,6 +76,7 @@ function NewLetterWizard() {
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isGeneratingLetters, setIsGeneratingLetters] = useState(false)
+  const [propertyCount, setPropertyCount] = useState<number | null>(null)
 
   // Fetch campaign + properties when we have a campaignId and need them
   const needsData = step === 'preview' || step === 'audience' || step === 'review' || step === 'confirmation'
@@ -309,6 +310,7 @@ function NewLetterWizard() {
           onProfileChange={setBuyerProfile}
           onBack={() => setStep('input')}
           onComplete={handleProfileComplete}
+          onCountChange={setPropertyCount}
         />
       )}
 
@@ -420,7 +422,8 @@ function NewLetterWizard() {
                   (criteria.price_max - criteria.price_min <= 600000) &&
                   criteria.years_owned_min !== undefined &&
                   criteria.beds_min && criteria.baths_min &&
-                  buyerProfile.financing
+                  buyerProfile.financing &&
+                  propertyCount !== null && propertyCount > 0 && propertyCount <= 150
                 )}
                 className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-6 gap-2 font-semibold shadow-lg shadow-[#006AFF]/20"
                 size="lg"
