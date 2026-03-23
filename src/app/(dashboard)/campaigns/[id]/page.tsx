@@ -260,11 +260,17 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
             </Card>
           </div>
 
-          {/* Tabs: Properties + Letter Preview */}
+          {/* Tabs: Properties + Content Channels */}
           <Tabs defaultValue="properties">
-            <TabsList>
+            <TabsList className="flex-wrap h-auto gap-1 p-1">
               <TabsTrigger value="properties">Properties ({properties.length})</TabsTrigger>
-              <TabsTrigger value="letter">Letter Preview</TabsTrigger>
+              <TabsTrigger value="letter">Letter</TabsTrigger>
+              <TabsTrigger value="email">Email</TabsTrigger>
+              <TabsTrigger value="text">Text</TabsTrigger>
+              <TabsTrigger value="call_script">Call Script</TabsTrigger>
+              <TabsTrigger value="social_post" disabled className="opacity-50">
+                Social Post <Badge variant="outline" className="ml-1 text-[9px] px-1 py-0">Soon</Badge>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="properties">
@@ -303,6 +309,37 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                   </CardContent>
                 </Card>
               )}
+            </TabsContent>
+
+            <TabsContent value="email">
+              <ChannelContent
+                campaignId={id}
+                channel="email"
+                channelData={channels.find((c) => c.channel === 'email')}
+              />
+            </TabsContent>
+
+            <TabsContent value="text">
+              <ChannelContent
+                campaignId={id}
+                channel="text"
+                channelData={channels.find((c) => c.channel === 'text')}
+              />
+            </TabsContent>
+
+            <TabsContent value="call_script">
+              <ChannelContent
+                campaignId={id}
+                channel="call_script"
+                channelData={channels.find((c) => c.channel === 'call_script')}
+              />
+            </TabsContent>
+
+            <TabsContent value="social_post">
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-lg font-semibold">Social Post</p>
+                <p className="text-sm text-muted-foreground mt-1">Coming soon</p>
+              </div>
             </TabsContent>
           </Tabs>
         </>
