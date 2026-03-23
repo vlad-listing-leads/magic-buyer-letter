@@ -57,6 +57,25 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // 1b. Fetch plan data from satellite verify endpoint (must happen early — JWT expires in 60s)
+  let activePlanIds: string[] = []
+  let isTeamMember = false
+  try {
+    const verifyRes = await fetch('https://listingleads.com/api/auth/satellite/verify', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (verifyRes.ok) {
+      const { user: verifiedUser } = await verifyRes.json()
+      activePlanIds = verifiedUser.activePlanIds ?? []
+      isTeamMember = verifiedUser.isTeamMember ?? false
+      log.info({ email, activePlanIds, isTeamMember }, 'll-callback: fetched plan data')
+    } else {
+      log.warn({ status: verifyRes.status }, 'll-callback: satellite verify failed (non-fatal)')
+    }
+  } catch (err) {
+    log.warn({ error: String(err) }, 'll-callback: satellite verify error (non-fatal)')
+  }
+
   const displayName = name || email.split('@')[0]
   const admin = createAdminClient()
 
@@ -222,26 +241,7 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // 5. Fetch plan data from satellite verify endpoint
-  let activePlanIds: string[] = []
-  let isTeamMember = false
-  try {
-    const verifyRes = await fetch('https://listingleads.com/api/auth/satellite/verify', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (verifyRes.ok) {
-      const { user: verifiedUser } = await verifyRes.json()
-      activePlanIds = verifiedUser.activePlanIds ?? []
-      isTeamMember = verifiedUser.isTeamMember ?? false
-      log.info({ email, activePlanIds, isTeamMember }, 'll-callback: fetched plan data')
-    } else {
-      log.warn({ status: verifyRes.status }, 'll-callback: satellite verify failed (non-fatal)')
-    }
-  } catch (err) {
-    log.warn({ error: String(err) }, 'll-callback: satellite verify error (non-fatal)')
-  }
-
-  // Store plan data on user record
+  // 5. Store plan data on user record
   if (userId) {
     await admin
       .from('users')
