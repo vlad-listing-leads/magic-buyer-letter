@@ -11,6 +11,7 @@ interface CurrentUser {
   isAdmin: boolean
   activePlanIds: string[]
   isTeamMember: boolean
+  planName: string | null
 }
 
 async function fetchCurrentUser(): Promise<CurrentUser> {

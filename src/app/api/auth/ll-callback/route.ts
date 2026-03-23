@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { jwtVerify } from 'jose'
 import { createAdminClient } from '@/lib/supabase/server'
-import { getListingLeadsProfile } from '@/lib/supabase/listing-leads'
+import { getListingLeadsProfile, createListingLeadsClient } from '@/lib/supabase/listing-leads'
 import { createLogger } from '@/lib/logger'
 
 const log = createLogger('ll-callback')
@@ -74,6 +74,28 @@ export async function GET(request: NextRequest) {
     }
   } catch (err) {
     log.warn({ error: String(err) }, 'll-callback: satellite verify error (non-fatal)')
+  }
+
+  // 1c. Resolve plan name from LL database (solo_plan_ids → solo_plans)
+  let planName: string | null = null
+  if (activePlanIds.length > 0) {
+    try {
+      const llClient = createListingLeadsClient()
+      const { data: planIdRow } = await llClient
+        .from('solo_plan_ids')
+        .select('plan_id, solo_plans!inner(plan_name)')
+        .in('memberstack_plan_id', activePlanIds)
+        .limit(1)
+        .single()
+
+      if (planIdRow) {
+        const soloPlans = planIdRow.solo_plans as unknown as { plan_name: string }
+        planName = soloPlans?.plan_name ?? null
+      }
+      log.info({ email, planName }, 'll-callback: resolved plan name')
+    } catch (err) {
+      log.warn({ error: String(err) }, 'll-callback: failed to resolve plan name (non-fatal)')
+    }
   }
 
   const displayName = name || email.split('@')[0]
@@ -248,6 +270,7 @@ export async function GET(request: NextRequest) {
       .update({
         active_plan_ids: activePlanIds,
         is_team_member: isTeamMember,
+        plan_name: planName,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
