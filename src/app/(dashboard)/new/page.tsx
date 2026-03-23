@@ -431,19 +431,6 @@ function NewBuyerWizard() {
           {/* Letter tab */}
           {previewTab === 'letter' && (
             <>
-              {campaignId && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(`/api/mbl/campaigns/${campaignId}/export`, '_blank')}
-                    className="gap-1.5"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Download Addresses
-                  </Button>
-                </div>
-              )}
               <LetterPreviewWizard
                 agent={agent}
                 properties={properties}
@@ -455,6 +442,7 @@ function NewBuyerWizard() {
                 onSkillChange={setSelectedSkillId}
                 onBack={() => setStep('audience')}
                 onContinue={() => setStep('review')}
+                campaignId={campaignId}
               />
             </>
           )}

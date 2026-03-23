@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { Button } from '@/components/ui/button'
+import { Download, Mail } from 'lucide-react'
 import { LetterPreview } from './LetterPreview'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
 
@@ -18,6 +19,7 @@ interface LetterPreviewWizardProps {
   onSkillChange: (skillId: string | null) => void
   onBack: () => void
   onContinue: () => void
+  campaignId?: string | null
 }
 
 export function LetterPreviewWizard({
@@ -30,6 +32,7 @@ export function LetterPreviewWizard({
   onSkillChange,
   onBack,
   onContinue,
+  campaignId,
 }: LetterPreviewWizardProps) {
   const apiFetch = useApiFetch()
 
@@ -74,17 +77,6 @@ export function LetterPreviewWizard({
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold">
-          Preview what {buyerName || 'your buyer'}&apos;s homeowners will receive
-        </h2>
-        <p className="text-muted-foreground">
-          {hasMultipleSkills
-            ? `${activeSkills.length} letter styles generated — review each one`
-            : 'Review your letter below'}
-        </p>
-      </div>
-
       {/* Skill selector — pill buttons */}
       {hasMultipleSkills && (
         <div className="flex justify-center gap-2">
@@ -104,6 +96,25 @@ export function LetterPreviewWizard({
           ))}
         </div>
       )}
+
+      {/* Letter header */}
+      <div className="max-w-[740px] mx-auto flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Mail className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Direct Mail Letter</span>
+        </div>
+        {campaignId && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(`/api/mbl/campaigns/${campaignId}/export`, '_blank')}
+            className="gap-1.5 text-xs"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download Letters &amp; Addresses
+          </Button>
+        )}
+      </div>
 
       {/* Letter preview */}
       <div className="max-w-[740px] mx-auto">

@@ -262,7 +262,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
           {/* Tabs: Properties + Content Channels */}
           <Tabs defaultValue="properties">
-            <TabsList className="flex-wrap h-auto gap-1 p-1">
+            <TabsList className="flex-wrap h-auto gap-1 p-1 w-full justify-center">
               <TabsTrigger value="properties">Properties ({properties.length})</TabsTrigger>
               <TabsTrigger value="letter">Letter</TabsTrigger>
               <TabsTrigger value="email">Email</TabsTrigger>
