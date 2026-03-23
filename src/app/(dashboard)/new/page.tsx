@@ -258,12 +258,13 @@ function NewBuyerWizard() {
   }, [])
 
   const handleGenerateAll = async () => {
-    if (!campaignId || selectedIds.size === 0) return
+    if (!campaignId) return
+    if (selectedChannels.has('letter') && selectedIds.size === 0) return
     setIsGeneratingLetters(true)
 
     try {
-      // Generate letters (SSE stream)
-      const letterPromise = (async () => {
+      // Generate letters (SSE stream) — only if letter channel selected
+      const letterPromise = !selectedChannels.has('letter') ? Promise.resolve() : (async () => {
         const res = await apiFetch(`/api/mbl/campaigns/${campaignId}/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -403,8 +404,14 @@ function NewBuyerWizard() {
           <div className="text-center">
             <h3 className="text-lg font-semibold">Generating content...</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              AI is creating {selectedIds.size} personalized letter{selectedIds.size !== 1 ? 's' : ''}
-              {selectedChannels.size > 1 ? ` + ${selectedChannels.size - (selectedChannels.has('letter') ? 1 : 0)} other channel${selectedChannels.size > 2 ? 's' : ''}` : ''}
+              AI is creating {(() => {
+                const parts: string[] = []
+                if (selectedChannels.has('letter')) parts.push(`${selectedIds.size} personalized letter${selectedIds.size !== 1 ? 's' : ''}`)
+                if (selectedChannels.has('email')) parts.push('email')
+                if (selectedChannels.has('text')) parts.push('text message')
+                if (selectedChannels.has('call_script')) parts.push('call script')
+                return parts.join(', ')
+              })()}
             </p>
           </div>
         </div>

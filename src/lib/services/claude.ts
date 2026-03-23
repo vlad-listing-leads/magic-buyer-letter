@@ -171,10 +171,14 @@ async function callClaudeRaw(systemPrompt: string, userPrompt: string, maxTokens
 
 export async function generateChannelContent(
   channel: string,
-  context: ChannelContext
+  context: ChannelContext,
+  skillPrompt?: string | null
 ): Promise<ChannelResult> {
-  const systemPrompt = CHANNEL_PROMPTS[channel]
-  if (!systemPrompt) throw new Error(`Unknown channel: ${channel}`)
+  const defaultPrompt = CHANNEL_PROMPTS[channel]
+  if (!defaultPrompt) throw new Error(`Unknown channel: ${channel}`)
+
+  // Skill prompt from admin completely replaces the default system prompt
+  const systemPrompt = skillPrompt || defaultPrompt
 
   const userPrompt = [
     `Buyer: ${context.buyer_name}`,

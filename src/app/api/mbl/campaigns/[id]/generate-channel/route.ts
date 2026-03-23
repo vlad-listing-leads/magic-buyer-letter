@@ -42,6 +42,16 @@ export const POST = withErrorHandler(async (request: NextRequest, context) => {
 
   if (!agent) return apiError('Agent profile not found', 404)
 
+  // Fetch active skill for this channel
+  const { data: skill } = await admin
+    .from('mbl_skills')
+    .select('prompt_instructions')
+    .eq('channel', channel)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
   // Build context for generation
   const area = [campaign.criteria_city, campaign.criteria_state].filter(Boolean).join(', ')
   const priceMin = campaign.criteria_price_min
@@ -65,8 +75,8 @@ export const POST = withErrorHandler(async (request: NextRequest, context) => {
     agent_brokerage: agent.brokerage || '',
   }
 
-  // Generate content
-  const result = await generateChannelContent(channel, channelContext)
+  // Generate content — skill prompt overrides the system prompt if available
+  const result = await generateChannelContent(channel, channelContext, skill?.prompt_instructions)
 
   // Upsert into campaign_channels
   const { data: saved, error } = await admin
