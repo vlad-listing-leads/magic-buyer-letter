@@ -61,19 +61,23 @@ export async function GET(request: NextRequest) {
   let activePlanIds: string[] = []
   let isTeamMember = false
   try {
+    console.log('[ll-callback] calling satellite verify for', email)
     const verifyRes = await fetch('https://listingleads.com/api/auth/satellite/verify', {
       headers: { Authorization: `Bearer ${token}` },
     })
+    console.log('[ll-callback] satellite verify status:', verifyRes.status)
     if (verifyRes.ok) {
-      const { user: verifiedUser } = await verifyRes.json()
+      const verifyBody = await verifyRes.json()
+      console.log('[ll-callback] satellite verify response:', JSON.stringify(verifyBody))
+      const { user: verifiedUser } = verifyBody
       activePlanIds = verifiedUser.activePlanIds ?? []
       isTeamMember = verifiedUser.isTeamMember ?? false
-      log.info({ email, activePlanIds, isTeamMember }, 'll-callback: fetched plan data')
     } else {
-      log.warn({ status: verifyRes.status }, 'll-callback: satellite verify failed (non-fatal)')
+      const errBody = await verifyRes.text()
+      console.log('[ll-callback] satellite verify failed:', verifyRes.status, errBody)
     }
   } catch (err) {
-    log.warn({ error: String(err) }, 'll-callback: satellite verify error (non-fatal)')
+    console.log('[ll-callback] satellite verify error:', String(err))
   }
 
   // 1c. Resolve plan name from LL database (solo_plan_ids → solo_plans)
