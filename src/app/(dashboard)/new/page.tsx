@@ -8,6 +8,11 @@ import { SmartInput } from '@/components/mbl/SmartInput'
 import { BuyerProfile } from '@/components/mbl/BuyerProfile'
 import { PipelineLoading } from '@/components/mbl/PipelineLoading'
 import { LetterPreviewWizard } from '@/components/mbl/LetterPreviewWizard'
+import { ChannelTabs } from '@/components/mbl/ChannelTabs'
+import { ChannelContent } from '@/components/mbl/ChannelContent'
+import { ChannelSidebar } from '@/components/mbl/ChannelSidebar'
+import type { ChannelTab } from '@/components/mbl/ChannelTabs'
+import type { MblCampaignChannel, ChannelType } from '@/types'
 import { AudienceSelection } from '@/components/mbl/AudienceSelection'
 import { CampaignSummary } from '@/components/mbl/CampaignSummary'
 import { ChannelSelector } from '@/components/mbl/ChannelSelector'
@@ -80,6 +85,7 @@ function NewBuyerWizard() {
   const [isGeneratingLetters, setIsGeneratingLetters] = useState(false)
   const [propertyCount, setPropertyCount] = useState<number | null>(null)
   const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set(['letter']))
+  const [previewTab, setPreviewTab] = useState<ChannelTab>('letter')
 
   // Fetch campaign + properties when we have a campaignId and need them
   const needsData = step === 'preview' || step === 'audience' || step === 'review' || step === 'confirmation'
@@ -105,6 +111,17 @@ function NewBuyerWizard() {
       const json = await res.json()
       return json.data
     },
+  })
+
+  // Fetch generated channels
+  const { data: generatedChannels = [] } = useQuery<MblCampaignChannel[]>({
+    queryKey: ['campaign-channels', campaignId],
+    queryFn: async () => {
+      const res = await apiFetch(`/api/mbl/campaigns/${campaignId}/channels`)
+      const json = await res.json()
+      return json.data ?? []
+    },
+    enabled: !!campaignId && (step === 'preview' || step === 'review'),
   })
 
   // Fetch skills for name display
@@ -387,18 +404,56 @@ function NewBuyerWizard() {
       )}
 
       {step === 'preview' && !isGeneratingLetters && agent && (
-        <LetterPreviewWizard
-          agent={agent}
-          properties={properties}
-          buyerName={buyerName || campaign?.buyer_name || ''}
-          bullets={bullets}
-          templateStyle={templateStyle}
-          onTemplateChange={setTemplateStyle}
-          selectedSkillId={selectedSkillId}
-          onSkillChange={setSelectedSkillId}
-          onBack={() => setStep('audience')}
-          onContinue={() => setStep('review')}
-        />
+        <div className="space-y-6">
+          <div className="text-center space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight">
+              Your Magic 5 for {buyerName || campaign?.buyer_name || 'Your Buyer'}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Review all generated content below
+            </p>
+          </div>
+
+          <ChannelTabs
+            activeTab={previewTab}
+            onTabChange={setPreviewTab}
+            letterSent={false}
+            channels={generatedChannels}
+          />
+
+          {/* Letter tab */}
+          {previewTab === 'letter' && (
+            <LetterPreviewWizard
+              agent={agent}
+              properties={properties}
+              buyerName={buyerName || campaign?.buyer_name || ''}
+              bullets={bullets}
+              templateStyle={templateStyle}
+              onTemplateChange={setTemplateStyle}
+              selectedSkillId={selectedSkillId}
+              onSkillChange={setSelectedSkillId}
+              onBack={() => setStep('audience')}
+              onContinue={() => setStep('review')}
+            />
+          )}
+
+          {/* Email / Text / Call Script tabs */}
+          {(previewTab === 'email' || previewTab === 'text' || previewTab === 'call_script') && campaignId && (
+            <ChannelContent
+              campaignId={campaignId}
+              channel={previewTab as ChannelType}
+              channelData={generatedChannels.find((c) => c.channel === previewTab)}
+            />
+          )}
+
+          {/* Social post — coming soon */}
+          {previewTab === 'social_post' && (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <p className="text-lg font-semibold">Social Post</p>
+              <p className="text-sm text-muted-foreground mt-1">Coming soon</p>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Step 6: Summary — download PDFs */}
