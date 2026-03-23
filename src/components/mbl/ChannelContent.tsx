@@ -160,8 +160,8 @@ export function ChannelContent({ campaignId, channel, channelData }: ChannelCont
           </div>
 
           {/* Bottom bar */}
-          <div className="border-t border-border px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="border-t border-border px-6 py-3">
+            <div className="flex items-center justify-between">
               <Button
                 variant="ghost"
                 size="sm"
@@ -171,18 +171,18 @@ export function ChannelContent({ campaignId, channel, channelData }: ChannelCont
               >
                 <RotateCcw className="h-3 w-3" /> Regenerate
               </Button>
-              <span className="text-xs text-muted-foreground">
-                {channelData.body.length} chars · Follow up in 48 hrs if no response
-              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(channelData.body, 'Text')}
+                className="text-xs gap-1.5"
+              >
+                <Copy className="h-3 w-3" /> Copy
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => copyToClipboard(channelData.body, 'Text')}
-              className="text-xs gap-1.5"
-            >
-              <Copy className="h-3 w-3" /> Copy
-            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              {channelData.body.length} chars · Follow up in 48 hrs if no response
+            </p>
           </div>
         </div>
       </div>
