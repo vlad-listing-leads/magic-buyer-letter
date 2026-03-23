@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { ChipSelector } from './ChipSelector'
@@ -68,6 +68,10 @@ export function BuyerProfile({
     onProfileChange?.(profile)
   }, [profile, onProfileChange])
 
+  const [propertyCount, setPropertyCount] = useState<number | null>(null)
+  const [countLoading, setCountLoading] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const hasLocation = !!(criteria.city && criteria.state) || !!criteria.zip
   const hasPrice = !!(criteria.price_min && criteria.price_max)
   const priceGapOk = !hasPrice || ((criteria.price_max! - criteria.price_min!) <= 600000)
@@ -75,6 +79,37 @@ export function BuyerProfile({
   const hasBeds = !!criteria.beds_min
   const hasBaths = !!criteria.baths_min
   const canContinue = hasLocation && hasPrice && priceGapOk
+  const canCount = hasLocation && hasPrice && priceGapOk
+
+  const fetchCount = useCallback(async (c: PropertySearchCriteria) => {
+    setCountLoading(true)
+    try {
+      const res = await fetch('/api/mbl/search-count', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(c),
+      })
+      const json = await res.json()
+      if (json.success) {
+        setPropertyCount(json.data.count)
+      }
+    } catch {
+      setPropertyCount(null)
+    } finally {
+      setCountLoading(false)
+    }
+  }, [])
+
+  // Debounced count fetch when search criteria change
+  useEffect(() => {
+    if (!canCount) {
+      setPropertyCount(null)
+      return
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => fetchCount(criteria), 800)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [criteria, canCount, fetchCount])
 
   return (
     <div className="max-w-2xl mx-auto space-y-5 animate-fade-in pb-20">
@@ -194,6 +229,32 @@ export function BuyerProfile({
           />
         </div>
       </div>
+
+      {/* Property count preview */}
+      {canCount && (
+        <div className={cn(
+          'rounded-lg border px-4 py-3 text-sm',
+          countLoading ? 'border-border text-muted-foreground' :
+          propertyCount === null ? 'border-border text-muted-foreground' :
+          propertyCount < 25 ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300' :
+          propertyCount > 2000 ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300' :
+          'border-green-300 bg-green-50 text-green-800 dark:border-green-700 dark:bg-green-950/30 dark:text-green-300'
+        )}>
+          {countLoading ? (
+            'Counting properties...'
+          ) : propertyCount === null ? (
+            'Checking available properties...'
+          ) : propertyCount === 0 ? (
+            'No properties found — try expanding your search area or price range.'
+          ) : propertyCount < 25 ? (
+            <><strong>{propertyCount.toLocaleString()}</strong> properties found — consider expanding your criteria for better results.</>
+          ) : propertyCount > 2000 ? (
+            <><strong>{propertyCount.toLocaleString()}</strong> properties found — consider narrowing your price range or area to refine results.</>
+          ) : (
+            <><strong>{propertyCount.toLocaleString()}</strong> properties found</>
+          )}
+        </div>
+      )}
 
       <Separator />
 

@@ -141,6 +141,26 @@ async function fetchAllPages(params: Record<string, unknown>): Promise<ReapiProp
 }
 
 /**
+ * Count-only property search (size: 0). Does NOT consume API credits.
+ * Returns the total number of matching properties without fetching records.
+ */
+export async function countProperties(
+  criteria: PropertySearchCriteria
+): Promise<number> {
+  const params = { ...buildReapiParams(criteria), size: 0 }
+  logger.info({ params }, 'REAPI count-only search')
+
+  const result = await reapiFetch<{ resultCount?: number; totalResults?: number; data?: unknown[] }>(
+    '/v2/PropertySearch',
+    params
+  )
+
+  const count = result.resultCount ?? result.totalResults ?? result.data?.length ?? 0
+  logger.info({ count }, 'REAPI count result')
+  return count
+}
+
+/**
  * Search properties using correct REAPI v2 parameter names and pagination.
  *
  * Strategy:
