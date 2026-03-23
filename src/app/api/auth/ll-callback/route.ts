@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const verifyRes = await fetch('https://listingleads.com/api/auth/satellite/verify', {
+    const verifyRes = await fetch('https://www.listingleads.com/api/auth/satellite/verify', {
       headers: { Authorization: `Bearer ${token}` },
     })
     verifyDebug += `status:${verifyRes.status}`
