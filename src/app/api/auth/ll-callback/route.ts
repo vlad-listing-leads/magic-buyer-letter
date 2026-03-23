@@ -36,15 +36,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'CROSS_APP_AUTH_SECRET not set' }, { status: 500 })
   }
 
-  // 1. Call satellite verify FIRST (before anything else — JWT expires in 60s)
+  // 1. Decode JWT to check timing, then call satellite verify
   let activePlanIds: string[] = []
   let isTeamMember = false
   let verifyDebug = ''
+
+  // Decode JWT payload (base64) to inspect timestamp/exp without verification
+  try {
+    const payloadB64 = token.split('.')[1]
+    const decoded = JSON.parse(Buffer.from(payloadB64, 'base64').toString())
+    const now = Date.now()
+    const tokenAge = decoded.timestamp ? now - decoded.timestamp : 'no-timestamp'
+    const expIn = decoded.exp ? (decoded.exp * 1000) - now : 'no-exp'
+    verifyDebug = `age:${tokenAge}ms exp_in:${expIn}ms `
+  } catch {
+    verifyDebug = 'decode-failed '
+  }
+
   try {
     const verifyRes = await fetch('https://listingleads.com/api/auth/satellite/verify', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    verifyDebug = `status:${verifyRes.status}`
+    verifyDebug += `status:${verifyRes.status}`
     if (verifyRes.ok) {
       const verifyBody = await verifyRes.json()
       verifyDebug += ` body:${JSON.stringify(verifyBody).slice(0, 500)}`
