@@ -147,7 +147,7 @@ async function fetchAllPages(params: Record<string, unknown>): Promise<ReapiProp
 export async function countProperties(
   criteria: PropertySearchCriteria
 ): Promise<number> {
-  const params = { ...buildReapiParams(criteria), size: 0 }
+  const params = { ...buildReapiParams(criteria), size: 1 }
   logger.info({ params }, 'REAPI count-only search')
 
   const result = await reapiFetch<{ resultCount?: number; totalResults?: number; data?: unknown[] }>(
