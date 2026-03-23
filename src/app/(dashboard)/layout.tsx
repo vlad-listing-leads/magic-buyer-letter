@@ -14,9 +14,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ExternalLink, LogOut, Moon, Sun, Settings } from 'lucide-react'
+import { UpgradePage } from '@/components/UpgradePage'
 import { Toaster as SileoToaster } from 'sileo'
 import 'sileo/styles.css'
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -39,6 +41,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const displayName = user?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'User'
+  const isAdmin = user?.isAdmin ?? false
+
+  const { data: allowedPlanIds } = useQuery<string[]>({
+    queryKey: ['allowed-plans'],
+    queryFn: async () => {
+      const res = await fetch('/api/allowed-plans')
+      const json = await res.json()
+      return json.data ?? []
+    },
+    staleTime: 5 * 60_000,
+    enabled: !!user && !isAdmin,
+  })
+
+  const hasAllowedPlan = isAdmin || (
+    allowedPlanIds !== undefined &&
+    (allowedPlanIds.length === 0 || // No plans configured = no gate
+      user?.activePlanIds?.some((id) => allowedPlanIds.includes(id)) === true)
+  )
 
   return (
     <div className="flex flex-col h-screen">
@@ -113,7 +133,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Page Content */}
           <div className="flex-1 overflow-hidden">
             <div className="w-full h-full bg-background overflow-y-auto">
-              <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8">{children}</div>
+              <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8">
+                {user && !hasAllowedPlan ? <UpgradePage /> : children}
+              </div>
             </div>
           </div>
         </SidebarInset>

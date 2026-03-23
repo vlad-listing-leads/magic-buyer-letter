@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { PenLine, Mail, Sparkles, Users, Trophy } from 'lucide-react'
+import { PenLine, Mail, Sparkles, Users, Trophy, Shield } from 'lucide-react'
 
 import {
   Sidebar,
@@ -30,6 +30,7 @@ const adminItems = [
   { href: '/admin/skills', label: 'Skills', icon: Sparkles },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { href: '/admin/plans', label: 'Plan Access', icon: Shield },
 ]
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
