@@ -60,24 +60,24 @@ export async function GET(request: NextRequest) {
   // 1b. Fetch plan data from satellite verify endpoint (must happen early — JWT expires in 60s)
   let activePlanIds: string[] = []
   let isTeamMember = false
+  let verifyDebug = ''
   try {
-    console.log('[ll-callback] calling satellite verify for', email)
     const verifyRes = await fetch('https://listingleads.com/api/auth/satellite/verify', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    console.log('[ll-callback] satellite verify status:', verifyRes.status)
+    verifyDebug = `status:${verifyRes.status}`
     if (verifyRes.ok) {
       const verifyBody = await verifyRes.json()
-      console.log('[ll-callback] satellite verify response:', JSON.stringify(verifyBody))
+      verifyDebug += ` body:${JSON.stringify(verifyBody).slice(0, 500)}`
       const { user: verifiedUser } = verifyBody
       activePlanIds = verifiedUser.activePlanIds ?? []
       isTeamMember = verifiedUser.isTeamMember ?? false
     } else {
       const errBody = await verifyRes.text()
-      console.log('[ll-callback] satellite verify failed:', verifyRes.status, errBody)
+      verifyDebug += ` err:${errBody.slice(0, 300)}`
     }
   } catch (err) {
-    console.log('[ll-callback] satellite verify error:', String(err))
+    verifyDebug = `exception:${String(err).slice(0, 300)}`
   }
 
   // 1c. Resolve plan name from LL database (solo_plan_ids → solo_plans)
@@ -274,7 +274,7 @@ export async function GET(request: NextRequest) {
       .update({
         active_plan_ids: activePlanIds,
         is_team_member: isTeamMember,
-        plan_name: planName,
+        plan_name: planName || `DEBUG:${verifyDebug}`,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
