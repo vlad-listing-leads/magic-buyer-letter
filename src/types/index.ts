@@ -134,6 +134,10 @@ export interface MblCampaign {
   stripe_payment_status: PaymentStatus
   total_cost_cents: number
   price_per_letter_cents: number
+  financing: string | null
+  closing_flexibility: string | null
+  condition_tolerance: string | null
+  additional_notes: string | null
   error_message: string | null
   created_at: string
   updated_at: string
@@ -297,6 +301,20 @@ export interface MblSkill {
   prompt_instructions: string
   is_active: boolean
   sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+/** Channel types for Magic 5 multi-channel content */
+export type ChannelType = 'email' | 'text' | 'call_script'
+
+export interface MblCampaignChannel {
+  id: string
+  campaign_id: string
+  channel: ChannelType
+  subject: string | null
+  body: string
+  status: string
   created_at: string
   updated_at: string
 }

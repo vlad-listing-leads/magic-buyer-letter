@@ -30,7 +30,11 @@ import {
 import { formatDate } from '@/lib/utils'
 import { sileo } from 'sileo'
 import Link from 'next/link'
-import type { MblCampaign, MblProperty, MblAgent } from '@/types'
+import { ChannelTabs } from '@/components/mbl/ChannelTabs'
+import { ChannelContent } from '@/components/mbl/ChannelContent'
+import { ChannelSidebar } from '@/components/mbl/ChannelSidebar'
+import type { ChannelTab } from '@/components/mbl/ChannelTabs'
+import type { MblCampaign, MblProperty, MblAgent, MblCampaignChannel, ChannelType } from '@/types'
 
 const PRE_SEND_STATUSES = ['searching', 'skip_tracing', 'verifying', 'generating', 'ready']
 
@@ -40,6 +44,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const apiFetch = useApiFetch()
   const [isDeleting, setIsDeleting] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null)
+  const [activeChannel, setActiveChannel] = useState<ChannelTab>('letter')
 
   const { data, isLoading, error } = useQuery<{ campaign: MblCampaign; properties: MblProperty[] }>({
     queryKey: ['campaign', id],
@@ -57,6 +62,15 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       const res = await apiFetch('/api/mbl/agent')
       const json = await res.json()
       return json.data
+    },
+  })
+
+  const { data: channels = [] } = useQuery<MblCampaignChannel[]>({
+    queryKey: ['campaign-channels', id],
+    queryFn: async () => {
+      const res = await apiFetch(`/api/mbl/campaigns/${id}/channels`)
+      const json = await res.json()
+      return json.data ?? []
     },
   })
 
@@ -293,84 +307,133 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           </Tabs>
         </>
       ) : (
-        /* === POST-SEND VIEW === */
+        /* === POST-SEND VIEW: Magic 5 === */
         <>
-          {/* Post-send stats */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Sent</CardTitle>
-                <Send className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{sentCount}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Cost</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${totalCost}</div>
-              </CardContent>
-            </Card>
+          {/* Magic 5 Header */}
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold">Your Magic 5 for {campaign.buyer_name}</h2>
+            <p className="text-sm text-muted-foreground">5 touchpoints, one buyer story. Copy any channel and go.</p>
           </div>
 
-          {/* Recipients */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Recipients ({properties.length})</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="p-3 text-left font-medium text-muted-foreground">Owner</th>
-                      <th className="p-3 text-left font-medium text-muted-foreground">Address</th>
-                      <th className="p-3 text-left font-medium text-muted-foreground">Details</th>
-                      <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {properties.map((prop) => (
-                      <tr key={prop.id} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
-                        <td className="p-3 font-medium">
-                          {prop.owner_first_name} {prop.owner_last_name}
-                        </td>
-                        <td className="p-3">
-                          <div>{prop.address_line1}</div>
-                          <div className="text-xs text-muted-foreground">{prop.city}, {prop.state} {prop.zip}</div>
-                        </td>
-                        <td className="p-3 text-xs text-muted-foreground">
-                          {prop.estimated_value ? `$${prop.estimated_value.toLocaleString()}` : '—'}
-                          {' · '}
-                          {prop.bedrooms ?? '?'}bd/{prop.bathrooms ?? '?'}ba
-                          {' · '}
-                          {prop.sqft?.toLocaleString() ?? '?'} sqft
-                          {prop.equity_percent ? ` · ${prop.equity_percent}% equity` : ''}
-                          {prop.years_owned ? ` · ${prop.years_owned}yr` : ''}
-                        </td>
-                        <td className="p-3">
-                          <Badge variant="secondary" className="text-xs capitalize">
-                            {prop.owner_type}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                    {properties.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="p-8 text-center text-muted-foreground">
-                          No recipients
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Channel Tabs */}
+          <ChannelTabs
+            activeTab={activeChannel}
+            onTabChange={setActiveChannel}
+            letterSent={campaign.status === 'sent' || campaign.status === 'delivered'}
+            channels={channels}
+          />
+
+          {/* Content + Sidebar */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+            {/* Main Content */}
+            <div>
+              {/* Letter tab — existing recipients view */}
+              {activeChannel === 'letter' && (
+                <>
+                  <div className="grid gap-4 md:grid-cols-2 mb-6">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Sent</CardTitle>
+                        <Send className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{sentCount}</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Cost</CardTitle>
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">${totalCost}</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Recipients ({properties.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="p-3 text-left font-medium text-muted-foreground">Owner</th>
+                              <th className="p-3 text-left font-medium text-muted-foreground">Address</th>
+                              <th className="p-3 text-left font-medium text-muted-foreground">Details</th>
+                              <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {properties.map((prop) => (
+                              <tr key={prop.id} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
+                                <td className="p-3 font-medium">
+                                  {prop.owner_first_name} {prop.owner_last_name}
+                                </td>
+                                <td className="p-3">
+                                  <div>{prop.address_line1}</div>
+                                  <div className="text-xs text-muted-foreground">{prop.city}, {prop.state} {prop.zip}</div>
+                                </td>
+                                <td className="p-3 text-xs text-muted-foreground">
+                                  {prop.estimated_value ? `$${prop.estimated_value.toLocaleString()}` : '—'}
+                                  {' · '}
+                                  {prop.bedrooms ?? '?'}bd/{prop.bathrooms ?? '?'}ba
+                                  {' · '}
+                                  {prop.sqft?.toLocaleString() ?? '?'} sqft
+                                  {prop.equity_percent ? ` · ${prop.equity_percent}% equity` : ''}
+                                  {prop.years_owned ? ` · ${prop.years_owned}yr` : ''}
+                                </td>
+                                <td className="p-3">
+                                  <Badge variant="secondary" className="text-xs capitalize">
+                                    {prop.owner_type}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                            {properties.length === 0 && (
+                              <tr>
+                                <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                                  No recipients
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {/* Email / Text / Call Script tabs */}
+              {(activeChannel === 'email' || activeChannel === 'text' || activeChannel === 'call_script') && (
+                <ChannelContent
+                  campaignId={id}
+                  channel={activeChannel as ChannelType}
+                  channelData={channels.find((c) => c.channel === activeChannel)}
+                />
+              )}
+
+              {/* Social post — coming soon */}
+              {activeChannel === 'social_post' && (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <p className="text-lg font-semibold">Social Post</p>
+                  <p className="text-sm text-muted-foreground mt-1">Coming soon</p>
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar */}
+            <div className="hidden lg:block">
+              <ChannelSidebar
+                campaign={campaign}
+                channels={channels}
+                letterSent={campaign.status === 'sent' || campaign.status === 'delivered'}
+              />
+            </div>
+          </div>
         </>
       )}
     </div>
