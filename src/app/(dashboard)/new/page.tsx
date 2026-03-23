@@ -183,7 +183,7 @@ function NewBuyerWizard() {
       max: criteria.price_max,
     })
 
-    const hasLetter = selectedChannels.has('letter')
+    setStep('generating')
 
     try {
       const payload = {
@@ -214,17 +214,9 @@ function NewBuyerWizard() {
 
       const { data: result } = await res.json()
       setCampaignId(result.id)
-
-      if (hasLetter) {
-        // Letter selected → go to property search pipeline
-        setStep('generating')
-      } else {
-        // No letter → go straight to buyer detail page
-        sileo.success({ title: 'Buyer created!' })
-        router.push(`/campaigns/${result.id}`)
-      }
     } catch (err) {
       sileo.error({ title: err instanceof Error ? err.message : 'Failed to create buyer' })
+      setStep('channels')
     }
   }
 
@@ -473,7 +465,7 @@ function NewBuyerWizard() {
                 className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-6 gap-2 font-semibold shadow-lg shadow-[#006AFF]/20"
                 size="lg"
               >
-                {selectedChannels.has('letter') ? 'Find Properties' : 'Create Buyer'}
+                Find Properties
                 <ArrowRight className="h-4 w-4" />
               </Button>
             )}

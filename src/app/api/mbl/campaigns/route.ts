@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: user.id,
         agent_id: agent.id,
-        status: data.selected_channels.includes('letter') ? 'searching' : 'ready',
+        status: 'searching',
         selected_channels: data.selected_channels,
         buyer_name: data.buyer_name,
         buyer_description: data.buyer_description,
