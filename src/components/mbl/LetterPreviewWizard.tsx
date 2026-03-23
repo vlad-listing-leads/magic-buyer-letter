@@ -111,7 +111,7 @@ export function LetterPreviewWizard({
             className="gap-1.5 text-xs"
           >
             <Download className="h-3.5 w-3.5" />
-            Download Letters &amp; Addresses
+            Download Addresses
           </Button>
         )}
       </div>

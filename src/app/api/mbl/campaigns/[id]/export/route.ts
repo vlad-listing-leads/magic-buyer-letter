@@ -38,11 +38,10 @@ export const GET = withErrorHandler(async (_request: NextRequest, context) => {
     'Baths',
     'Sqft',
     'Est. Value',
+    'Year Built',
+    'Years Owned',
     'Owner Type',
-    'Status',
-    'Delivery Status',
-    'Lob Letter ID',
-    'Expected Delivery',
+    'Neighborhood',
   ]
 
   const rows = properties.map((p) => [
@@ -55,11 +54,10 @@ export const GET = withErrorHandler(async (_request: NextRequest, context) => {
     p.bathrooms ?? '',
     p.sqft ?? '',
     p.estimated_value ?? '',
+    p.year_built ?? '',
+    p.years_owned ?? '',
     p.owner_type,
-    p.status,
-    p.delivery_status,
-    p.lob_letter_id ?? '',
-    p.expected_delivery ?? '',
+    p.neighborhood ?? '',
   ])
 
   const csvContent = [
@@ -74,7 +72,7 @@ export const GET = withErrorHandler(async (_request: NextRequest, context) => {
     ),
   ].join('\n')
 
-  const filename = `${campaign.buyer_name.replace(/[^a-zA-Z0-9]/g, '_')}_campaign.csv`
+  const filename = `${campaign.buyer_name.replace(/[^a-zA-Z0-9]/g, '_')}_addresses.csv`
 
   return new NextResponse(csvContent, {
     headers: {

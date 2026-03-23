@@ -207,7 +207,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           )}
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="mr-1 h-4 w-4" />
-            Export CSV
+            Download Addresses
           </Button>
           {canDelete && (
             <AlertDialog>
