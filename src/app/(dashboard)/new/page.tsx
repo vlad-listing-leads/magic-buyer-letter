@@ -144,7 +144,7 @@ function NewLetterWizard() {
   const handleSmartInputComplete = (
     name: string,
     desc: string,
-    parsedCriteria: PropertySearchCriteria & { financing?: string; notes?: string }
+    parsedCriteria: PropertySearchCriteria & { financing?: string; closing_flexibility?: string; condition_tolerance?: string; notes?: string }
   ) => {
     setBuyerName(name)
     setDescription(desc)
@@ -152,15 +152,19 @@ function NewLetterWizard() {
 
     // Pre-fill buyer profile from AI-parsed data
     const validFinancing = ['pre-approved', 'cash', 'fha', 'va', 'conventional']
-    if (parsedCriteria.financing && validFinancing.includes(parsedCriteria.financing)) {
-      setBuyerProfile((prev) => ({
-        ...prev,
-        financing: parsedCriteria.financing as BuyerProfileData['financing'],
-        additional_notes: parsedCriteria.notes ?? prev.additional_notes,
-      }))
-    } else if (parsedCriteria.notes) {
-      setBuyerProfile((prev) => ({ ...prev, additional_notes: parsedCriteria.notes ?? '' }))
-    }
+    const validClosing = ['flexible', 'quick-close', '30-days', 'no-rush', 'rent-back']
+    const validCondition = ['minor-updates', 'as-is', 'move-in-ready', 'major-reno']
+
+    setBuyerProfile((prev) => ({
+      ...prev,
+      ...(parsedCriteria.financing && validFinancing.includes(parsedCriteria.financing)
+        ? { financing: parsedCriteria.financing as BuyerProfileData['financing'] } : {}),
+      ...(parsedCriteria.closing_flexibility && validClosing.includes(parsedCriteria.closing_flexibility)
+        ? { closing_flexibility: parsedCriteria.closing_flexibility as BuyerProfileData['closing_flexibility'] } : {}),
+      ...(parsedCriteria.condition_tolerance && validCondition.includes(parsedCriteria.condition_tolerance)
+        ? { condition_tolerance: parsedCriteria.condition_tolerance as BuyerProfileData['condition_tolerance'] } : {}),
+      ...(parsedCriteria.notes ? { additional_notes: parsedCriteria.notes } : {}),
+    }))
 
     setStep('profile')
   }

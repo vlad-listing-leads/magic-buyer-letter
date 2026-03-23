@@ -20,7 +20,10 @@ interface ParsedCriteria {
   baths_min: number | null
   sqft_min: number | null
   sqft_max: number | null
+  years_owned_min: number | null
   financing: string | null
+  closing_flexibility: string | null
+  condition_tolerance: string | null
   notes: string | null
 }
 
@@ -78,10 +81,16 @@ export function SmartInput({ onComplete }: SmartInputProps) {
 
       const buyerName = data.buyer_name || 'My Buyer'
 
-      // Pass financing and notes through for Step 2 pre-fill
+      if (data.years_owned_min !== null && data.years_owned_min !== undefined) {
+        criteria.years_owned_min = data.years_owned_min
+      }
+
+      // Pass profile fields through for Step 2 pre-fill
       const enrichedCriteria = {
         ...criteria,
         ...(data.financing ? { financing: data.financing } : {}),
+        ...(data.closing_flexibility ? { closing_flexibility: data.closing_flexibility } : {}),
+        ...(data.condition_tolerance ? { condition_tolerance: data.condition_tolerance } : {}),
         ...(data.notes ? { notes: data.notes } : {}),
       }
 

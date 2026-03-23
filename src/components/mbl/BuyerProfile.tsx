@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
+import { Loader2 } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { ChipSelector } from './ChipSelector'
 import { cn } from '@/lib/utils'
@@ -258,9 +259,9 @@ export function BuyerProfile({
           'border-green-300 bg-green-50 text-green-800 dark:border-green-700 dark:bg-green-950/30 dark:text-green-300'
         )}>
           {countLoading ? (
-            'Counting properties...'
+            <span className="flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Finding number of properties...</span>
           ) : propertyCount === null ? (
-            'Checking available properties...'
+            <span className="flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Finding number of properties...</span>
           ) : propertyCount === 0 ? (
             'No properties found — try expanding your search area or price range.'
           ) : propertyCount < 25 ? (
