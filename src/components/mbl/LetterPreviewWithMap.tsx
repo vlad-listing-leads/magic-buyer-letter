@@ -1,6 +1,7 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
+import type MapLibreGL from 'maplibre-gl'
 import { Card, CardContent } from '@/components/ui/card'
 import { Map } from '@/components/ui/map'
 import { cn } from '@/lib/utils'
@@ -18,10 +19,18 @@ interface LetterPreviewWithMapProps {
   className?: string
 }
 
-/** Calculate centroid, zoom, and circle size from property locations */
-function computeMapView(properties: MblProperty[]): { center: [number, number]; zoom: number; circlePx: number } {
+/** Calculate centroid, zoom, and circle radius from property locations */
+function computeMapView(properties: MblProperty[]): {
+  center: [number, number]
+  zoom: number
+  radiusKm: number
+  circleGeoJSON: GeoJSON.Feature<GeoJSON.Polygon>
+} {
   const withCoords = properties.filter((p) => p.latitude && p.longitude)
-  if (withCoords.length === 0) return { center: [-71.06, 42.36], zoom: 9, circlePx: 120 }
+  if (withCoords.length === 0) {
+    const defaultCircle = makeCircleGeoJSON(-71.06, 42.36, 5)
+    return { center: [-71.06, 42.36], zoom: 9, radiusKm: 5, circleGeoJSON: defaultCircle }
+  }
 
   const lats = withCoords.map((p) => p.latitude!)
   const lngs = withCoords.map((p) => p.longitude!)
@@ -29,23 +38,49 @@ function computeMapView(properties: MblProperty[]): { center: [number, number]; 
   const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
   const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
 
-  const latSpread = Math.max(...lats) - Math.min(...lats)
-  const lngSpread = Math.max(...lngs) - Math.min(...lngs)
-  const maxSpread = Math.max(latSpread, lngSpread)
+  // Calculate radius to encompass all properties (+ 20% padding)
+  const distances = withCoords.map((p) => haversineKm(centerLat, centerLng, p.latitude!, p.longitude!))
+  const maxDist = Math.max(...distances, 1) * 1.3 // 30% padding
 
-  // Zoom + circle size paired together
-  // Circle should cover ~60-70% of the map container to encompass the property spread
+  // Zoom based on radius
   let zoom = 12
-  let circlePx = 120
-  if (maxSpread > 2)       { zoom = 7;  circlePx = 140 }
-  else if (maxSpread > 1)  { zoom = 8;  circlePx = 140 }
-  else if (maxSpread > 0.5){ zoom = 9;  circlePx = 130 }
-  else if (maxSpread > 0.2){ zoom = 10; circlePx = 120 }
-  else if (maxSpread > 0.1){ zoom = 11; circlePx = 110 }
-  else if (maxSpread > 0.05){zoom = 12; circlePx = 100 }
-  else                     { zoom = 13; circlePx = 80 }
+  if (maxDist > 100) zoom = 7
+  else if (maxDist > 50) zoom = 8
+  else if (maxDist > 25) zoom = 9
+  else if (maxDist > 12) zoom = 10
+  else if (maxDist > 6) zoom = 11
+  else if (maxDist > 3) zoom = 12
+  else zoom = 13
 
-  return { center: [centerLng, centerLat], zoom, circlePx }
+  const circleGeoJSON = makeCircleGeoJSON(centerLng, centerLat, maxDist)
+  return { center: [centerLng, centerLat], zoom, radiusKm: maxDist, circleGeoJSON }
+}
+
+/** Haversine distance in km */
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+/** Create a GeoJSON circle polygon */
+function makeCircleGeoJSON(lng: number, lat: number, radiusKm: number, steps = 64): GeoJSON.Feature<GeoJSON.Polygon> {
+  const coords: [number, number][] = []
+  for (let i = 0; i <= steps; i++) {
+    const angle = (i / steps) * 2 * Math.PI
+    const dx = radiusKm * Math.cos(angle)
+    const dy = radiusKm * Math.sin(angle)
+    const dLat = dy / 111.32
+    const dLng = dx / (111.32 * Math.cos(lat * Math.PI / 180))
+    coords.push([lng + dLng, lat + dLat])
+  }
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'Polygon', coordinates: [coords] },
+  }
 }
 
 export function LetterPreviewWithMap({
@@ -111,6 +146,41 @@ export function LetterPreviewWithMap({
   const paragraphs = body.split('\n').filter(Boolean)
 
   const mapView = computeMapView(allProperties ?? (property ? [property] : []))
+  const mapRef = useRef<MapLibreGL.Map>(null)
+
+  const addCircleLayer = useCallback((map: MapLibreGL.Map) => {
+    if (map.getSource('search-area')) return
+    map.addSource('search-area', {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: [mapView.circleGeoJSON],
+      },
+    })
+    map.addLayer({
+      id: 'search-area-fill',
+      type: 'fill',
+      source: 'search-area',
+      paint: { 'fill-color': '#1a2744', 'fill-opacity': 0.06 },
+    })
+    map.addLayer({
+      id: 'search-area-line',
+      type: 'line',
+      source: 'search-area',
+      paint: { 'line-color': '#1a2744', 'line-width': 2, 'line-dasharray': [4, 3], 'line-opacity': 0.5 },
+    })
+  }, [mapView.circleGeoJSON])
+
+  // Add circle layer once map loads
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    if (map.isStyleLoaded()) {
+      addCircleLayer(map)
+    } else {
+      map.on('load', () => addCircleLayer(map))
+    }
+  }, [mapReady, addCircleLayer])
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -131,6 +201,7 @@ export function LetterPreviewWithMap({
           <div style={{ height: '25%', minHeight: '160px', position: 'relative', overflow: 'hidden' }}>
             {mapReady && (
               <Map
+                ref={mapRef}
                 center={mapView.center}
                 zoom={mapView.zoom}
                 theme="light"
@@ -177,63 +248,24 @@ export function LetterPreviewWithMap({
               background: 'linear-gradient(to bottom, transparent 0%, rgba(253,252,250,1) 100%)',
               pointerEvents: 'none',
             }} />
-            {/* Hand-drawn circle overlay + label */}
+            {/* "Buyers looking" label */}
             <div style={{
               position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
+              bottom: '22%',
+              right: '12px',
+              fontSize: '7px',
+              fontFamily: "'Helvetica Neue', Arial, sans-serif",
+              fontWeight: 600,
+              color: '#1a2744',
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.06em',
+              backgroundColor: 'rgba(255,255,255,0.85)',
+              padding: '2px 6px',
+              borderRadius: '2px',
+              lineHeight: '1.3',
               pointerEvents: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
             }}>
-              <svg
-                width={mapView.circlePx}
-                height={mapView.circlePx}
-                viewBox={`0 0 ${mapView.circlePx} ${mapView.circlePx}`}
-                fill="none"
-                style={{ flexShrink: 0 }}
-              >
-                <ellipse
-                  cx={mapView.circlePx / 2}
-                  cy={mapView.circlePx / 2}
-                  rx={mapView.circlePx / 2 - 10}
-                  ry={mapView.circlePx / 2 - 12}
-                  stroke="#1a2744"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  fill="none"
-                  style={{
-                    strokeDasharray: '5 4',
-                    filter: 'url(#rough2)',
-                  }}
-                />
-                <defs>
-                  <filter id="rough2">
-                    <feTurbulence type="turbulence" baseFrequency="0.03" numOctaves="3" result="noise" />
-                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" />
-                  </filter>
-                </defs>
-              </svg>
-              <div style={{
-                position: 'absolute',
-                left: '100%',
-                marginLeft: '4px',
-                whiteSpace: 'nowrap' as const,
-                fontSize: '7px',
-                fontFamily: "'Helvetica Neue', Arial, sans-serif",
-                fontWeight: 600,
-                color: '#1a2744',
-                textTransform: 'uppercase' as const,
-                letterSpacing: '0.06em',
-                backgroundColor: 'rgba(255,255,255,0.85)',
-                padding: '2px 6px',
-                borderRadius: '2px',
-                lineHeight: '1.3',
-              }}>
-                This is where our<br />buyers are looking
-              </div>
+              Area of interest
             </div>
           </div>
 
