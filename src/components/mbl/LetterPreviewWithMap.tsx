@@ -101,7 +101,7 @@ export function LetterPreviewWithMap({
             {mapReady && (
               <Map
                 center={[lng, lat]}
-                zoom={13}
+                zoom={11}
                 theme="light"
                 className="w-full h-full"
                 interactive={false}
@@ -116,7 +116,7 @@ export function LetterPreviewWithMap({
             }}>
               {agent.logo_url ? (
                 <img src={agent.logo_url} alt={agent.name}
-                  style={{ height: '32px', maxWidth: '140px', objectFit: 'contain', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))' }} />
+                  style={{ height: '32px', maxWidth: '140px', objectFit: 'contain' }} />
               ) : (
                 <div style={{
                   fontSize: '10px',
@@ -143,69 +143,68 @@ export function LetterPreviewWithMap({
               background: 'linear-gradient(to bottom, transparent 0%, rgba(253,252,250,1) 100%)',
               pointerEvents: 'none',
             }} />
-            {/* Hand-drawn circle overlay */}
-            <svg
-              style={{
+            {/* Hand-drawn circle overlay + label */}
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}>
+              <svg
+                width="180"
+                height="180"
+                viewBox="0 0 180 180"
+                fill="none"
+                style={{ flexShrink: 0 }}
+              >
+                <ellipse
+                  cx="90"
+                  cy="90"
+                  rx="75"
+                  ry="72"
+                  stroke="#1a2744"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  fill="none"
+                  style={{
+                    strokeDasharray: '5 4',
+                    filter: 'url(#rough2)',
+                  }}
+                />
+                <defs>
+                  <filter id="rough2">
+                    <feTurbulence type="turbulence" baseFrequency="0.03" numOctaves="3" result="noise" />
+                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" />
+                  </filter>
+                </defs>
+              </svg>
+              <div style={{
                 position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '140px',
-                height: '140px',
-                pointerEvents: 'none',
-              }}
-              viewBox="0 0 140 140"
-              fill="none"
-            >
-              <ellipse
-                cx="70"
-                cy="70"
-                rx="58"
-                ry="55"
-                stroke="#1a2744"
-                strokeWidth="2"
-                strokeLinecap="round"
-                fill="rgba(26,39,68,0.06)"
-                style={{
-                  strokeDasharray: '4 3',
-                  filter: 'url(#rough)',
-                }}
-              />
-              <defs>
-                <filter id="rough">
-                  <feTurbulence type="turbulence" baseFrequency="0.03" numOctaves="3" result="noise" />
-                  <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" />
-                </filter>
-              </defs>
-            </svg>
+                left: '100%',
+                marginLeft: '4px',
+                whiteSpace: 'nowrap' as const,
+                fontSize: '7px',
+                fontFamily: "'Helvetica Neue', Arial, sans-serif",
+                fontWeight: 600,
+                color: '#1a2744',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.06em',
+                backgroundColor: 'rgba(255,255,255,0.85)',
+                padding: '2px 6px',
+                borderRadius: '2px',
+                lineHeight: '1.3',
+              }}>
+                This is where our<br />buyers are looking
+              </div>
+            </div>
           </div>
 
           {/* Letter content — below map */}
           <div style={{ padding: '16px 36px 24px 36px' }}>
-            {/* Logo + agent info */}
-            <div className="flex items-center justify-between pb-3" style={{ borderBottom: '0.5px solid #e2ded8', marginBottom: '14px' }}>
-              <div className="flex-shrink-0">
-                {agent.logo_url ? (
-                  <img src={agent.logo_url} alt={agent.name} className="h-8 max-w-[140px] object-contain" />
-                ) : (
-                  <div style={{
-                    fontSize: '11px',
-                    fontFamily: "'Helvetica Neue', Arial, sans-serif",
-                    fontWeight: 400,
-                    color: '#555',
-                    textTransform: 'uppercase' as const,
-                    letterSpacing: '0.2em',
-                  }}>
-                    {agent.brokerage || agent.name}
-                  </div>
-                )}
-              </div>
-              <div style={{ fontSize: '10px', color: '#888', fontFamily: "'Helvetica Neue', Arial, sans-serif", textAlign: 'right' as const }}>
-                {agent.phone && <div>{agent.phone}</div>}
-                {agent.email && <div>{agent.email}</div>}
-              </div>
-            </div>
-
             {/* Letter body */}
             <div style={{ fontSize: '13px', lineHeight: '1.25', color: '#333', letterSpacing: '0.01em' }}>
               {paragraphs.map((para, i) => {
@@ -264,6 +263,8 @@ export function LetterPreviewWithMap({
                 <div style={{ lineHeight: '1.4', fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
                   <p style={{ fontWeight: 600, fontSize: '13px', color: '#1a2744' }}>{agent.name}</p>
                   {agent.brokerage && <p style={{ fontSize: '10.5px', color: '#777' }}>{agent.brokerage}</p>}
+                  {agent.phone && <p style={{ fontSize: '10.5px', color: '#777' }}>{agent.phone}</p>}
+                  {agent.email && <p style={{ fontSize: '10.5px', color: '#777' }}>{agent.email}</p>}
                   {agent.license_number && (
                     <p style={{ fontSize: '9px', color: '#aaa', letterSpacing: '0.03em' }}>License #{agent.license_number}</p>
                   )}
