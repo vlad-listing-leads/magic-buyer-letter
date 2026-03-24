@@ -4,7 +4,13 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { Button } from '@/components/ui/button'
-import { Download, Mail, MapPin, FileText } from 'lucide-react'
+import { Download, Mail, MapPin, FileText, Pencil } from 'lucide-react'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { LetterPreview } from './LetterPreview'
 import { LetterPreviewWithMap } from './LetterPreviewWithMap'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
@@ -37,6 +43,10 @@ export function LetterPreviewWizard({
 }: LetterPreviewWizardProps) {
   const apiFetch = useApiFetch()
   const [letterDesign, setLetterDesign] = useState<'classic' | 'map'>('classic')
+  const [editOpen, setEditOpen] = useState(false)
+  const [editBody, setEditBody] = useState('')
+  const [editPs, setEditPs] = useState('')
+  const [customContent, setCustomContent] = useState<{ body: string; ps: string } | null>(null)
 
   const { data: skills } = useQuery<{ id: string; name: string; description: string; channel: string }[]>({
     queryKey: ['active-skills'],
@@ -63,6 +73,23 @@ export function LetterPreviewWizard({
   const getSkillContent = (skillId: string) => {
     const bySkill = (sampleProperty as unknown as Record<string, unknown>)?.personalized_content_by_skill as Record<string, { body: string; ps: string }> | null
     return bySkill?.[skillId] ?? undefined
+  }
+
+  // Resolve current content: custom edit > skill content > personalized content
+  const currentContent = customContent
+    ?? (selectedSkillId ? getSkillContent(selectedSkillId) : undefined)
+    ?? (sampleProperty?.personalized_content as { body: string; ps: string } | null)
+    ?? { body: '', ps: '' }
+
+  const handleOpenEdit = () => {
+    setEditBody(currentContent?.body ?? '')
+    setEditPs(currentContent?.ps ?? '')
+    setEditOpen(true)
+  }
+
+  const handleSaveEdit = () => {
+    setCustomContent({ body: editBody, ps: editPs })
+    setEditOpen(false)
   }
 
   if (!skills) {
@@ -128,17 +155,28 @@ export function LetterPreviewWizard({
             With Map
           </button>
         </div>
-        {campaignId && (
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open(`/api/mbl/campaigns/${campaignId}/export`, '_blank')}
+            onClick={handleOpenEdit}
             className="gap-1.5 text-xs"
           >
-            <Download className="h-3.5 w-3.5" />
-            Download Addresses
+            <Pencil className="h-3.5 w-3.5" />
+            Edit
           </Button>
-        )}
+          {campaignId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open(`/api/mbl/campaigns/${campaignId}/export`, '_blank')}
+              className="gap-1.5 text-xs"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download Addresses
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Letter preview */}
@@ -152,7 +190,7 @@ export function LetterPreviewWizard({
               buyerName={buyerName}
               bullets={bullets}
               templateStyle={templateStyle}
-              editedContent={selectedSkillId ? getSkillContent(selectedSkillId) : undefined}
+              editedContent={customContent ?? (selectedSkillId ? getSkillContent(selectedSkillId) : undefined)}
             />
           ) : (
             <LetterPreview
@@ -161,7 +199,7 @@ export function LetterPreviewWizard({
               buyerName={buyerName}
               bullets={bullets}
               templateStyle={templateStyle}
-              editedContent={selectedSkillId ? getSkillContent(selectedSkillId) : undefined}
+              editedContent={customContent ?? (selectedSkillId ? getSkillContent(selectedSkillId) : undefined)}
             />
           )}
         </div>
@@ -169,6 +207,47 @@ export function LetterPreviewWizard({
 
       {/* Bottom spacing for sticky footer */}
       <div className="h-16" />
+
+      {/* Edit Sheet */}
+      <Sheet open={editOpen} onOpenChange={setEditOpen}>
+        <SheetContent className="overflow-y-auto sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>Edit Letter</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Letter Body</label>
+              <p className="text-xs text-muted-foreground">
+                Use placeholders: {'{{property_address}}'}, {'{{neighborhood}}'}, {'{{buyer_name}}'}, {'{{agent_name}}'}, {'{{agent_phone}}'}
+              </p>
+              <textarea
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+                rows={16}
+                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">P.S. (optional)</label>
+              <textarea
+                value={editPs}
+                onChange={(e) => setEditPs(e.target.value)}
+                rows={3}
+                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none font-mono"
+                placeholder="P.S. Add a personal note..."
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleSaveEdit} className="flex-1 bg-[#006AFF] hover:bg-[#0058D4] text-white">
+                Save Changes
+              </Button>
+              <Button variant="outline" onClick={() => setEditOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
