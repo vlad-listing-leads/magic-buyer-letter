@@ -102,9 +102,10 @@ export function LetterPreviewWithMap({
   const ps = editedContent?.ps ?? personalized?.ps ?? ''
 
   const [mapReady, setMapReady] = useState(false)
+  const [mapError, setMapError] = useState(false)
   useEffect(() => {
     // Delay map mount to let the card render with proper dimensions first
-    const timer = setTimeout(() => setMapReady(true), 100)
+    const timer = setTimeout(() => setMapReady(true), 300)
     return () => clearTimeout(timer)
   }, [])
 
@@ -226,7 +227,7 @@ export function LetterPreviewWithMap({
 
             {/* Right: map */}
             <div style={{ width: '50%', position: 'relative', overflow: 'hidden' }}>
-              {mapReady && (
+              {mapReady && !mapError && (
                 <Map
                   ref={mapRef}
                   center={mapView.center}
@@ -235,7 +236,21 @@ export function LetterPreviewWithMap({
                   className="w-full h-full"
                   interactive={false}
                   styles={{
-                    light: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+                    light: {
+                      version: 8,
+                      sources: {
+                        voyager: {
+                          type: 'raster',
+                          tiles: [
+                            'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                            'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                            'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                          ],
+                          tileSize: 256,
+                        },
+                      },
+                      layers: [{ id: 'voyager', type: 'raster', source: 'voyager' }],
+                    },
                   }}
                 />
               )}
