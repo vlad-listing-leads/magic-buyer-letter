@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { Button } from '@/components/ui/button'
-import { Download, Mail, MapPin, FileText, Pencil } from 'lucide-react'
+import { Download, Mail, MapPin, FileText, Pencil, Loader2 } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -47,6 +47,7 @@ export function LetterPreviewWizard({
   const [editBody, setEditBody] = useState('')
   const [editPs, setEditPs] = useState('')
   const [customContent, setCustomContent] = useState<{ body: string; ps: string } | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   const { data: skills } = useQuery<{ id: string; name: string; description: string; channel: string }[]>({
     queryKey: ['active-skills'],
@@ -90,6 +91,36 @@ export function LetterPreviewWizard({
   const handleSaveEdit = () => {
     setCustomContent({ body: editBody, ps: editPs })
     setEditOpen(false)
+  }
+
+  const handleDownloadPDF = async () => {
+    const letterEl = document.querySelector('[data-letter-preview]') as HTMLElement
+    if (!letterEl) return
+
+    setIsDownloading(true)
+    try {
+      const html2canvas = (await import('html2canvas-pro')).default
+      const { jsPDF } = await import('jspdf')
+
+      const canvas = await html2canvas(letterEl, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#fdfcfa',
+      })
+
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'letter' })
+      const pdfWidth = 8.5
+      const pdfHeight = 11
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+
+      const name = buyerName || 'buyer'
+      pdf.save(`${name.replace(/[^a-zA-Z0-9]/g, '_')}_letter.pdf`)
+    } catch (err) {
+      console.error('PDF generation failed:', err)
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   if (!skills) {
@@ -164,6 +195,16 @@ export function LetterPreviewWizard({
           >
             <Pencil className="h-3.5 w-3.5" />
             Edit
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadPDF}
+            disabled={isDownloading}
+            className="gap-1.5 text-xs"
+          >
+            {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            Download PDF
           </Button>
           {campaignId && (
             <Button

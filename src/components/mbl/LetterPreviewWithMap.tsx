@@ -194,6 +194,7 @@ export function LetterPreviewWithMap({
       )}
 
       <Card className="overflow-hidden [aspect-ratio:8.5/11] rounded-lg shadow-lg"
+        data-letter-preview
         style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: 'linear-gradient(168deg, #fdfcfa 0%, #f8f6f2 100%)' }}
         ref={cardRef}>
         <CardContent className="px-0 pb-0 pt-0 h-full" ref={contentRef}>
