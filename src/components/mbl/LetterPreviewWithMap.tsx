@@ -101,7 +101,7 @@ export function LetterPreviewWithMap({
             {mapReady && (
               <Map
                 center={[lng, lat]}
-                zoom={11}
+                zoom={9}
                 theme="light"
                 className="w-full h-full"
                 interactive={false}
