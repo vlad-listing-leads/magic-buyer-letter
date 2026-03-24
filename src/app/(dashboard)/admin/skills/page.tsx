@@ -328,25 +328,6 @@ export default function AdminSkillsPage() {
           </SheetHeader>
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Channel</label>
-              <div className="flex gap-2 flex-wrap">
-                {CHANNEL_TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setForm((p) => ({ ...p, channel: tab.id }))}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                      form.channel === tab.id
-                        ? 'bg-[#006AFF] text-white'
-                        : 'bg-muted text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-1.5">
               <label className="text-sm font-medium">Name</label>
               <Input
                 value={form.name}
