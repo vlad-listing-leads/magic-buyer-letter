@@ -200,7 +200,7 @@ export function LetterPreviewWithMap({
           {/* Header — logo left, map right half */}
           <div style={{ height: '25%', minHeight: '160px', display: 'flex' }}>
             {/* Left: logo + agent info */}
-            <div style={{ width: '50%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '16px 20px 16px 36px' }}>
+            <div style={{ width: '50%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '16px 20px 16px 52px' }}>
               {agent.logo_url ? (
                 <img src={agent.logo_url} alt={agent.name}
                   style={{ height: '36px', maxWidth: '160px', objectFit: 'contain', marginBottom: '10px' }} />
