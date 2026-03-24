@@ -102,36 +102,53 @@ export function LetterPreviewWizard({
       const html2canvas = (await import('html2canvas-pro')).default
       const { jsPDF } = await import('jspdf')
 
-      // Grab MapLibre WebGL canvas and convert to a temp image before capture
-      const mapCanvas = letterEl.querySelector('canvas.maplibregl-canvas') as HTMLCanvasElement | null
-      let tempImg: HTMLImageElement | null = null
+      // Replace ALL WebGL canvases with static images before capture
+      const canvases = letterEl.querySelectorAll('canvas')
+      const swaps: Array<{ canvas: HTMLCanvasElement; img: HTMLImageElement }> = []
 
-      if (mapCanvas) {
-        tempImg = document.createElement('img')
-        tempImg.src = mapCanvas.toDataURL('image/png')
-        tempImg.style.cssText = mapCanvas.style.cssText
-        tempImg.style.position = 'absolute'
-        tempImg.style.top = '0'
-        tempImg.style.left = '0'
-        tempImg.style.width = '100%'
-        tempImg.style.height = '100%'
-        mapCanvas.parentElement?.appendChild(tempImg)
-        mapCanvas.style.display = 'none'
-      }
+      canvases.forEach((c) => {
+        try {
+          const img = document.createElement('img')
+          img.src = c.toDataURL('image/png')
+          img.style.cssText = window.getComputedStyle(c).cssText
+          img.style.position = 'absolute'
+          img.style.inset = '0'
+          img.style.width = '100%'
+          img.style.height = '100%'
+          img.style.objectFit = 'cover'
+          c.parentElement?.insertBefore(img, c)
+          c.style.visibility = 'hidden'
+          swaps.push({ canvas: c, img })
+        } catch {
+          // canvas tainted, skip
+        }
+      })
 
-      const canvas = await html2canvas(letterEl, {
+      // Small delay for images to render
+      await new Promise((r) => setTimeout(r, 100))
+
+      const result = await html2canvas(letterEl, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#fdfcfa',
+        logging: false,
+        onclone: (clonedDoc) => {
+          // Also hide any maplibre-gl elements that html2canvas can't render
+          const mapEls = clonedDoc.querySelectorAll('.maplibregl-canvas-container')
+          mapEls.forEach((el) => {
+            const htmlEl = el as HTMLElement
+            htmlEl.style.overflow = 'hidden'
+          })
+        },
       })
 
-      // Restore map canvas
-      if (mapCanvas && tempImg) {
-        mapCanvas.style.display = ''
-        tempImg.remove()
-      }
+      // Restore canvases
+      swaps.forEach(({ canvas, img }) => {
+        canvas.style.visibility = ''
+        img.remove()
+      })
 
-      const imgData = canvas.toDataURL('image/png')
+      const imgData = result.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'letter' })
       pdf.addImage(imgData, 'PNG', 0, 0, 8.5, 11)
 
