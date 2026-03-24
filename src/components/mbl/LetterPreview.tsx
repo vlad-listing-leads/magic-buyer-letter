@@ -92,7 +92,7 @@ export function LetterPreview({
       )}
 
       {/* Letter Card — Editorial design */}
-      <Card className="overflow-hidden [aspect-ratio:8.5/11] rounded-lg shadow-lg"
+      <Card className="overflow-hidden [aspect-ratio:8.5/11] rounded-lg shadow-lg border-0"
         data-letter-preview
         style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: 'linear-gradient(168deg, #fdfcfa 0%, #f8f6f2 100%)' }}
         ref={cardRef}>

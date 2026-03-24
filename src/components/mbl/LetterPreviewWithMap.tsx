@@ -64,21 +64,26 @@ function latLngToTile(lat: number, lng: number, zoom: number): { x: number; y: n
   }
 }
 
-/** Generate a 3x3 grid of tile URLs centered on a location */
-function getStaticMapTiles(lat: number, lng: number, zoom: number): Array<{ url: string; offsetX: number; offsetY: number }> {
+/** Generate a 4x3 grid of retina tile URLs centered on a location */
+function getStaticMapTiles(lat: number, lng: number, zoom: number): Array<{ url: string; left: number; top: number }> {
   const center = latLngToTile(lat, lng, zoom)
-  const tiles: Array<{ url: string; offsetX: number; offsetY: number }> = []
+  const tiles: Array<{ url: string; left: number; top: number }> = []
   const servers = ['a', 'b', 'c']
+  const TILE = 256
 
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
+  // Center offset: shift so the centroid is in the middle of the container
+  const cx = center.pixelX
+  const cy = center.pixelY
+
+  for (let dy = -1; dy <= 2; dy++) {
+    for (let dx = -1; dx <= 2; dx++) {
       const tx = center.x + dx
       const ty = center.y + dy
-      const server = servers[(tx + ty) % 3]
+      const server = servers[Math.abs(tx + ty) % 3]
       tiles.push({
-        url: `https://${server}.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${tx}/${ty}.png`,
-        offsetX: dx * 256 - center.pixelX + 256 * 1.5, // center the grid
-        offsetY: dy * 256 - center.pixelY + 256 * 0.75,
+        url: `https://${server}.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${tx}/${ty}@2x.png`,
+        left: dx * TILE - cx + TILE,
+        top: dy * TILE - cy + TILE * 0.5,
       })
     }
   }
@@ -180,7 +185,7 @@ export function LetterPreviewWithMap({
         </div>
       )}
 
-      <Card className="overflow-hidden [aspect-ratio:8.5/11] rounded-lg shadow-lg"
+      <Card className="overflow-hidden [aspect-ratio:8.5/11] rounded-lg shadow-lg border-0"
         data-letter-preview
         style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: 'linear-gradient(168deg, #fdfcfa 0%, #f8f6f2 100%)' }}
         ref={cardRef}>
@@ -225,11 +230,10 @@ export function LetterPreviewWithMap({
                     crossOrigin="anonymous"
                     style={{
                       position: 'absolute',
-                      left: `${tile.offsetX}px`,
-                      top: `${tile.offsetY}px`,
+                      left: `${tile.left}px`,
+                      top: `${tile.top}px`,
                       width: '256px',
                       height: '256px',
-                      imageRendering: 'auto',
                     }}
                   />
                 ))}
