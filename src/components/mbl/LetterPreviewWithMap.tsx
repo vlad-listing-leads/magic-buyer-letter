@@ -18,10 +18,10 @@ interface LetterPreviewWithMapProps {
   className?: string
 }
 
-/** Calculate centroid and zoom level from property locations */
-function computeMapView(properties: MblProperty[]): { center: [number, number]; zoom: number } {
+/** Calculate centroid, zoom, and circle size from property locations */
+function computeMapView(properties: MblProperty[]): { center: [number, number]; zoom: number; circlePx: number } {
   const withCoords = properties.filter((p) => p.latitude && p.longitude)
-  if (withCoords.length === 0) return { center: [-71.06, 42.36], zoom: 9 }
+  if (withCoords.length === 0) return { center: [-71.06, 42.36], zoom: 9, circlePx: 120 }
 
   const lats = withCoords.map((p) => p.latitude!)
   const lngs = withCoords.map((p) => p.longitude!)
@@ -33,17 +33,19 @@ function computeMapView(properties: MblProperty[]): { center: [number, number]; 
   const lngSpread = Math.max(...lngs) - Math.min(...lngs)
   const maxSpread = Math.max(latSpread, lngSpread)
 
-  // Rough zoom calculation based on geographic spread
+  // Zoom + circle size paired together
+  // Circle should cover ~60-70% of the map container to encompass the property spread
   let zoom = 12
-  if (maxSpread > 2) zoom = 7
-  else if (maxSpread > 1) zoom = 8
-  else if (maxSpread > 0.5) zoom = 9
-  else if (maxSpread > 0.2) zoom = 10
-  else if (maxSpread > 0.1) zoom = 11
-  else if (maxSpread > 0.05) zoom = 12
-  else zoom = 13
+  let circlePx = 120
+  if (maxSpread > 2)       { zoom = 7;  circlePx = 140 }
+  else if (maxSpread > 1)  { zoom = 8;  circlePx = 140 }
+  else if (maxSpread > 0.5){ zoom = 9;  circlePx = 130 }
+  else if (maxSpread > 0.2){ zoom = 10; circlePx = 120 }
+  else if (maxSpread > 0.1){ zoom = 11; circlePx = 110 }
+  else if (maxSpread > 0.05){zoom = 12; circlePx = 100 }
+  else                     { zoom = 13; circlePx = 80 }
 
-  return { center: [centerLng, centerLat], zoom }
+  return { center: [centerLng, centerLat], zoom, circlePx }
 }
 
 export function LetterPreviewWithMap({
@@ -187,17 +189,17 @@ export function LetterPreviewWithMap({
               gap: '6px',
             }}>
               <svg
-                width="180"
-                height="180"
-                viewBox="0 0 180 180"
+                width={mapView.circlePx}
+                height={mapView.circlePx}
+                viewBox={`0 0 ${mapView.circlePx} ${mapView.circlePx}`}
                 fill="none"
                 style={{ flexShrink: 0 }}
               >
                 <ellipse
-                  cx="90"
-                  cy="90"
-                  rx="75"
-                  ry="72"
+                  cx={mapView.circlePx / 2}
+                  cy={mapView.circlePx / 2}
+                  rx={mapView.circlePx / 2 - 10}
+                  ry={mapView.circlePx / 2 - 12}
                   stroke="#1a2744"
                   strokeWidth="2"
                   strokeLinecap="round"
@@ -236,7 +238,7 @@ export function LetterPreviewWithMap({
           </div>
 
           {/* Letter content — below map */}
-          <div style={{ padding: '16px 36px 24px 36px' }}>
+          <div style={{ padding: '16px 44px 24px 44px' }}>
             {/* Letter body */}
             <div style={{ fontSize: '13px', lineHeight: '1.25', color: '#333', letterSpacing: '0.01em' }}>
               {paragraphs.map((para, i) => {
