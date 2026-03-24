@@ -90,7 +90,7 @@ export function LetterPreviewWithMap({
         <CardContent className="px-0 pb-0 pt-0 h-full" ref={contentRef}>
 
           {/* Large map header — 25% of page */}
-          <div style={{ height: '25%', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ height: '25%', minHeight: '160px', position: 'relative', overflow: 'hidden' }}>
             <Map
               center={[lng, lat]}
               zoom={13}
