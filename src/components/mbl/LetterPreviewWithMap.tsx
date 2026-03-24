@@ -110,13 +110,13 @@ export function LetterPreviewWithMap({
             {/* Logo overlay top-left */}
             <div style={{
               position: 'absolute',
-              top: '10px',
-              left: '12px',
+              top: '14px',
+              left: '18px',
               zIndex: 1,
             }}>
               {agent.logo_url ? (
                 <img src={agent.logo_url} alt={agent.name}
-                  style={{ height: '28px', maxWidth: '120px', objectFit: 'contain', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))' }} />
+                  style={{ height: '32px', maxWidth: '140px', objectFit: 'contain', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))' }} />
               ) : (
                 <div style={{
                   fontSize: '10px',
