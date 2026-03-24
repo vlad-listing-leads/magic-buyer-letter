@@ -102,49 +102,46 @@ export function LetterPreviewWizard({
       const html2canvas = (await import('html2canvas-pro')).default
       const { jsPDF } = await import('jspdf')
 
-      // Replace ALL WebGL canvases with static images before capture
-      const canvases = letterEl.querySelectorAll('canvas')
-      const swaps: Array<{ canvas: HTMLCanvasElement; img: HTMLImageElement }> = []
+      // For map design: temporarily replace the map container with a static image
+      const mapContainer = letterEl.querySelector('.maplibregl-map') as HTMLElement | null
+      const mapCanvas = letterEl.querySelector('canvas.maplibregl-canvas') as HTMLCanvasElement | null
+      let staticMapImg: HTMLImageElement | null = null
+      let originalMapDisplay = ''
 
-      canvases.forEach((c) => {
+      if (mapContainer && mapCanvas) {
         try {
-          const img = document.createElement('img')
-          img.src = c.toDataURL('image/png')
-          img.style.position = 'absolute'
-          img.style.inset = '0'
-          img.style.width = '100%'
-          img.style.height = '100%'
-          img.style.objectFit = 'cover'
-          img.style.zIndex = '999'
-          c.parentElement?.insertBefore(img, c)
-          swaps.push({ canvas: c, img })
-        } catch {
-          // canvas tainted, skip
-        }
-      })
+          // Create static image from map canvas
+          staticMapImg = document.createElement('img')
+          staticMapImg.src = mapCanvas.toDataURL('image/png')
+          staticMapImg.style.width = '100%'
+          staticMapImg.style.height = '100%'
+          staticMapImg.style.objectFit = 'cover'
+          staticMapImg.style.display = 'block'
 
-      // Small delay for images to render
-      await new Promise((r) => setTimeout(r, 100))
+          // Hide the entire map container and show the image in its place
+          originalMapDisplay = mapContainer.style.display
+          mapContainer.style.display = 'none'
+          mapContainer.parentElement?.insertBefore(staticMapImg, mapContainer)
+
+          // Wait for image to load
+          await new Promise((r) => setTimeout(r, 50))
+        } catch {
+          // If canvas capture fails, just proceed without map
+        }
+      }
 
       const result = await html2canvas(letterEl, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#fdfcfa',
         logging: false,
-        onclone: (clonedDoc) => {
-          // Also hide any maplibre-gl elements that html2canvas can't render
-          const mapEls = clonedDoc.querySelectorAll('.maplibregl-canvas-container')
-          mapEls.forEach((el) => {
-            const htmlEl = el as HTMLElement
-            htmlEl.style.overflow = 'hidden'
-          })
-        },
       })
 
-      // Remove temp images
-      swaps.forEach(({ img }) => {
-        img.remove()
-      })
+      // Restore map
+      if (mapContainer && staticMapImg) {
+        mapContainer.style.display = originalMapDisplay
+        staticMapImg.remove()
+      }
 
       const imgData = result.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'letter' })
