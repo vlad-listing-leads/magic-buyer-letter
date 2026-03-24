@@ -102,17 +102,38 @@ export function LetterPreviewWizard({
       const html2canvas = (await import('html2canvas-pro')).default
       const { jsPDF } = await import('jspdf')
 
+      // Grab MapLibre WebGL canvas and convert to a temp image before capture
+      const mapCanvas = letterEl.querySelector('canvas.maplibregl-canvas') as HTMLCanvasElement | null
+      let tempImg: HTMLImageElement | null = null
+
+      if (mapCanvas) {
+        tempImg = document.createElement('img')
+        tempImg.src = mapCanvas.toDataURL('image/png')
+        tempImg.style.cssText = mapCanvas.style.cssText
+        tempImg.style.position = 'absolute'
+        tempImg.style.top = '0'
+        tempImg.style.left = '0'
+        tempImg.style.width = '100%'
+        tempImg.style.height = '100%'
+        mapCanvas.parentElement?.appendChild(tempImg)
+        mapCanvas.style.display = 'none'
+      }
+
       const canvas = await html2canvas(letterEl, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#fdfcfa',
       })
 
+      // Restore map canvas
+      if (mapCanvas && tempImg) {
+        mapCanvas.style.display = ''
+        tempImg.remove()
+      }
+
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'letter' })
-      const pdfWidth = 8.5
-      const pdfHeight = 11
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      pdf.addImage(imgData, 'PNG', 0, 0, 8.5, 11)
 
       const name = buyerName || 'buyer'
       pdf.save(`${name.replace(/[^a-zA-Z0-9]/g, '_')}_letter.pdf`)

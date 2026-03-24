@@ -227,6 +227,7 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
       attributionControl: false,
       ...props,
       ...viewport,
+      ...(({ preserveDrawingBuffer: true }) as Record<string, unknown>),
     });
 
     const styleDataHandler = () => {
