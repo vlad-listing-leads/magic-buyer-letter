@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Map } from '@/components/ui/map'
 import { cn } from '@/lib/utils'
@@ -33,6 +33,13 @@ export function LetterPreviewWithMap({
 
   const body = editedContent?.body ?? personalized?.body ?? ''
   const ps = editedContent?.ps ?? personalized?.ps ?? ''
+
+  const [mapReady, setMapReady] = useState(false)
+  useEffect(() => {
+    // Delay map mount to let the card render with proper dimensions first
+    const timer = setTimeout(() => setMapReady(true), 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Auto-scale content to fit page
   const cardRef = useRef<HTMLDivElement>(null)
@@ -91,14 +98,41 @@ export function LetterPreviewWithMap({
 
           {/* Large map header — 25% of page */}
           <div style={{ height: '25%', minHeight: '160px', position: 'relative', overflow: 'hidden' }}>
-            <Map
-              center={[lng, lat]}
-              zoom={13}
-              theme="light"
-              className="w-full h-full"
-              interactive={false}
-            >
-            </Map>
+            {mapReady && (
+              <Map
+                center={[lng, lat]}
+                zoom={13}
+                theme="light"
+                className="w-full h-full"
+                interactive={false}
+              />
+            )}
+            {/* Logo overlay top-left */}
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              left: '12px',
+              zIndex: 1,
+            }}>
+              {agent.logo_url ? (
+                <img src={agent.logo_url} alt={agent.name}
+                  style={{ height: '28px', maxWidth: '120px', objectFit: 'contain', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))' }} />
+              ) : (
+                <div style={{
+                  fontSize: '10px',
+                  fontFamily: "'Helvetica Neue', Arial, sans-serif",
+                  fontWeight: 600,
+                  color: '#1a2744',
+                  textTransform: 'uppercase' as const,
+                  letterSpacing: '0.15em',
+                  backgroundColor: 'rgba(255,255,255,0.85)',
+                  padding: '3px 8px',
+                  borderRadius: '3px',
+                }}>
+                  {agent.brokerage || agent.name}
+                </div>
+              )}
+            </div>
             {/* White fade at bottom */}
             <div style={{
               position: 'absolute',
