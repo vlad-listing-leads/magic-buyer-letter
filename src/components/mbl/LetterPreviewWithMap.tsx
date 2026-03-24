@@ -1,9 +1,7 @@
 'use client'
 
-import { useRef, useEffect, useState, useCallback } from 'react'
-import type MapLibreGL from 'maplibre-gl'
+import { useRef, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Map } from '@/components/ui/map'
 import { cn } from '@/lib/utils'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
 import type { LetterContent } from './LetterPreview'
@@ -19,18 +17,10 @@ interface LetterPreviewWithMapProps {
   className?: string
 }
 
-/** Calculate centroid, zoom, and circle radius from property locations */
-function computeMapView(properties: MblProperty[]): {
-  center: [number, number]
-  zoom: number
-  radiusKm: number
-  circleGeoJSON: GeoJSON.Feature<GeoJSON.Polygon>
-} {
+/** Calculate centroid and zoom from property locations */
+function computeMapView(properties: MblProperty[]): { centerLat: number; centerLng: number; zoom: number; radiusKm: number } {
   const withCoords = properties.filter((p) => p.latitude && p.longitude)
-  if (withCoords.length === 0) {
-    const defaultCircle = makeCircleGeoJSON(-71.06, 42.36, 5)
-    return { center: [-71.06, 42.36], zoom: 9, radiusKm: 5, circleGeoJSON: defaultCircle }
-  }
+  if (withCoords.length === 0) return { centerLat: 42.36, centerLng: -71.06, zoom: 10, radiusKm: 5 }
 
   const lats = withCoords.map((p) => p.latitude!)
   const lngs = withCoords.map((p) => p.longitude!)
@@ -38,11 +28,9 @@ function computeMapView(properties: MblProperty[]): {
   const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
   const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
 
-  // Calculate radius to encompass all properties (+ 20% padding)
   const distances = withCoords.map((p) => haversineKm(centerLat, centerLng, p.latitude!, p.longitude!))
-  const maxDist = Math.max(...distances, 1) * 1.3 // 30% padding
+  const maxDist = Math.max(...distances, 1) * 1.3
 
-  // Zoom based on radius
   let zoom = 12
   if (maxDist > 100) zoom = 7
   else if (maxDist > 50) zoom = 8
@@ -52,11 +40,9 @@ function computeMapView(properties: MblProperty[]): {
   else if (maxDist > 3) zoom = 12
   else zoom = 13
 
-  const circleGeoJSON = makeCircleGeoJSON(centerLng, centerLat, maxDist)
-  return { center: [centerLng, centerLat], zoom, radiusKm: maxDist, circleGeoJSON }
+  return { centerLat, centerLng, zoom, radiusKm: maxDist }
 }
 
-/** Haversine distance in km */
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371
   const dLat = (lat2 - lat1) * Math.PI / 180
@@ -65,22 +51,68 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-/** Create a GeoJSON circle polygon */
-function makeCircleGeoJSON(lng: number, lat: number, radiusKm: number, steps = 64): GeoJSON.Feature<GeoJSON.Polygon> {
-  const coords: [number, number][] = []
-  for (let i = 0; i <= steps; i++) {
-    const angle = (i / steps) * 2 * Math.PI
-    const dx = radiusKm * Math.cos(angle)
-    const dy = radiusKm * Math.sin(angle)
-    const dLat = dy / 111.32
-    const dLng = dx / (111.32 * Math.cos(lat * Math.PI / 180))
-    coords.push([lng + dLng, lat + dLat])
-  }
+/** Convert lat/lng to tile coordinates */
+function latLngToTile(lat: number, lng: number, zoom: number): { x: number; y: number; pixelX: number; pixelY: number } {
+  const n = Math.pow(2, zoom)
+  const xTile = ((lng + 180) / 360) * n
+  const yTile = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n
   return {
-    type: 'Feature',
-    properties: {},
-    geometry: { type: 'Polygon', coordinates: [coords] },
+    x: Math.floor(xTile),
+    y: Math.floor(yTile),
+    pixelX: (xTile % 1) * 256,
+    pixelY: (yTile % 1) * 256,
   }
+}
+
+/** Generate a 3x3 grid of tile URLs centered on a location */
+function getStaticMapTiles(lat: number, lng: number, zoom: number): Array<{ url: string; offsetX: number; offsetY: number }> {
+  const center = latLngToTile(lat, lng, zoom)
+  const tiles: Array<{ url: string; offsetX: number; offsetY: number }> = []
+  const servers = ['a', 'b', 'c']
+
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const tx = center.x + dx
+      const ty = center.y + dy
+      const server = servers[(tx + ty) % 3]
+      tiles.push({
+        url: `https://${server}.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${tx}/${ty}.png`,
+        offsetX: dx * 256 - center.pixelX + 256 * 1.5, // center the grid
+        offsetY: dy * 256 - center.pixelY + 256 * 0.75,
+      })
+    }
+  }
+  return tiles
+}
+
+/** SVG circle overlay for the search area */
+function CircleOverlay({ containerWidth, containerHeight, radiusKm, zoom }: {
+  containerWidth: number; containerHeight: number; radiusKm: number; zoom: number
+}) {
+  // Approximate pixels per km at this zoom level
+  const metersPerPixel = 156543.03392 * Math.cos(0) / Math.pow(2, zoom)
+  const pixelsPerKm = 1000 / metersPerPixel
+  const radiusPx = Math.min(radiusKm * pixelsPerKm, containerWidth * 0.4, containerHeight * 0.4)
+
+  return (
+    <svg
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+      viewBox={`0 0 ${containerWidth} ${containerHeight}`}
+    >
+      <ellipse
+        cx={containerWidth / 2}
+        cy={containerHeight / 2}
+        rx={Math.max(radiusPx, 30)}
+        ry={Math.max(radiusPx, 30)}
+        stroke="#1a2744"
+        strokeWidth="1.5"
+        strokeDasharray="5 4"
+        strokeOpacity="0.5"
+        fill="#1a2744"
+        fillOpacity="0.05"
+      />
+    </svg>
+  )
 }
 
 export function LetterPreviewWithMap({
@@ -96,20 +128,10 @@ export function LetterPreviewWithMap({
   const address = property
     ? `${property.address_line1}, ${property.city}`
     : '123 Main St, Your City'
-  const phone = agent.phone || '(555) 123-4567'
 
   const body = editedContent?.body ?? personalized?.body ?? ''
   const ps = editedContent?.ps ?? personalized?.ps ?? ''
 
-  const [mapReady, setMapReady] = useState(false)
-  const [mapError, setMapError] = useState(false)
-  useEffect(() => {
-    // Delay map mount to let the card render with proper dimensions first
-    const timer = setTimeout(() => setMapReady(true), 300)
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Auto-scale content to fit page
   const cardRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -145,43 +167,8 @@ export function LetterPreviewWithMap({
     .slice(0, 2)
 
   const paragraphs = body.split('\n').filter(Boolean)
-
   const mapView = computeMapView(allProperties ?? (property ? [property] : []))
-  const mapRef = useRef<MapLibreGL.Map>(null)
-
-  const addCircleLayer = useCallback((map: MapLibreGL.Map) => {
-    if (map.getSource('search-area')) return
-    map.addSource('search-area', {
-      type: 'geojson',
-      data: {
-        type: 'FeatureCollection',
-        features: [mapView.circleGeoJSON],
-      },
-    })
-    map.addLayer({
-      id: 'search-area-fill',
-      type: 'fill',
-      source: 'search-area',
-      paint: { 'fill-color': '#1a2744', 'fill-opacity': 0.06 },
-    })
-    map.addLayer({
-      id: 'search-area-line',
-      type: 'line',
-      source: 'search-area',
-      paint: { 'line-color': '#1a2744', 'line-width': 2, 'line-dasharray': [4, 3], 'line-opacity': 0.5 },
-    })
-  }, [mapView.circleGeoJSON])
-
-  // Add circle layer once map loads
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
-    if (map.isStyleLoaded()) {
-      addCircleLayer(map)
-    } else {
-      map.on('load', () => addCircleLayer(map))
-    }
-  }, [mapReady, addCircleLayer])
+  const tiles = getStaticMapTiles(mapView.centerLat, mapView.centerLng, mapView.zoom)
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -199,7 +186,7 @@ export function LetterPreviewWithMap({
         ref={cardRef}>
         <CardContent className="px-0 pb-0 pt-0 h-full" ref={contentRef}>
 
-          {/* Header — logo left, map right half */}
+          {/* Header — logo left, static map right half */}
           <div style={{ height: '25%', minHeight: '160px', display: 'flex' }}>
             {/* Left: logo + agent info */}
             <div style={{ width: '50%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '16px 20px 16px 52px' }}>
@@ -226,35 +213,36 @@ export function LetterPreviewWithMap({
               </div>
             </div>
 
-            {/* Right: map */}
+            {/* Right: static tile map */}
             <div style={{ width: '50%', position: 'relative', overflow: 'hidden' }}>
-              {mapReady && !mapError && (
-                <Map
-                  ref={mapRef}
-                  center={mapView.center}
-                  zoom={mapView.zoom}
-                  theme="light"
-                  className="w-full h-full"
-                  interactive={false}
-                  styles={{
-                    light: {
-                      version: 8,
-                      sources: {
-                        voyager: {
-                          type: 'raster',
-                          tiles: [
-                            'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-                            'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-                            'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-                          ],
-                          tileSize: 256,
-                        },
-                      },
-                      layers: [{ id: 'voyager', type: 'raster', source: 'voyager' }],
-                    },
-                  }}
-                />
-              )}
+              {/* Tile grid */}
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                {tiles.map((tile, i) => (
+                  <img
+                    key={i}
+                    src={tile.url}
+                    alt=""
+                    crossOrigin="anonymous"
+                    style={{
+                      position: 'absolute',
+                      left: `${tile.offsetX}px`,
+                      top: `${tile.offsetY}px`,
+                      width: '256px',
+                      height: '256px',
+                      imageRendering: 'auto',
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Circle overlay */}
+              <CircleOverlay
+                containerWidth={400}
+                containerHeight={200}
+                radiusKm={mapView.radiusKm}
+                zoom={mapView.zoom}
+              />
+
               {/* Fade left edge into paper */}
               <div style={{
                 position: 'absolute', top: 0, left: 0, bottom: 0, width: '20%',
@@ -280,9 +268,8 @@ export function LetterPreviewWithMap({
             </div>
           </div>
 
-          {/* Letter content — below map */}
+          {/* Letter content — below header */}
           <div style={{ padding: '16px 52px 24px 52px' }}>
-            {/* Letter body */}
             <div style={{ fontSize: '13px', lineHeight: '1.35', color: '#333', letterSpacing: '0.01em' }}>
               {paragraphs.map((para, i) => {
                 const isBullet = /^[•\-\*]\s/.test(para.trim())
@@ -318,7 +305,7 @@ export function LetterPreviewWithMap({
               })}
             </div>
 
-            {/* Compact signature */}
+            {/* Signature */}
             <div className="select-none" style={{ marginTop: '20px' }}>
               <p style={{ fontStyle: 'italic', fontSize: '13px', color: '#555', marginBottom: '12px' }}>
                 With warm regards,

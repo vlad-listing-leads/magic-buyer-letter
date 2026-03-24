@@ -95,14 +95,6 @@ export function LetterPreviewWizard({
 
   const handleDownloadPDF = async () => {
     setIsDownloading(true)
-
-    // Temporarily switch to classic design for PDF (map can't be captured)
-    const wasMap = letterDesign === 'map'
-    if (wasMap) setLetterDesign('classic')
-
-    // Wait for re-render
-    await new Promise((r) => setTimeout(r, 200))
-
     try {
       const letterEl = document.querySelector('[data-letter-preview]') as HTMLElement
       if (!letterEl) return
@@ -126,8 +118,6 @@ export function LetterPreviewWizard({
     } catch (err) {
       console.error('PDF generation failed:', err)
     } finally {
-      // Restore map design if it was active
-      if (wasMap) setLetterDesign('map')
       setIsDownloading(false)
     }
   }
