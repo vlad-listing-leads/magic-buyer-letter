@@ -94,41 +94,21 @@ export function LetterPreviewWizard({
   }
 
   const handleDownloadPDF = async () => {
-    const letterEl = document.querySelector('[data-letter-preview]') as HTMLElement
-    if (!letterEl) return
-
     setIsDownloading(true)
+
+    // Temporarily switch to classic design for PDF (map can't be captured)
+    const wasMap = letterDesign === 'map'
+    if (wasMap) setLetterDesign('classic')
+
+    // Wait for re-render
+    await new Promise((r) => setTimeout(r, 200))
+
     try {
+      const letterEl = document.querySelector('[data-letter-preview]') as HTMLElement
+      if (!letterEl) return
+
       const html2canvas = (await import('html2canvas-pro')).default
       const { jsPDF } = await import('jspdf')
-
-      // For map design: temporarily replace the map container with a static image
-      const mapContainer = letterEl.querySelector('.maplibregl-map') as HTMLElement | null
-      const mapCanvas = letterEl.querySelector('canvas.maplibregl-canvas') as HTMLCanvasElement | null
-      let staticMapImg: HTMLImageElement | null = null
-      let originalMapDisplay = ''
-
-      if (mapContainer && mapCanvas) {
-        try {
-          // Create static image from map canvas
-          staticMapImg = document.createElement('img')
-          staticMapImg.src = mapCanvas.toDataURL('image/png')
-          staticMapImg.style.width = '100%'
-          staticMapImg.style.height = '100%'
-          staticMapImg.style.objectFit = 'cover'
-          staticMapImg.style.display = 'block'
-
-          // Hide the entire map container and show the image in its place
-          originalMapDisplay = mapContainer.style.display
-          mapContainer.style.display = 'none'
-          mapContainer.parentElement?.insertBefore(staticMapImg, mapContainer)
-
-          // Wait for image to load
-          await new Promise((r) => setTimeout(r, 50))
-        } catch {
-          // If canvas capture fails, just proceed without map
-        }
-      }
 
       const result = await html2canvas(letterEl, {
         scale: 2,
@@ -136,12 +116,6 @@ export function LetterPreviewWizard({
         backgroundColor: '#fdfcfa',
         logging: false,
       })
-
-      // Restore map
-      if (mapContainer && staticMapImg) {
-        mapContainer.style.display = originalMapDisplay
-        staticMapImg.remove()
-      }
 
       const imgData = result.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'letter' })
@@ -152,6 +126,8 @@ export function LetterPreviewWizard({
     } catch (err) {
       console.error('PDF generation failed:', err)
     } finally {
+      // Restore map design if it was active
+      if (wasMap) setLetterDesign('map')
       setIsDownloading(false)
     }
   }
