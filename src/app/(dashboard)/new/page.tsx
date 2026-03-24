@@ -427,44 +427,56 @@ function NewBuyerWizard() {
 
           {/* Sidebar + Content layout */}
           <div className="flex gap-6">
-            {/* Vertical channel sidebar */}
-            <div className="w-[160px] flex-shrink-0">
-              <nav className="space-y-1 sticky top-4">
+            {/* Channel sidebar */}
+            <div className="w-[200px] flex-shrink-0">
+              <div className="sticky top-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 mb-3">Channels</p>
                 {([
-                  { id: 'letter' as const, label: 'Letter', icon: Mail },
-                  { id: 'email' as const, label: 'Email', icon: FileText },
-                  { id: 'text' as const, label: 'Text', icon: MessageSquare },
-                  { id: 'call_script' as const, label: 'Call script', icon: Phone },
-                  { id: 'social_post' as const, label: 'Social post', icon: Camera, comingSoon: true },
+                  { id: 'letter' as const, label: 'Letter', desc: 'Direct mail', icon: Mail },
+                  { id: 'email' as const, label: 'Email', desc: 'Cold outreach', icon: FileText },
+                  { id: 'text' as const, label: 'Text', desc: 'SMS message', icon: MessageSquare },
+                  { id: 'call_script' as const, label: 'Call script', desc: 'Phone talk track', icon: Phone },
+                  { id: 'social_post' as const, label: 'Social post', desc: 'Coming soon', icon: Camera, comingSoon: true },
                 ] as const).map((ch) => {
                   const isActive = previewTab === ch.id
                   const isGenerated = ch.id === 'letter'
                     ? true
                     : generatedChannels.some((c) => c.channel === ch.id)
+                  const isComingSoon = 'comingSoon' in ch && ch.comingSoon
                   const Icon = ch.icon
                   return (
                     <button
                       key={ch.id}
-                      onClick={() => !('comingSoon' in ch && ch.comingSoon) && setPreviewTab(ch.id)}
-                      disabled={'comingSoon' in ch && ch.comingSoon}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      onClick={() => !isComingSoon && setPreviewTab(ch.id)}
+                      disabled={isComingSoon}
+                      className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-all border ${
                         isActive
-                          ? 'bg-accent text-foreground font-medium'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                      } ${'comingSoon' in ch && ch.comingSoon ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          ? 'border-[#006AFF]/30 bg-[#006AFF]/5 shadow-sm'
+                          : 'border-transparent hover:border-border hover:bg-accent/50'
+                      } ${isComingSoon ? 'opacity-40 cursor-not-allowed' : ''}`}
                     >
-                      <span className={`h-2 w-2 rounded-full flex-shrink-0 ${
-                        isGenerated && !('comingSoon' in ch && ch.comingSoon) ? 'bg-green-500' : 'bg-zinc-300 dark:bg-zinc-600'
-                      }`} />
-                      <Icon className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{ch.label}</span>
-                      {'comingSoon' in ch && ch.comingSoon && (
-                        <span className="text-[9px] border rounded px-1 py-0 ml-auto">Soon</span>
-                      )}
+                      <div className={`flex items-center justify-center h-9 w-9 rounded-lg flex-shrink-0 ${
+                        isActive ? 'bg-[#006AFF]/10 text-[#006AFF]' : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <Icon className="h-4.5 w-4.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm ${isActive ? 'font-semibold text-foreground' : 'font-medium text-foreground/80'}`}>
+                            {ch.label}
+                          </span>
+                          {!isComingSoon && (
+                            <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${
+                              isGenerated ? 'bg-green-500' : 'bg-zinc-300 dark:bg-zinc-600'
+                            }`} />
+                          )}
+                        </div>
+                        <span className="text-[11px] text-muted-foreground">{ch.desc}</span>
+                      </div>
                     </button>
                   )
                 })}
-              </nav>
+              </div>
             </div>
 
             {/* Main content */}
