@@ -287,12 +287,12 @@ export function LetterPreviewWizard({
 
       {/* Edit Sheet */}
       <Sheet open={editOpen} onOpenChange={setEditOpen}>
-        <SheetContent className="overflow-y-auto sm:max-w-lg">
+        <SheetContent className="overflow-y-auto sm:max-w-lg px-6">
           <SheetHeader>
             <SheetTitle>Edit Letter</SheetTitle>
           </SheetHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-1.5">
+          <div className="space-y-5 py-5">
+            <div className="space-y-2">
               <label className="text-sm font-medium">Letter Body</label>
               <p className="text-xs text-muted-foreground">
                 Use placeholders: {'{{property_address}}'}, {'{{neighborhood}}'}, {'{{buyer_name}}'}, {'{{agent_name}}'}, {'{{agent_phone}}'}
@@ -300,17 +300,17 @@ export function LetterPreviewWizard({
               <textarea
                 value={editBody}
                 onChange={(e) => setEditBody(e.target.value)}
-                rows={16}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none font-mono"
+                rows={18}
+                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-sm font-medium">P.S. (optional)</label>
               <textarea
                 value={editPs}
                 onChange={(e) => setEditPs(e.target.value)}
                 rows={3}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none font-mono"
+                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
                 placeholder="P.S. Add a personal note..."
               />
             </div>
