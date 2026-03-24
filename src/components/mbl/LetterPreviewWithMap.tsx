@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Map, MapMarker } from '@/components/ui/map'
+import { Map } from '@/components/ui/map'
 import { cn } from '@/lib/utils'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
 import type { LetterContent } from './LetterPreview'
@@ -98,41 +98,52 @@ export function LetterPreviewWithMap({
               className="w-full h-full"
               interactive={false}
             >
-              {property?.latitude && property?.longitude && (
-                <MapMarker
-                  longitude={property.longitude}
-                  latitude={property.latitude}
-                >
-                  <div style={{
-                    width: '12px',
-                    height: '12px',
-                    backgroundColor: '#1a2744',
-                    borderRadius: '50%',
-                    border: '2px solid #fff',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                  }} />
-                </MapMarker>
-              )}
             </Map>
-            {/* "Area we're interested in" overlay */}
+            {/* White fade at bottom */}
             <div style={{
               position: 'absolute',
-              bottom: '8px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              backgroundColor: 'rgba(26,39,68,0.9)',
-              color: '#fff',
-              fontSize: '8px',
-              fontFamily: "'Helvetica Neue', Arial, sans-serif",
-              fontWeight: 600,
-              textTransform: 'uppercase' as const,
-              letterSpacing: '0.1em',
-              padding: '3px 10px',
-              borderRadius: '3px',
-              whiteSpace: 'nowrap' as const,
-            }}>
-              Area we&apos;re interested in
-            </div>
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '20%',
+              background: 'linear-gradient(to bottom, transparent 0%, rgba(253,252,250,1) 100%)',
+              pointerEvents: 'none',
+            }} />
+            {/* Hand-drawn circle overlay */}
+            <svg
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '140px',
+                height: '140px',
+                pointerEvents: 'none',
+              }}
+              viewBox="0 0 140 140"
+              fill="none"
+            >
+              <ellipse
+                cx="70"
+                cy="70"
+                rx="58"
+                ry="55"
+                stroke="#1a2744"
+                strokeWidth="2"
+                strokeLinecap="round"
+                fill="rgba(26,39,68,0.06)"
+                style={{
+                  strokeDasharray: '4 3',
+                  filter: 'url(#rough)',
+                }}
+              />
+              <defs>
+                <filter id="rough">
+                  <feTurbulence type="turbulence" baseFrequency="0.03" numOctaves="3" result="noise" />
+                  <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" />
+                </filter>
+              </defs>
+            </svg>
           </div>
 
           {/* Letter content — below map */}
