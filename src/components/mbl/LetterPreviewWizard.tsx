@@ -4,8 +4,9 @@ import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { Button } from '@/components/ui/button'
-import { Download, Mail } from 'lucide-react'
+import { Download, Mail, MapPin, FileText } from 'lucide-react'
 import { LetterPreview } from './LetterPreview'
+import { LetterPreviewWithMap } from './LetterPreviewWithMap'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
 
 interface LetterPreviewWizardProps {
@@ -35,6 +36,7 @@ export function LetterPreviewWizard({
   campaignId,
 }: LetterPreviewWizardProps) {
   const apiFetch = useApiFetch()
+  const [letterDesign, setLetterDesign] = useState<'classic' | 'map'>('classic')
 
   const { data: skills } = useQuery<{ id: string; name: string; description: string }[]>({
     queryKey: ['active-skills'],
@@ -97,11 +99,33 @@ export function LetterPreviewWizard({
         </div>
       )}
 
-      {/* Letter header */}
+      {/* Letter header with design toggle + download */}
       <div className="max-w-[740px] mx-auto flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Mail className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Direct Mail Letter</span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setLetterDesign('classic')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              letterDesign === 'classic'
+                ? 'bg-foreground text-background'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <FileText className="h-3.5 w-3.5" />
+            Classic
+          </button>
+          <button
+            type="button"
+            onClick={() => setLetterDesign('map')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              letterDesign === 'map'
+                ? 'bg-foreground text-background'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            With Map
+          </button>
         </div>
         {campaignId && (
           <Button
@@ -119,14 +143,25 @@ export function LetterPreviewWizard({
       {/* Letter preview */}
       <div className="max-w-[740px] mx-auto">
         <div className="rounded-xl bg-stone-200 dark:bg-[#282524] px-2 pt-2 pb-2">
-          <LetterPreview
-            agent={agent}
-            property={sampleProperty}
-            buyerName={buyerName}
-            bullets={bullets}
-            templateStyle={templateStyle}
-            editedContent={selectedSkillId ? getSkillContent(selectedSkillId) : undefined}
-          />
+          {letterDesign === 'map' ? (
+            <LetterPreviewWithMap
+              agent={agent}
+              property={sampleProperty}
+              buyerName={buyerName}
+              bullets={bullets}
+              templateStyle={templateStyle}
+              editedContent={selectedSkillId ? getSkillContent(selectedSkillId) : undefined}
+            />
+          ) : (
+            <LetterPreview
+              agent={agent}
+              property={sampleProperty}
+              buyerName={buyerName}
+              bullets={bullets}
+              templateStyle={templateStyle}
+              editedContent={selectedSkillId ? getSkillContent(selectedSkillId) : undefined}
+            />
+          )}
         </div>
       </div>
 

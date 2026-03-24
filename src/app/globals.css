@@ -277,4 +277,10 @@ button {
   html.transitioning * {
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease !important;
   }
+  .maplibregl-popup-content {
+    @apply bg-transparent! shadow-none! p-0! rounded-none!;
+  }
+  .maplibregl-popup-tip {
+    @apply hidden!;
+  }
 }
