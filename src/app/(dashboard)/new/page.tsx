@@ -415,20 +415,11 @@ function NewBuyerWizard() {
       )}
 
       {step === 'preview' && !isGeneratingLetters && agent && (
-        <div className="space-y-6">
-          <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Your Magic 5 for {buyerName || campaign?.buyer_name || 'Your Buyer'}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Review all generated content below
-            </p>
-          </div>
-
+        <div>
           {/* Sidebar + Content layout */}
-          <div className="flex gap-6">
+          <div className="flex">
             {/* Channel sidebar */}
-            <div className="w-[240px] flex-shrink-0">
+            <div className="w-[240px] flex-shrink-0 pr-6 border-r border-border">
               <div className="sticky top-4 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 mb-3">Channels</p>
                 {([
@@ -480,7 +471,7 @@ function NewBuyerWizard() {
             </div>
 
             {/* Main content */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 pl-6">
               {/* Letter */}
               {previewTab === 'letter' && (
                 <LetterPreviewWizard
