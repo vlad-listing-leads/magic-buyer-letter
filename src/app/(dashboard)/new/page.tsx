@@ -419,7 +419,7 @@ function NewBuyerWizard() {
           {/* Sidebar + Content layout */}
           <div className="flex">
             {/* Channel sidebar */}
-            <div className="w-[240px] flex-shrink-0 pr-6 border-r border-border">
+            <div className="w-[240px] flex-shrink-0 pr-6 border-r border-border min-h-full">
               <div className="sticky top-4 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 mb-3">Channels</p>
                 {([
