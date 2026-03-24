@@ -247,6 +247,18 @@ button {
   --sidebar-ring: #d6d3d1;
 }
 
+/* Sileo toast — always black bg, white text */
+[data-sileo-toast] {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #333 !important;
+}
+
+[data-sileo-toast] [data-sileo-title],
+[data-sileo-toast] [data-sileo-description] {
+  color: #fff !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
