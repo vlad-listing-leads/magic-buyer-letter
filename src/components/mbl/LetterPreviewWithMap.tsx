@@ -135,25 +135,7 @@ export function LetterPreviewWithMap({
                 className="w-full h-full"
                 interactive={false}
                 styles={{
-                  light: {
-                    version: 8,
-                    sources: {
-                      osm: {
-                        type: 'raster',
-                        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                        tileSize: 256,
-                      },
-                    },
-                    layers: [
-                      {
-                        id: 'osm-tiles',
-                        type: 'raster',
-                        source: 'osm',
-                        minzoom: 0,
-                        maxzoom: 19,
-                      },
-                    ],
-                  },
+                  light: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
                 }}
               />
             )}
