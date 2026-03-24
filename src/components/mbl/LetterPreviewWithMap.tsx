@@ -197,75 +197,70 @@ export function LetterPreviewWithMap({
         ref={cardRef}>
         <CardContent className="px-0 pb-0 pt-0 h-full" ref={contentRef}>
 
-          {/* Large map header — 25% of page */}
-          <div style={{ height: '25%', minHeight: '160px', position: 'relative', overflow: 'hidden' }}>
-            {mapReady && (
-              <Map
-                ref={mapRef}
-                center={mapView.center}
-                zoom={mapView.zoom}
-                theme="light"
-                className="w-full h-full"
-                interactive={false}
-                styles={{
-                  light: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
-                }}
-              />
-            )}
-            {/* Logo overlay top-left */}
-            <div style={{
-              position: 'absolute',
-              top: '14px',
-              left: '18px',
-              zIndex: 1,
-            }}>
+          {/* Header — logo left, map right half */}
+          <div style={{ height: '25%', minHeight: '160px', display: 'flex' }}>
+            {/* Left: logo + agent info */}
+            <div style={{ width: '50%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '16px 20px 16px 36px' }}>
               {agent.logo_url ? (
                 <img src={agent.logo_url} alt={agent.name}
-                  style={{ height: '32px', maxWidth: '140px', objectFit: 'contain' }} />
+                  style={{ height: '36px', maxWidth: '160px', objectFit: 'contain', marginBottom: '10px' }} />
               ) : (
                 <div style={{
-                  fontSize: '10px',
+                  fontSize: '12px',
                   fontFamily: "'Helvetica Neue', Arial, sans-serif",
                   fontWeight: 600,
                   color: '#1a2744',
                   textTransform: 'uppercase' as const,
                   letterSpacing: '0.15em',
-                  backgroundColor: 'rgba(255,255,255,0.85)',
-                  padding: '3px 8px',
-                  borderRadius: '3px',
+                  marginBottom: '10px',
                 }}>
                   {agent.brokerage || agent.name}
                 </div>
               )}
+              <div style={{ fontSize: '9px', fontFamily: "'Helvetica Neue', Arial, sans-serif", color: '#888', lineHeight: '1.6' }}>
+                {agent.name && <div style={{ fontWeight: 600, color: '#555', fontSize: '10px' }}>{agent.name}</div>}
+                {agent.phone && <div>{agent.phone}</div>}
+                {agent.email && <div>{agent.email}</div>}
+              </div>
             </div>
-            {/* White fade at bottom */}
-            <div style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: '20%',
-              background: 'linear-gradient(to bottom, transparent 0%, rgba(253,252,250,1) 100%)',
-              pointerEvents: 'none',
-            }} />
-            {/* "Buyers looking" label */}
-            <div style={{
-              position: 'absolute',
-              bottom: '22%',
-              right: '12px',
-              fontSize: '7px',
-              fontFamily: "'Helvetica Neue', Arial, sans-serif",
-              fontWeight: 600,
-              color: '#1a2744',
-              textTransform: 'uppercase' as const,
-              letterSpacing: '0.06em',
-              backgroundColor: 'rgba(255,255,255,0.85)',
-              padding: '2px 6px',
-              borderRadius: '2px',
-              lineHeight: '1.3',
-              pointerEvents: 'none',
-            }}>
-              Area of interest
+
+            {/* Right: map */}
+            <div style={{ width: '50%', position: 'relative', overflow: 'hidden' }}>
+              {mapReady && (
+                <Map
+                  ref={mapRef}
+                  center={mapView.center}
+                  zoom={mapView.zoom}
+                  theme="light"
+                  className="w-full h-full"
+                  interactive={false}
+                  styles={{
+                    light: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+                  }}
+                />
+              )}
+              {/* Fade left edge into paper */}
+              <div style={{
+                position: 'absolute', top: 0, left: 0, bottom: 0, width: '20%',
+                background: 'linear-gradient(to right, rgba(253,252,250,1) 0%, transparent 100%)',
+                pointerEvents: 'none',
+              }} />
+              {/* Fade bottom edge */}
+              <div style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0, height: '15%',
+                background: 'linear-gradient(to bottom, transparent 0%, rgba(253,252,250,1) 100%)',
+                pointerEvents: 'none',
+              }} />
+              {/* Label */}
+              <div style={{
+                position: 'absolute', bottom: '16%', right: '8px',
+                fontSize: '6.5px', fontFamily: "'Helvetica Neue', Arial, sans-serif",
+                fontWeight: 600, color: '#1a2744', textTransform: 'uppercase' as const,
+                letterSpacing: '0.06em', backgroundColor: 'rgba(255,255,255,0.85)',
+                padding: '2px 5px', borderRadius: '2px', pointerEvents: 'none',
+              }}>
+                Area of interest
+              </div>
             </div>
           </div>
 
@@ -329,8 +324,6 @@ export function LetterPreviewWithMap({
                 <div style={{ lineHeight: '1.4', fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
                   <p style={{ fontWeight: 600, fontSize: '13px', color: '#1a2744' }}>{agent.name}</p>
                   {agent.brokerage && <p style={{ fontSize: '10.5px', color: '#777' }}>{agent.brokerage}</p>}
-                  {agent.phone && <p style={{ fontSize: '10.5px', color: '#777' }}>{agent.phone}</p>}
-                  {agent.email && <p style={{ fontSize: '10.5px', color: '#777' }}>{agent.email}</p>}
                   {agent.license_number && (
                     <p style={{ fontSize: '9px', color: '#aaa', letterSpacing: '0.03em' }}>License #{agent.license_number}</p>
                   )}
