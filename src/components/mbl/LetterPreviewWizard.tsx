@@ -110,14 +110,13 @@ export function LetterPreviewWizard({
         try {
           const img = document.createElement('img')
           img.src = c.toDataURL('image/png')
-          img.style.cssText = window.getComputedStyle(c).cssText
           img.style.position = 'absolute'
           img.style.inset = '0'
           img.style.width = '100%'
           img.style.height = '100%'
           img.style.objectFit = 'cover'
+          img.style.zIndex = '999'
           c.parentElement?.insertBefore(img, c)
-          c.style.visibility = 'hidden'
           swaps.push({ canvas: c, img })
         } catch {
           // canvas tainted, skip
@@ -142,9 +141,8 @@ export function LetterPreviewWizard({
         },
       })
 
-      // Restore canvases
-      swaps.forEach(({ canvas, img }) => {
-        canvas.style.visibility = ''
+      // Remove temp images
+      swaps.forEach(({ img }) => {
         img.remove()
       })
 
