@@ -10,6 +10,7 @@ import type { LetterContent } from './LetterPreview'
 interface LetterPreviewWithMapProps {
   agent: MblAgent
   property: MblProperty | null
+  allProperties?: MblProperty[]
   buyerName: string
   bullets: { b1: string; b2: string; b3: string }
   templateStyle: TemplateStyle
@@ -17,9 +18,38 @@ interface LetterPreviewWithMapProps {
   className?: string
 }
 
+/** Calculate centroid and zoom level from property locations */
+function computeMapView(properties: MblProperty[]): { center: [number, number]; zoom: number } {
+  const withCoords = properties.filter((p) => p.latitude && p.longitude)
+  if (withCoords.length === 0) return { center: [-71.06, 42.36], zoom: 9 }
+
+  const lats = withCoords.map((p) => p.latitude!)
+  const lngs = withCoords.map((p) => p.longitude!)
+
+  const centerLat = lats.reduce((a, b) => a + b, 0) / lats.length
+  const centerLng = lngs.reduce((a, b) => a + b, 0) / lngs.length
+
+  const latSpread = Math.max(...lats) - Math.min(...lats)
+  const lngSpread = Math.max(...lngs) - Math.min(...lngs)
+  const maxSpread = Math.max(latSpread, lngSpread)
+
+  // Rough zoom calculation based on geographic spread
+  let zoom = 12
+  if (maxSpread > 2) zoom = 7
+  else if (maxSpread > 1) zoom = 8
+  else if (maxSpread > 0.5) zoom = 9
+  else if (maxSpread > 0.2) zoom = 10
+  else if (maxSpread > 0.1) zoom = 11
+  else if (maxSpread > 0.05) zoom = 12
+  else zoom = 13
+
+  return { center: [centerLng, centerLat], zoom }
+}
+
 export function LetterPreviewWithMap({
   agent,
   property,
+  allProperties,
   buyerName,
   editedContent,
   className,
@@ -78,8 +108,7 @@ export function LetterPreviewWithMap({
 
   const paragraphs = body.split('\n').filter(Boolean)
 
-  const lat = property?.latitude ?? 42.36
-  const lng = property?.longitude ?? -71.06
+  const mapView = computeMapView(allProperties ?? (property ? [property] : []))
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -100,8 +129,8 @@ export function LetterPreviewWithMap({
           <div style={{ height: '25%', minHeight: '160px', position: 'relative', overflow: 'hidden' }}>
             {mapReady && (
               <Map
-                center={[lng, lat]}
-                zoom={9}
+                center={mapView.center}
+                zoom={mapView.zoom}
                 theme="light"
                 className="w-full h-full"
                 interactive={false}

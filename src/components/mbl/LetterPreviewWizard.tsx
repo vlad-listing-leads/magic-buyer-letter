@@ -148,6 +148,7 @@ export function LetterPreviewWizard({
             <LetterPreviewWithMap
               agent={agent}
               property={sampleProperty}
+              allProperties={properties}
               buyerName={buyerName}
               bullets={bullets}
               templateStyle={templateStyle}

@@ -99,63 +99,16 @@ export function LetterPreview({
           {/* Inset stationery border */}
           <div className="h-full" style={{ margin: '18px', border: '0.5px solid #e2ded8', padding: '0 36px 32px 36px' }}>
 
-            {/* Letterhead — logo left, mini map right */}
-            <div className="flex items-start justify-between pt-7 pb-2">
-              <div className="flex-shrink-0">
-                {agent.logo_url ? (
-                  <img src={agent.logo_url} alt={agent.name} className="h-10 max-w-[160px] object-contain" />
-                ) : (
-                  <div className="text-[12px] tracking-[0.2em] uppercase"
-                    style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 400, color: '#555' }}>
-                    {agent.brokerage || agent.name}
-                  </div>
-                )}
-              </div>
-              {/* Mini static map — free OSM tiles, no API key */}
-              {property?.latitude && property?.longitude && (() => {
-                const z = 14
-                const lat = property.latitude!
-                const lng = property.longitude!
-                const x = Math.floor(((lng + 180) / 360) * Math.pow(2, z))
-                const y = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z))
-                return (
-                  <div className="flex-shrink-0 relative" style={{ width: '96px', height: '80px', borderRadius: '5px', overflow: 'hidden', border: '0.5px solid #e2ded8' }}>
-                    <img
-                      src={`https://tile.openstreetmap.org/${z}/${x}/${y}.png`}
-                      alt="Location"
-                      className="w-full h-full object-cover"
-                      style={{ opacity: 0.85, filter: 'saturate(0.7) brightness(1.05)' }}
-                    />
-                    {/* Arrow + label overlay */}
-                    <div style={{
-                      position: 'absolute', bottom: '4px', left: '0', right: '0',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    }}>
-                      {/* Curved arrow pointing down */}
-                      <svg width="16" height="12" viewBox="0 0 16 12" style={{ marginBottom: '1px' }}>
-                        <path d="M8 0 C8 6, 8 6, 8 9" stroke="#1a2744" strokeWidth="1.2" fill="none" />
-                        <path d="M5.5 7 L8 10 L10.5 7" stroke="#1a2744" strokeWidth="1.2" fill="none" strokeLinejoin="round" />
-                      </svg>
-                      <div style={{
-                        fontSize: '5.5px',
-                        fontFamily: "'Helvetica Neue', Arial, sans-serif",
-                        fontWeight: 600,
-                        color: '#1a2744',
-                        textTransform: 'uppercase' as const,
-                        letterSpacing: '0.04em',
-                        backgroundColor: 'rgba(255,255,255,0.85)',
-                        padding: '1px 3px',
-                        borderRadius: '2px',
-                        lineHeight: '1.2',
-                        textAlign: 'center' as const,
-                        whiteSpace: 'nowrap' as const,
-                      }}>
-                        Area we&apos;re<br />interested in
-                      </div>
-                    </div>
-                  </div>
-                )
-              })()}
+            {/* Letterhead — centered logo */}
+            <div className="flex items-center justify-center pt-7 pb-2">
+              {agent.logo_url ? (
+                <img src={agent.logo_url} alt={agent.name} className="h-10 max-w-[160px] object-contain" />
+              ) : (
+                <div className="text-[12px] tracking-[0.2em] uppercase text-center"
+                  style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 400, color: '#555' }}>
+                  {agent.brokerage || agent.name}
+                </div>
+              )}
             </div>
             {/* Ornamental divider */}
             <div className="flex items-center justify-center gap-1.5 py-3 mb-3">
