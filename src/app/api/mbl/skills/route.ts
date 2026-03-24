@@ -8,7 +8,7 @@ export const GET = withErrorHandler(async () => {
 
   const { data, error } = await admin
     .from('mbl_skills')
-    .select('id, name, description')
+    .select('id, name, description, channel')
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
 

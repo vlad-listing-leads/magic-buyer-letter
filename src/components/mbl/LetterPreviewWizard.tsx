@@ -38,7 +38,7 @@ export function LetterPreviewWizard({
   const apiFetch = useApiFetch()
   const [letterDesign, setLetterDesign] = useState<'classic' | 'map'>('classic')
 
-  const { data: skills } = useQuery<{ id: string; name: string; description: string }[]>({
+  const { data: skills } = useQuery<{ id: string; name: string; description: string; channel: string }[]>({
     queryKey: ['active-skills'],
     queryFn: async () => {
       const res = await apiFetch('/api/mbl/skills')
@@ -47,7 +47,8 @@ export function LetterPreviewWizard({
     },
   })
 
-  const activeSkills = skills ?? []
+  // Only show letter skills on the letter preview
+  const activeSkills = (skills ?? []).filter((s) => s.channel === 'letter')
   const hasMultipleSkills = activeSkills.length > 1
 
   React.useEffect(() => {
