@@ -270,7 +270,7 @@ export function LetterPreviewWithMap({
           </div>
 
           {/* Letter content — below map */}
-          <div style={{ padding: '16px 44px 24px 44px' }}>
+          <div style={{ padding: '16px 52px 24px 52px' }}>
             {/* Letter body */}
             <div style={{ fontSize: '13px', lineHeight: '1.25', color: '#333', letterSpacing: '0.01em' }}>
               {paragraphs.map((para, i) => {
