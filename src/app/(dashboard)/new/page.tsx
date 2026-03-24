@@ -8,17 +8,14 @@ import { SmartInput } from '@/components/mbl/SmartInput'
 import { BuyerProfile } from '@/components/mbl/BuyerProfile'
 import { PipelineLoading } from '@/components/mbl/PipelineLoading'
 import { LetterPreviewWizard } from '@/components/mbl/LetterPreviewWizard'
-import { ChannelTabs } from '@/components/mbl/ChannelTabs'
 import { ChannelContent } from '@/components/mbl/ChannelContent'
-import { ChannelSidebar } from '@/components/mbl/ChannelSidebar'
-import type { ChannelTab } from '@/components/mbl/ChannelTabs'
 import type { MblCampaignChannel, ChannelType } from '@/types'
 import { AudienceSelection } from '@/components/mbl/AudienceSelection'
 import { CampaignSummary } from '@/components/mbl/CampaignSummary'
 import { ChannelSelector } from '@/components/mbl/ChannelSelector'
 import { generateBullets } from '@/lib/bullets'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, ArrowRight, Download } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Download, Mail, FileText, MessageSquare, Phone, Camera } from 'lucide-react'
 import { sileo } from 'sileo'
 import { cn } from '@/lib/utils'
 import type {
@@ -85,7 +82,7 @@ function NewBuyerWizard() {
   const [isGeneratingLetters, setIsGeneratingLetters] = useState(false)
   const [propertyCount, setPropertyCount] = useState<number | null>(null)
   const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set(['letter']))
-  const [previewTab, setPreviewTab] = useState<ChannelTab>('letter')
+  const [previewTab, setPreviewTab] = useState<'letter' | 'email' | 'text' | 'call_script' | 'social_post'>('letter')
 
   // Fetch campaign + properties when we have a campaignId and need them
   const needsData = step === 'preview' || step === 'audience' || step === 'review' || step === 'confirmation'
@@ -428,50 +425,87 @@ function NewBuyerWizard() {
             </p>
           </div>
 
-          <ChannelTabs
-            activeTab={previewTab}
-            onTabChange={setPreviewTab}
-            letterSent={false}
-            channels={generatedChannels}
-          />
-
-          {/* Letter tab */}
-          {previewTab === 'letter' && (
-            <>
-              <LetterPreviewWizard
-                agent={agent}
-                properties={properties}
-                buyerName={buyerName || campaign?.buyer_name || ''}
-                bullets={bullets}
-                templateStyle={templateStyle}
-                onTemplateChange={setTemplateStyle}
-                selectedSkillId={selectedSkillId}
-                onSkillChange={setSelectedSkillId}
-                onBack={() => setStep('audience')}
-                onContinue={() => setStep('review')}
-                campaignId={campaignId}
-              />
-            </>
-          )}
-
-          {/* Email / Text / Call Script tabs */}
-          {(previewTab === 'email' || previewTab === 'text' || previewTab === 'call_script') && campaignId && (
-            <div className="max-w-[740px] mx-auto">
-              <ChannelContent
-                campaignId={campaignId}
-                channel={previewTab as ChannelType}
-                channelData={generatedChannels.find((c) => c.channel === previewTab)}
-              />
+          {/* Sidebar + Content layout */}
+          <div className="flex gap-6">
+            {/* Vertical channel sidebar */}
+            <div className="w-[160px] flex-shrink-0">
+              <nav className="space-y-1 sticky top-4">
+                {([
+                  { id: 'letter' as const, label: 'Letter', icon: Mail },
+                  { id: 'email' as const, label: 'Email', icon: FileText },
+                  { id: 'text' as const, label: 'Text', icon: MessageSquare },
+                  { id: 'call_script' as const, label: 'Call script', icon: Phone },
+                  { id: 'social_post' as const, label: 'Social post', icon: Camera, comingSoon: true },
+                ] as const).map((ch) => {
+                  const isActive = previewTab === ch.id
+                  const isGenerated = ch.id === 'letter'
+                    ? true
+                    : generatedChannels.some((c) => c.channel === ch.id)
+                  const Icon = ch.icon
+                  return (
+                    <button
+                      key={ch.id}
+                      onClick={() => !('comingSoon' in ch && ch.comingSoon) && setPreviewTab(ch.id)}
+                      disabled={'comingSoon' in ch && ch.comingSoon}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-accent text-foreground font-medium'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                      } ${'comingSoon' in ch && ch.comingSoon ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <span className={`h-2 w-2 rounded-full flex-shrink-0 ${
+                        isGenerated && !('comingSoon' in ch && ch.comingSoon) ? 'bg-green-500' : 'bg-zinc-300 dark:bg-zinc-600'
+                      }`} />
+                      <Icon className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{ch.label}</span>
+                      {'comingSoon' in ch && ch.comingSoon && (
+                        <span className="text-[9px] border rounded px-1 py-0 ml-auto">Soon</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </nav>
             </div>
-          )}
 
-          {/* Social post — coming soon */}
-          {previewTab === 'social_post' && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-lg font-semibold">Social Post</p>
-              <p className="text-sm text-muted-foreground mt-1">Coming soon</p>
+            {/* Main content */}
+            <div className="flex-1 min-w-0">
+              {/* Letter */}
+              {previewTab === 'letter' && (
+                <LetterPreviewWizard
+                  agent={agent}
+                  properties={properties}
+                  buyerName={buyerName || campaign?.buyer_name || ''}
+                  bullets={bullets}
+                  templateStyle={templateStyle}
+                  onTemplateChange={setTemplateStyle}
+                  selectedSkillId={selectedSkillId}
+                  onSkillChange={setSelectedSkillId}
+                  onBack={() => setStep('audience')}
+                  onContinue={() => setStep('review')}
+                  campaignId={campaignId}
+                />
+              )}
+
+              {/* Email / Text / Call Script */}
+              {(previewTab === 'email' || previewTab === 'text' || previewTab === 'call_script') && campaignId && (
+                <div className="max-w-[740px]">
+                  <ChannelContent
+                    campaignId={campaignId}
+                    channel={previewTab as ChannelType}
+                    channelData={generatedChannels.find((c) => c.channel === previewTab)}
+                  />
+                </div>
+              )}
+
+              {/* Social post — coming soon */}
+              {previewTab === 'social_post' && (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <p className="text-lg font-semibold">Social Post</p>
+                  <p className="text-sm text-muted-foreground mt-1">Coming soon</p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
 
