@@ -247,18 +247,6 @@ export function LetterPreviewWithMap({
                 zoom={mapView.zoom}
               />
 
-              {/* Fade left edge into paper */}
-              <div style={{
-                position: 'absolute', top: 0, left: 0, bottom: 0, width: '20%',
-                background: 'linear-gradient(to right, rgba(253,252,250,1) 0%, transparent 100%)',
-                pointerEvents: 'none',
-              }} />
-              {/* Fade bottom edge */}
-              <div style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0, height: '15%',
-                background: 'linear-gradient(to bottom, transparent 0%, rgba(253,252,250,1) 100%)',
-                pointerEvents: 'none',
-              }} />
               {/* Label */}
               <div style={{
                 position: 'absolute', bottom: '16%', right: '8px',
