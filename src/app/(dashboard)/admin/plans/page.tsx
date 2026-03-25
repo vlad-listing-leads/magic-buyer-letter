@@ -19,6 +19,7 @@ interface AvailablePlan {
   memberstack_plan_id: string
   plan_name: string
   type: string
+  is_legacy?: boolean
 }
 
 export default function AdminPlansPage() {
@@ -148,6 +149,11 @@ export default function AdminPlansPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium">{plan.plan_name}</p>
+                        {plan.is_legacy && (
+                          <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700 dark:bg-orange-950 dark:text-orange-300">
+                            Legacy
+                          </span>
+                        )}
                         <Badge variant="outline" className="text-xs">
                           {plan.type}
                         </Badge>

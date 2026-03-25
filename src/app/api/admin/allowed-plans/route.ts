@@ -36,16 +36,16 @@ export const GET = withAdminGuard(async () => {
       .order('display_order'),
   ])
 
-  const availablePlans: Array<{ memberstack_plan_id: string; plan_name: string; type: string }> = []
+  const availablePlans: Array<{ memberstack_plan_id: string; plan_name: string; type: string; is_legacy: boolean }> = []
 
   if (soloResult.data) {
     for (const row of soloResult.data) {
       const solo = row.solo_plans as unknown as { plan_name: string; tier: string; is_legacy: boolean }
-      if (solo.is_legacy) continue
       availablePlans.push({
         memberstack_plan_id: row.memberstack_plan_id,
         plan_name: `${solo.plan_name} (${row.billing_interval})`,
         type: 'solo',
+        is_legacy: solo.is_legacy ?? false,
       })
     }
   }
@@ -57,6 +57,7 @@ export const GET = withAdminGuard(async () => {
         memberstack_plan_id: row.memberstack_plan_id,
         plan_name: `${tier.team_plans.plan_name} - ${tier.seat_limit} seats (${row.billing_interval})`,
         type: 'team',
+        is_legacy: false,
       })
     }
   }
