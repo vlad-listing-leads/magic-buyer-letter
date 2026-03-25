@@ -180,13 +180,17 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       : ''
   const canDelete = campaign.status !== 'sent' && campaign.status !== 'sending' && campaign.status !== 'delivered'
 
-  // Get letter content — campaign-level template (new) or fall back to first property's content (old campaigns)
-  const letterContent = campaign.letter_templates
+  // Get letter content — prefer property personalized_content (filled), fall back to campaign templates
+  const contentProperty = properties.find(p => p.personalized_content) ?? null
+  const propertyContent = contentProperty?.personalized_content as { body?: string; ps?: string } | null
+  const campaignTemplate = campaign.letter_templates
     ? Object.values(campaign.letter_templates)[0] ?? null
     : null
-  const fallbackProperty = !letterContent
-    ? properties.find(p => p.personalized_content) ?? null
-    : null
+  // Use property content if it has a body (old campaigns with filled templates),
+  // otherwise use campaign-level template (new campaigns without personalization)
+  const letterContent = propertyContent?.body
+    ? { body: propertyContent.body, ps: propertyContent.ps }
+    : campaignTemplate
 
 
   // Pre-send metrics
@@ -527,7 +531,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                         <LetterPreviewWithMap
                           agent={agent}
                           letterContent={letterContent}
-                          property={fallbackProperty}
                           allProperties={properties}
                           buyerName={campaign.buyer_name}
                           bullets={{ b1: campaign.bullet_1, b2: campaign.bullet_2, b3: campaign.bullet_3 }}
@@ -545,7 +548,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                         <LetterPreview
                           agent={agent}
                           letterContent={letterContent}
-                          property={fallbackProperty}
                           buyerName={campaign.buyer_name}
                           bullets={{ b1: campaign.bullet_1, b2: campaign.bullet_2, b3: campaign.bullet_3 }}
                           templateStyle={campaign.template_style}

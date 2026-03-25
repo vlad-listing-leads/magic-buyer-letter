@@ -19,9 +19,9 @@ interface CampaignContext {
 function buildSystemPrompt(skillInstructions: string): string {
   return `${skillInstructions}
 
-Available placeholders (app replaces per recipient): {{property_address}}, {{neighborhood}}, {{buyer_name}}, {{agent_name}}, {{agent_phone}}, {{bullet_1}}, {{bullet_2}}, {{bullet_3}}
-
-No homeowner names available.
+Write the letter with the actual buyer name and details provided — do NOT use placeholders.
+This is a single letter that goes to all recipients (no per-address personalization).
+Do not include homeowner names or property addresses — keep it general to the area.
 
 JSON only: {"body": "content with \\n for breaks", "ps": "or empty string"}`
 }
@@ -68,7 +68,7 @@ export async function generateLetterForSkill(
   logger.info({ skill: skillInstructions.slice(0, 80) }, 'Generating letter')
   const systemPrompt = buildSystemPrompt(skillInstructions)
   // User prompt: just the data, no instructions
-  const userPrompt = `${context.buyer_name}, ${context.area}, {{bullet_1}}=${context.bullet_1}, {{bullet_2}}=${context.bullet_2}, {{bullet_3}}=${context.bullet_3}`
+  const userPrompt = `Buyer: ${context.buyer_name}\nArea: ${context.area}\nKey points:\n- ${context.bullet_1}\n- ${context.bullet_2}\n- ${context.bullet_3}`
   return callClaude(systemPrompt, userPrompt)
 }
 
