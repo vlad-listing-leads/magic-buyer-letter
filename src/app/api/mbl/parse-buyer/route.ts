@@ -61,8 +61,8 @@ If no buyer name is found, use "My Buyer".`,
 
     if (!res.ok) {
       const errBody = await res.text()
-      logger.error({ status: res.status, body: errBody }, 'Claude parse error')
-      return apiError('Failed to parse buyer description', 500)
+      logger.error({ status: res.status, body: errBody, hasKey: !!env.anthropic.apiKey, keyPrefix: env.anthropic.apiKey?.slice(0, 10) }, 'Claude parse error')
+      return apiError(`Failed to parse buyer description (${res.status})`, 500)
     }
 
     const result = await res.json()

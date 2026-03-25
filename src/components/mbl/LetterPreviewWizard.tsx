@@ -90,11 +90,23 @@ export function LetterPreviewWizard({
     : null
 
   // Resolve current content: custom edit > skill content > campaign template > property content
+  const skillContent = selectedSkillId ? getSkillContent(selectedSkillId) : undefined
   const currentContent = customContent
-    ?? (selectedSkillId ? getSkillContent(selectedSkillId) : undefined)
+    ?? skillContent
     ?? (firstTemplate ? { body: firstTemplate.body, ps: firstTemplate.ps ?? '' } : undefined)
     ?? (sampleProperty?.personalized_content as { body: string; ps: string } | null)
     ?? { body: '', ps: '' }
+
+  // Debug — remove after fixing
+  console.log('[LetterWizard]', {
+    hasLetterTemplates: !!letterTemplates,
+    templateKeys: letterTemplates ? Object.keys(letterTemplates) : [],
+    selectedSkillId,
+    skillContent: skillContent ? 'found' : 'none',
+    firstTemplate: firstTemplate ? firstTemplate.body?.slice(0, 50) : 'none',
+    propertyContent: sampleProperty?.personalized_content ? 'found' : 'none',
+    finalBody: currentContent?.body?.slice(0, 50) || 'EMPTY',
+  })
 
   const handleOpenEdit = () => {
     setEditBody(currentContent?.body ?? '')
