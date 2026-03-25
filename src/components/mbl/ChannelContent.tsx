@@ -1,10 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { Button } from '@/components/ui/button'
 import { MergeVariableHighlight } from './MergeVariableHighlight'
-import { Copy, Loader2, Sparkles, RotateCcw } from 'lucide-react'
+import { Copy, Loader2, Sparkles, RotateCcw, Pencil, Check, X } from 'lucide-react'
 import { sileo } from 'sileo'
 import type { MblCampaignChannel, ChannelType } from '@/types'
 
@@ -23,6 +24,9 @@ const CHANNEL_LABELS: Record<ChannelType, string> = {
 export function ChannelContent({ campaignId, channel, channelData }: ChannelContentProps) {
   const apiFetch = useApiFetch()
   const queryClient = useQueryClient()
+  const [isEditing, setIsEditing] = useState(false)
+  const [editSubject, setEditSubject] = useState('')
+  const [editBody, setEditBody] = useState('')
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -40,6 +44,40 @@ export function ChannelContent({ campaignId, channel, channelData }: ChannelCont
     },
     onError: () => sileo.error({ title: `Failed to generate ${CHANNEL_LABELS[channel].toLowerCase()}` }),
   })
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!channelData) return
+      const res = await apiFetch(`/api/mbl/campaigns/${campaignId}/channels`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelId: channelData.id,
+          body: editBody,
+          ...(channel === 'email' ? { subject: editSubject } : {}),
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaign-channels', campaignId] })
+      setIsEditing(false)
+      sileo.success({ title: `${CHANNEL_LABELS[channel]} saved` })
+    },
+    onError: () => sileo.error({ title: 'Failed to save changes' }),
+  })
+
+  const startEditing = () => {
+    if (!channelData) return
+    setEditSubject(channelData.subject ?? '')
+    setEditBody(channelData.body)
+    setIsEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setIsEditing(false)
+  }
 
   const copyToClipboard = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text)
@@ -72,84 +110,200 @@ export function ChannelContent({ campaignId, channel, channelData }: ChannelCont
     )
   }
 
-  // Email layout — subject header + body + copy buttons at bottom
+  // Email layout
   if (channel === 'email') {
     return (
       <div className="space-y-3">
         <div className="rounded-xl border border-border bg-card overflow-hidden">
-          {/* Subject line header */}
-          {channelData.subject && (
+          {/* Subject line */}
+          {isEditing ? (
+            <div className="border-b border-border px-6 py-3">
+              <span className="text-sm text-muted-foreground mr-3">Subject:</span>
+              <input
+                value={editSubject}
+                onChange={(e) => setEditSubject(e.target.value)}
+                className="bg-transparent text-[15px] font-medium outline-none border-b border-dashed border-muted-foreground/30 focus:border-foreground w-[calc(100%-70px)]"
+              />
+            </div>
+          ) : channelData.subject ? (
             <div className="border-b border-border px-6 py-4">
               <span className="text-sm text-muted-foreground mr-3">Subject:</span>
               <span className="text-[15px] font-medium">
                 <MergeVariableHighlight text={channelData.subject} />
               </span>
             </div>
-          )}
+          ) : null}
 
-          {/* Email body */}
+          {/* Body */}
           <div className="px-6 py-6">
-            <div className="space-y-4 text-[15px] leading-relaxed text-foreground/90">
-              {channelData.body.split('\n').map((line, i) => {
-                if (!line.trim()) return <div key={i} className="h-3" />
-                return (
-                  <p key={i}>
-                    <MergeVariableHighlight text={line} />
-                  </p>
-                )
-              })}
-            </div>
+            {isEditing ? (
+              <textarea
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+                rows={12}
+                className="w-full bg-transparent text-[15px] leading-relaxed text-foreground/90 outline-none resize-y min-h-[200px] font-[inherit]"
+              />
+            ) : (
+              <div className="space-y-4 text-[15px] leading-relaxed text-foreground/90">
+                {channelData.body.split('\n').map((line, i) => {
+                  if (!line.trim()) return <div key={i} className="h-3" />
+                  return (
+                    <p key={i}>
+                      <MergeVariableHighlight text={line} />
+                    </p>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Bottom bar with copy buttons */}
+          {/* Bottom bar */}
           <div className="border-t border-border px-6 py-3 flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => generateMutation.mutate()}
-              disabled={generateMutation.isPending}
-              className="text-muted-foreground text-xs gap-1.5"
-            >
-              <RotateCcw className="h-3 w-3" /> Regenerate
-            </Button>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => copyToClipboard(channelData.body, 'Body')}
-                className="text-xs gap-1.5"
+                onClick={() => generateMutation.mutate()}
+                disabled={generateMutation.isPending || isEditing}
+                className="text-muted-foreground text-xs gap-1.5"
               >
-                <Copy className="h-3 w-3" /> Copy body
+                <RotateCcw className="h-3 w-3" /> Regenerate
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  copyToClipboard(
-                    `Subject: ${channelData.subject}\n\n${channelData.body}`,
-                    'Email'
-                  )
-                }
-                className="text-xs gap-1.5"
-              >
-                <Copy className="h-3 w-3" /> Copy all
-              </Button>
+              {isEditing ? (
+                <>
+                  <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="text-xs gap-1.5 h-7">
+                    {saveMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                    Save
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={cancelEditing} className="text-xs gap-1.5 h-7">
+                    <X className="h-3 w-3" /> Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={startEditing} className="text-muted-foreground text-xs gap-1.5">
+                  <Pencil className="h-3 w-3" /> Edit
+                </Button>
+              )}
             </div>
+            {!isEditing && (
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(channelData.body, 'Body')} className="text-xs gap-1.5">
+                  <Copy className="h-3 w-3" /> Copy body
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(`Subject: ${channelData.subject}\n\n${channelData.body}`, 'Email')}
+                  className="text-xs gap-1.5"
+                >
+                  <Copy className="h-3 w-3" /> Copy all
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
     )
   }
 
-  // Text message layout — single bubble-like card
+  // Text message layout
   if (channel === 'text') {
     return (
       <div className="space-y-3">
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="px-6 py-6">
+            {isEditing ? (
+              <textarea
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+                rows={6}
+                className="w-full bg-transparent text-[15px] leading-relaxed text-foreground/90 outline-none resize-y min-h-[120px] font-[inherit]"
+              />
+            ) : (
+              <div className="space-y-4 text-[15px] leading-relaxed text-foreground/90">
+                {channelData.body.split('\n').map((line, i) => {
+                  if (!line.trim()) return <div key={i} className="h-3" />
+                  return (
+                    <p key={i}>
+                      <MergeVariableHighlight text={line} />
+                    </p>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom bar */}
+          <div className="border-t border-border px-6 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => generateMutation.mutate()}
+                  disabled={generateMutation.isPending || isEditing}
+                  className="text-muted-foreground text-xs gap-1.5"
+                >
+                  <RotateCcw className="h-3 w-3" /> Regenerate
+                </Button>
+                {isEditing ? (
+                  <>
+                    <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="text-xs gap-1.5 h-7">
+                      {saveMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      Save
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={cancelEditing} className="text-xs gap-1.5 h-7">
+                      <X className="h-3 w-3" /> Cancel
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="ghost" size="sm" onClick={startEditing} className="text-muted-foreground text-xs gap-1.5">
+                    <Pencil className="h-3 w-3" /> Edit
+                  </Button>
+                )}
+              </div>
+              {!isEditing && (
+                <Button variant="outline" size="sm" onClick={() => copyToClipboard(channelData.body, 'Text')} className="text-xs gap-1.5">
+                  <Copy className="h-3 w-3" /> Copy
+                </Button>
+              )}
+            </div>
+            {!isEditing && (
+              <p className="text-xs text-muted-foreground mt-2">
+                {channelData.body.length} chars · Follow up in 48 hrs if no response
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Call script layout
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-6 py-6">
+          {isEditing ? (
+            <textarea
+              value={editBody}
+              onChange={(e) => setEditBody(e.target.value)}
+              rows={16}
+              className="w-full bg-transparent text-[15px] leading-relaxed text-foreground/90 outline-none resize-y min-h-[300px] font-[inherit]"
+            />
+          ) : (
             <div className="space-y-4 text-[15px] leading-relaxed text-foreground/90">
               {channelData.body.split('\n').map((line, i) => {
                 if (!line.trim()) return <div key={i} className="h-3" />
+
+                if (line.match(/^\[.+\]$/)) {
+                  return (
+                    <p key={i} className="font-semibold text-amber-600 dark:text-amber-400 text-xs uppercase tracking-widest pt-2">
+                      {line}
+                    </p>
+                  )
+                }
+
                 return (
                   <p key={i}>
                     <MergeVariableHighlight text={line} />
@@ -157,84 +311,42 @@ export function ChannelContent({ campaignId, channel, channelData }: ChannelCont
                 )
               })}
             </div>
-          </div>
-
-          {/* Bottom bar */}
-          <div className="border-t border-border px-6 py-3">
-            <div className="flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => generateMutation.mutate()}
-                disabled={generateMutation.isPending}
-                className="text-muted-foreground text-xs gap-1.5"
-              >
-                <RotateCcw className="h-3 w-3" /> Regenerate
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => copyToClipboard(channelData.body, 'Text')}
-                className="text-xs gap-1.5"
-              >
-                <Copy className="h-3 w-3" /> Copy
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {channelData.body.length} chars · Follow up in 48 hrs if no response
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Call script layout — sections with colored headers
-  return (
-    <div className="space-y-3">
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="px-6 py-6">
-          <div className="space-y-4 text-[15px] leading-relaxed text-foreground/90">
-            {channelData.body.split('\n').map((line, i) => {
-              if (!line.trim()) return <div key={i} className="h-3" />
-
-              // Section headers like [OPENING], [IF YES — THE HOOK]
-              if (line.match(/^\[.+\]$/)) {
-                return (
-                  <p key={i} className="font-semibold text-amber-600 dark:text-amber-400 text-xs uppercase tracking-widest pt-2">
-                    {line}
-                  </p>
-                )
-              }
-
-              return (
-                <p key={i}>
-                  <MergeVariableHighlight text={line} />
-                </p>
-              )
-            })}
-          </div>
+          )}
         </div>
 
         {/* Bottom bar */}
         <div className="border-t border-border px-6 py-3 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => generateMutation.mutate()}
-            disabled={generateMutation.isPending}
-            className="text-muted-foreground text-xs gap-1.5"
-          >
-            <RotateCcw className="h-3 w-3" /> Regenerate
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => copyToClipboard(channelData.body, 'Call Script')}
-            className="text-xs gap-1.5"
-          >
-            <Copy className="h-3 w-3" /> Copy
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => generateMutation.mutate()}
+              disabled={generateMutation.isPending || isEditing}
+              className="text-muted-foreground text-xs gap-1.5"
+            >
+              <RotateCcw className="h-3 w-3" /> Regenerate
+            </Button>
+            {isEditing ? (
+              <>
+                <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="text-xs gap-1.5 h-7">
+                  {saveMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                  Save
+                </Button>
+                <Button variant="ghost" size="sm" onClick={cancelEditing} className="text-xs gap-1.5 h-7">
+                  <X className="h-3 w-3" /> Cancel
+                </Button>
+              </>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={startEditing} className="text-muted-foreground text-xs gap-1.5">
+                <Pencil className="h-3 w-3" /> Edit
+              </Button>
+            )}
+          </div>
+          {!isEditing && (
+            <Button variant="outline" size="sm" onClick={() => copyToClipboard(channelData.body, 'Call Script')} className="text-xs gap-1.5">
+              <Copy className="h-3 w-3" /> Copy
+            </Button>
+          )}
         </div>
       </div>
     </div>

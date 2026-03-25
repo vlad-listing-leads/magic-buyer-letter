@@ -140,7 +140,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </SidebarInset>
       </SidebarProvider>
-      <SileoToaster position="bottom-left" theme="dark" />
+      <SileoToaster position="bottom-left" theme="light" />
     </div>
   )
 }
