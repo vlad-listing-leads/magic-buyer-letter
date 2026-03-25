@@ -518,7 +518,37 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
                 {/* Letter — both designs side by side */}
                 {letterSubTab === 'letter' && (
-                  agent ? (
+                  !letterContent?.body ? (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <p className="text-muted-foreground mb-4">No letter generated yet. Generate one now.</p>
+                        <Button
+                          onClick={async () => {
+                            const selectedPropertyIds = selectedIds ? Array.from(selectedIds) : properties.map(p => p.id)
+                            const res = await apiFetch(`/api/mbl/campaigns/${id}/generate`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ property_ids: selectedPropertyIds }),
+                            })
+                            // SSE stream — wait for completion
+                            if (res.body) {
+                              const reader = res.body.getReader()
+                              const decoder = new TextDecoder()
+                              while (true) {
+                                const { done, value } = await reader.read()
+                                if (done) break
+                                const text = decoder.decode(value)
+                                if (text.includes('"step":"ready"') || text.includes('"step":"error"')) break
+                              }
+                            }
+                            window.location.reload()
+                          }}
+                        >
+                          Generate Letter
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ) : agent ? (
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                       <div>
                         <div className="flex items-center justify-between mb-2">
