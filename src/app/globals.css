@@ -247,16 +247,21 @@ button {
   --sidebar-ring: #d6d3d1;
 }
 
-/* Sileo toast — always black bg, white text */
+/* Sileo viewport — transparent background */
+[data-sileo-viewport] {
+  background: transparent !important;
+}
+
+/* Sileo toast — dark pill, white text */
 [data-sileo-toast] {
-  background-color: #000 !important;
-  color: #fff !important;
-  border-color: #333 !important;
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+  border-color: hsl(var(--border)) !important;
 }
 
 [data-sileo-toast] [data-sileo-title],
 [data-sileo-toast] [data-sileo-description] {
-  color: #fff !important;
+  color: hsl(var(--card-foreground)) !important;
 }
 
 @layer base {
