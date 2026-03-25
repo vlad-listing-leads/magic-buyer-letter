@@ -27,6 +27,7 @@ interface LetterPreviewWizardProps {
   onBack: () => void
   onContinue: () => void
   campaignId?: string | null
+  letterTemplates?: Record<string, { body: string; ps?: string }> | null
 }
 
 export function LetterPreviewWizard({
@@ -40,6 +41,7 @@ export function LetterPreviewWizard({
   onBack,
   onContinue,
   campaignId,
+  letterTemplates,
 }: LetterPreviewWizardProps) {
   const apiFetch = useApiFetch()
   const [letterDesign, setLetterDesign] = useState<'classic' | 'map'>('classic')
@@ -72,13 +74,25 @@ export function LetterPreviewWizard({
     properties.find((p) => p.personalized_content) ?? properties[0] ?? null
 
   const getSkillContent = (skillId: string) => {
+    // First check campaign-level templates (new flow)
+    if (letterTemplates?.[skillId]) {
+      const t = letterTemplates[skillId]
+      return { body: t.body, ps: t.ps ?? '' }
+    }
+    // Fall back to per-property content (old flow)
     const bySkill = (sampleProperty as unknown as Record<string, unknown>)?.personalized_content_by_skill as Record<string, { body: string; ps: string }> | null
     return bySkill?.[skillId] ?? undefined
   }
 
-  // Resolve current content: custom edit > skill content > personalized content
+  // Get first available template from campaign
+  const firstTemplate = letterTemplates
+    ? Object.values(letterTemplates)[0] ?? null
+    : null
+
+  // Resolve current content: custom edit > skill content > campaign template > property content
   const currentContent = customContent
     ?? (selectedSkillId ? getSkillContent(selectedSkillId) : undefined)
+    ?? (firstTemplate ? { body: firstTemplate.body, ps: firstTemplate.ps ?? '' } : undefined)
     ?? (sampleProperty?.personalized_content as { body: string; ps: string } | null)
     ?? { body: '', ps: '' }
 
@@ -225,21 +239,21 @@ export function LetterPreviewWizard({
           {letterDesign === 'map' ? (
             <LetterPreviewWithMap
               agent={agent}
-              property={sampleProperty}
+              letterContent={currentContent}
               allProperties={properties}
               buyerName={buyerName}
               bullets={bullets}
               templateStyle={templateStyle}
-              editedContent={customContent ?? (selectedSkillId ? getSkillContent(selectedSkillId) : undefined)}
+              editedContent={currentContent}
             />
           ) : (
             <LetterPreview
               agent={agent}
-              property={sampleProperty}
+              letterContent={currentContent}
               buyerName={buyerName}
               bullets={bullets}
               templateStyle={templateStyle}
-              editedContent={customContent ?? (selectedSkillId ? getSkillContent(selectedSkillId) : undefined)}
+              editedContent={currentContent}
             />
           )}
         </div>
