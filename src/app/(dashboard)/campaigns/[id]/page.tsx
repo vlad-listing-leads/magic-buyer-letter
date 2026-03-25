@@ -180,9 +180,12 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       : ''
   const canDelete = campaign.status !== 'sent' && campaign.status !== 'sending' && campaign.status !== 'delivered'
 
-  // Get the first letter template from campaign (one letter for all addresses)
+  // Get letter content — campaign-level template (new) or fall back to first property's content (old campaigns)
   const letterContent = campaign.letter_templates
     ? Object.values(campaign.letter_templates)[0] ?? null
+    : null
+  const fallbackProperty = !letterContent
+    ? properties.find(p => p.personalized_content) ?? null
     : null
 
 
@@ -524,6 +527,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                         <LetterPreviewWithMap
                           agent={agent}
                           letterContent={letterContent}
+                          property={fallbackProperty}
                           allProperties={properties}
                           buyerName={campaign.buyer_name}
                           bullets={{ b1: campaign.bullet_1, b2: campaign.bullet_2, b3: campaign.bullet_3 }}
@@ -541,6 +545,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                         <LetterPreview
                           agent={agent}
                           letterContent={letterContent}
+                          property={fallbackProperty}
                           buyerName={campaign.buyer_name}
                           bullets={{ b1: campaign.bullet_1, b2: campaign.bullet_2, b3: campaign.bullet_3 }}
                           templateStyle={campaign.template_style}
