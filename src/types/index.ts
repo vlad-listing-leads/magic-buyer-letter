@@ -139,6 +139,7 @@ export interface MblCampaign {
   condition_tolerance: string | null
   additional_notes: string | null
   selected_channels: string[]
+  letter_templates: Record<string, { body: string; ps?: string }> | null
   error_message: string | null
   created_at: string
   updated_at: string

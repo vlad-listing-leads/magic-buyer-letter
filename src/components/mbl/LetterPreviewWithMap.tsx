@@ -8,7 +8,9 @@ import type { LetterContent } from './LetterPreview'
 
 interface LetterPreviewWithMapProps {
   agent: MblAgent
-  property: MblProperty | null
+  letterContent?: { body: string; ps?: string } | null
+  /** @deprecated use letterContent instead */
+  property?: MblProperty | null
   allProperties?: MblProperty[]
   buyerName: string
   bullets: { b1: string; b2: string; b3: string }
@@ -122,6 +124,7 @@ function CircleOverlay({ containerWidth, containerHeight, radiusKm, zoom }: {
 
 export function LetterPreviewWithMap({
   agent,
+  letterContent,
   property,
   allProperties,
   buyerName,
@@ -130,12 +133,8 @@ export function LetterPreviewWithMap({
 }: LetterPreviewWithMapProps) {
   const personalized = property?.personalized_content as Record<string, string> | null
 
-  const address = property
-    ? `${property.address_line1}, ${property.city}`
-    : '123 Main St, Your City'
-
-  const body = editedContent?.body ?? personalized?.body ?? ''
-  const ps = editedContent?.ps ?? personalized?.ps ?? ''
+  const body = editedContent?.body ?? letterContent?.body ?? personalized?.body ?? ''
+  const ps = editedContent?.ps ?? letterContent?.ps ?? personalized?.ps ?? ''
 
   const cardRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -177,13 +176,6 @@ export function LetterPreviewWithMap({
 
   return (
     <div className={cn('space-y-3', className)}>
-      {property && (
-        <div className="text-xs">
-          <span className="text-muted-foreground">
-            Preview for <span className="font-medium text-foreground">{address}</span>
-          </span>
-        </div>
-      )}
 
       <Card className="overflow-hidden [aspect-ratio:8.5/11] rounded-lg shadow-lg border-0"
         data-letter-preview
@@ -276,18 +268,10 @@ export function LetterPreviewWithMap({
                 }
 
                 const highlightPara = (text: string) => {
-                  let html = text
-                  if (property) {
-                    html = html.replace(
-                      new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
-                      `<span style="background:linear-gradient(180deg, transparent 60%, rgba(26,39,68,0.08) 60%);font-weight:600">${address}</span>`
-                    )
-                  }
-                  html = html.replace(
+                  return text.replace(
                     /\$[\d,]+(?:\.\d{2})?/g,
                     (match) => `<span style="background:linear-gradient(180deg, transparent 60%, rgba(26,39,68,0.08) 60%);font-weight:600">${match}</span>`
                   )
-                  return html
                 }
 
                 return (

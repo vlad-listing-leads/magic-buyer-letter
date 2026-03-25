@@ -53,7 +53,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       try {
         send({ step: 'generating', progress: 5, message: 'Preparing letter generation...' })
 
-        const { generateLetterForSkill, fillTemplate } = await import('@/lib/services/claude')
+        const { generateLetterForSkill } = await import('@/lib/services/claude')
         const area = `${campaign.criteria_city}${campaign.criteria_state ? `, ${campaign.criteria_state}` : ''}`
 
         // Fetch active skills
@@ -95,69 +95,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           .update({ letter_templates: letterTemplates, status: 'generating' })
           .eq('id', id)
 
-        send({ step: 'generating', progress: 45, message: 'Personalizing for each property...' })
+        send({ step: 'generating', progress: 50, message: 'Finalizing...' })
 
-        // Get agent info
-        const { data: agentData } = await admin
-          .from('mbl_agents')
-          .select('name, phone')
-          .eq('id', campaign.agent_id)
-          .single()
-
-        // Get selected properties
-        const { data: selectedProps } = await admin
+        // Mark selected properties
+        await admin
           .from('mbl_properties')
-          .select('id, address_line1, city, neighborhood')
+          .update({ status: 'generated', selected: true })
           .eq('campaign_id', id)
           .in('id', propertyIds)
-
-        // Fill templates per selected property
-        let generatedCount = 0
-        const total = selectedProps?.length ?? 0
-        for (const prop of selectedProps ?? []) {
-          const vars = {
-            property_address: `${prop.address_line1}, ${prop.city}`,
-            neighborhood: prop.neighborhood || prop.city,
-            buyer_name: campaign.buyer_name,
-            bullet_1: campaign.bullet_1,
-            bullet_2: campaign.bullet_2,
-            bullet_3: campaign.bullet_3,
-            agent_name: agentData?.name ?? '',
-            agent_phone: agentData?.phone ?? '',
-          }
-
-          const contentBySkill: Record<string, { body: string; ps: string }> = {}
-          let firstFilled = null
-          for (const [skillId, template] of Object.entries(letterTemplates)) {
-            const filled = fillTemplate(template, vars)
-            contentBySkill[skillId] = {
-              body: filled.body,
-              ps: filled.ps ?? '',
-            }
-            if (!firstFilled) firstFilled = contentBySkill[skillId]
-          }
-
-          await admin
-            .from('mbl_properties')
-            .update({
-              personalized_content: firstFilled,
-              personalized_content_by_skill: contentBySkill,
-              status: 'generated',
-              selected: true,
-            })
-            .eq('id', prop.id)
-
-          generatedCount++
-
-          if (generatedCount % 10 === 0 || generatedCount === total) {
-            send({
-              step: 'generating',
-              progress: 45 + Math.round((generatedCount / total) * 50),
-              message: `Personalized ${generatedCount} of ${total} letters`,
-              count: generatedCount,
-            })
-          }
-        }
 
         // Mark non-selected properties
         await admin
@@ -168,14 +113,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
         await admin
           .from('mbl_campaigns')
-          .update({ properties_generated: generatedCount, status: 'ready' })
+          .update({ properties_generated: propertyIds.length, status: 'ready' })
           .eq('id', id)
 
         send({
           step: 'ready',
           progress: 100,
-          message: `${generatedCount} letters ready!`,
-          count: generatedCount,
+          message: `Letter ready for ${propertyIds.length} properties!`,
+          count: propertyIds.length,
           campaignId: id,
         })
       } catch (err) {

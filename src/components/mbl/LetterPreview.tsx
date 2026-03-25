@@ -13,7 +13,9 @@ export interface LetterContent {
 
 interface LetterPreviewProps {
   agent: MblAgent
-  property: MblProperty | null
+  letterContent?: { body: string; ps?: string } | null
+  /** @deprecated use letterContent instead */
+  property?: MblProperty | null
   buyerName: string
   bullets: { b1: string; b2: string; b3: string }
   templateStyle: TemplateStyle
@@ -24,6 +26,7 @@ interface LetterPreviewProps {
 
 export function LetterPreview({
   agent,
+  letterContent,
   property,
   buyerName,
   bullets,
@@ -31,16 +34,11 @@ export function LetterPreview({
   className,
 }: LetterPreviewProps) {
   const personalized = property?.personalized_content as Record<string, string> | null
-
-  const address = property
-    ? `${property.address_line1}, ${property.city}`
-    : '123 Main St, Your City'
   const phone = agent.phone || '(555) 123-4567'
 
-  // Body — everything from Claude, no hardcoded fallback
-  const body = editedContent?.body ?? personalized?.body ?? ''
-
-  const ps = editedContent?.ps ?? personalized?.ps ?? ''
+  // Prefer letterContent (campaign-level), fall back to property personalized_content
+  const body = editedContent?.body ?? letterContent?.body ?? personalized?.body ?? ''
+  const ps = editedContent?.ps ?? letterContent?.ps ?? personalized?.ps ?? ''
 
   // Auto-scale content to fit page
   const cardRef = useRef<HTMLDivElement>(null)
@@ -82,14 +80,6 @@ export function LetterPreview({
 
   return (
     <div className={cn('space-y-3', className)}>
-      {/* Address label */}
-      {property && (
-        <div className="text-xs">
-          <span className="text-muted-foreground">
-            Preview for <span className="font-medium text-foreground">{address}</span>
-          </span>
-        </div>
-      )}
 
       {/* Letter Card — Editorial design */}
       <Card className="overflow-hidden [aspect-ratio:8.5/11] rounded-lg shadow-lg border-0"
@@ -132,22 +122,12 @@ export function LetterPreview({
                   )
                 }
 
-                // Highlight property address and dollar amounts
+                // Highlight dollar amounts
                 const highlightPara = (text: string) => {
-                  let html = text
-                  // Highlight address
-                  if (property) {
-                    html = html.replace(
-                      new RegExp(address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
-                      `<span style="background:linear-gradient(180deg, transparent 60%, rgba(26,39,68,0.08) 60%);font-weight:600">${address}</span>`
-                    )
-                  }
-                  // Highlight dollar amounts
-                  html = html.replace(
+                  return text.replace(
                     /\$[\d,]+(?:\.\d{2})?/g,
                     (match) => `<span style="background:linear-gradient(180deg, transparent 60%, rgba(26,39,68,0.08) 60%);font-weight:600">${match}</span>`
                   )
-                  return html
                 }
 
                 return (
