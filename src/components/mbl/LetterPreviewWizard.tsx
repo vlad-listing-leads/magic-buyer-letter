@@ -103,6 +103,18 @@ export function LetterPreviewWizard({
     ?? (sampleProperty?.personalized_content as { body: string; ps: string } | null)
     ?? { body: '', ps: '' }
 
+  // Auto-save _active if it doesn't exist yet (so admin sees the same content)
+  const hasSavedActive = React.useRef(false)
+  React.useEffect(() => {
+    if (hasSavedActive.current || !campaignId || !currentContent?.body || activeTemplate) return
+    hasSavedActive.current = true
+    apiFetch(`/api/mbl/campaigns/${campaignId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ letter_templates: { _active: currentContent } }),
+    }).catch(() => {})
+  }, [campaignId, currentContent, activeTemplate, apiFetch])
+
   const handleOpenEdit = () => {
     setEditBody(currentContent?.body ?? '')
     setEditPs(currentContent?.ps ?? '')

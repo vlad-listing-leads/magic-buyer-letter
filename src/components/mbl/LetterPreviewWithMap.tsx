@@ -348,7 +348,7 @@ export function LetterPreviewWithMap({
           </div>
 
           {/* Broker disclaimer — microprint */}
-          <p className="select-none" style={{ fontSize: '8px', lineHeight: '1.4', color: '#aaa', textAlign: 'center', marginTop: '20px', padding: '0 24px 16px' }}>
+          <p className="select-none" style={{ fontSize: '10px', lineHeight: '10px', color: '#aaa', textAlign: 'center', marginTop: '20px', padding: '0 24px 16px' }}>
             If your property is listed with a Real Estate Broker, please disregard. It is not our intention to solicit the offerings or clients of other Real Estate Brokers.
           </p>
         </CardContent>
