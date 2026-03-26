@@ -89,10 +89,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           letterTemplates[skill.id] = template
         }
 
-        // Save templates on campaign
+        // Save templates on campaign — preserve _active if user already edited
+        const existingTemplates = (campaign.letter_templates as Record<string, unknown>) ?? {}
+        const merged = { ...letterTemplates }
+        if (existingTemplates['_active']) {
+          merged['_active'] = existingTemplates['_active'] as { body: string; ps?: string }
+        }
+
         await admin
           .from('mbl_campaigns')
-          .update({ letter_templates: letterTemplates, status: 'generating' })
+          .update({ letter_templates: merged, status: 'generating' })
           .eq('id', id)
 
         send({ step: 'generating', progress: 50, message: 'Finalizing...' })
