@@ -61,14 +61,16 @@ export default function AdminCampaignDetailPage({
   const agent = campaign.mbl_agents
   const area = `${campaign.criteria_city}${campaign.criteria_state ? `, ${campaign.criteria_state}` : ''}`
 
-  // Resolve letter content
-  const propertyContent = properties.find(p => p.personalized_content)?.personalized_content as { body?: string; ps?: string } | null
+  // Resolve letter content — prefer campaign templates (has user edits), fall back to property content
   const campaignTemplate = campaign.letter_templates
     ? Object.values(campaign.letter_templates)[0] ?? null
     : null
-  const letterContent = propertyContent?.body
-    ? { body: propertyContent.body, ps: propertyContent.ps }
-    : campaignTemplate
+  const propertyContent = properties.find(p => p.personalized_content)?.personalized_content as { body?: string; ps?: string } | null
+  const letterContent = campaignTemplate?.body
+    ? campaignTemplate
+    : propertyContent?.body
+      ? { body: propertyContent.body, ps: propertyContent.ps }
+      : null
 
   return (
     <div className="space-y-6">
