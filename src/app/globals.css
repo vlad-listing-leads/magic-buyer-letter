@@ -86,7 +86,7 @@ button {
 
 .animate-fade-in {
   opacity: 0;
-  animation: fade-in 0.8s ease-out forwards;
+  animation: fade-in 0.4s ease-out forwards;
 }
 
 .animate-fade-in-up {

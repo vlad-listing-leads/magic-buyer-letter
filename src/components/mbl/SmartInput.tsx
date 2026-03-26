@@ -46,12 +46,18 @@ export function SmartInput({ onComplete }: SmartInputProps) {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${Math.max(64, textareaRef.current.scrollHeight)}px`
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
     }
   }, [text])
 
   const handleContinue = async () => {
     if (!text.trim()) return
+
+    // Stop recording if active
+    if (isListening) {
+      recognitionRef.current?.stop()
+      setIsListening(false)
+    }
 
     setIsParsing(true)
     try {
@@ -115,6 +121,9 @@ export function SmartInput({ onComplete }: SmartInputProps) {
       setIsListening(false)
       return
     }
+
+    // Focus the textarea so text goes into it
+    textareaRef.current?.focus()
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRecognition) return
@@ -194,12 +203,25 @@ export function SmartInput({ onComplete }: SmartInputProps) {
         <div className="relative">
           <div
             className={cn(
-              'absolute -inset-1 rounded-2xl bg-[#006AFF]/20 blur-xl transition-opacity duration-500',
+              'absolute -inset-1 rounded-2xl bg-[#006AFF]/20 blur-xl transition-opacity duration-500 pointer-events-none',
               isFocused || text ? 'opacity-100' : 'opacity-0'
             )}
           />
 
-          <div className="relative">
+          <div
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) {
+                e.preventDefault()
+                textareaRef.current?.focus()
+              }
+            }}
+            className={cn(
+              'flex items-center rounded-2xl border-2 transition-colors duration-200 p-[10px] pl-5 cursor-text relative',
+              'bg-[#ffffff] dark:bg-[#0b0a09]',
+              isFocused || text ? 'border-[#006AFF]/50' : 'border-border',
+              isParsing && 'opacity-60'
+            )}
+          >
             <textarea
               ref={textareaRef}
               value={text}
@@ -207,7 +229,7 @@ export function SmartInput({ onComplete }: SmartInputProps) {
                 setText(e.target.value)
                 setParsed(null)
                 e.target.style.height = 'auto'
-                e.target.style.height = `${Math.max(64, e.target.scrollHeight)}px`
+                e.target.style.height = `${e.target.scrollHeight}px`
               }}
               onKeyDown={handleKeyDown}
               onFocus={() => setIsFocused(true)}
@@ -215,36 +237,30 @@ export function SmartInput({ onComplete }: SmartInputProps) {
               placeholder="Sarah, $800K-1.2M, 3 bed in Newton MA, pre-approved"
               disabled={isParsing}
               rows={1}
-              className={cn(
-                'w-full min-h-16 pl-5 pr-32 py-4 rounded-2xl border-2 bg-background text-lg resize-none overflow-hidden',
-                'placeholder:text-muted-foreground/50',
-                'focus:outline-none transition-colors duration-200',
-                'disabled:opacity-60',
-                isFocused || text ? 'border-[#006AFF]/50' : 'border-border'
-              )}
+              className="flex-1 min-w-0 bg-transparent text-lg resize-none overflow-hidden py-1 placeholder:text-muted-foreground/50 focus:outline-none"
               autoFocus
             />
-            <div className="absolute right-2 bottom-3 flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-shrink-0 pl-3">
               <button
                 type="button"
                 onClick={toggleVoice}
                 disabled={isParsing}
                 className={cn(
-                  'p-2.5 rounded-xl transition-all',
+                  'p-2 rounded-lg transition-all',
                   isListening
                     ? 'bg-red-500/10 text-red-500 animate-pulse'
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                 )}
                 title={isListening ? 'Stop listening' : 'Voice input'}
               >
-                {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                {isListening ? <MicOff className="h-4.5 w-4.5" /> : <Mic className="h-4.5 w-4.5" />}
               </button>
               <button
                 type="button"
                 onClick={handleContinue}
                 disabled={!text.trim() || isParsing}
                 className={cn(
-                  'flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all',
+                  'flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all',
                   text.trim() && !isParsing
                     ? 'bg-[#006AFF] text-white hover:bg-[#0058D4] shadow-lg shadow-[#006AFF]/25'
                     : 'bg-muted text-muted-foreground cursor-not-allowed'
@@ -347,7 +363,7 @@ export function SmartInput({ onComplete }: SmartInputProps) {
                 requestAnimationFrame(() => {
                   if (textareaRef.current) {
                     textareaRef.current.style.height = 'auto'
-                    textareaRef.current.style.height = `${Math.max(64, textareaRef.current.scrollHeight)}px`
+                    textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
                   }
                 })
               }}

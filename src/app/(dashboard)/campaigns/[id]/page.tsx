@@ -199,10 +199,12 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
+      <hr className="border-border -mx-4 sm:-mx-6 md:-mx-8" />
+
       {/* Sidebar + Content — same layout as /new preview step */}
-      <div className="flex">
-        {/* Channel sidebar */}
-        <div className="w-[240px] flex-shrink-0 pr-6 border-r border-border min-h-full">
+      <div className="flex -mb-4 sm:-mb-6 md:-mb-8">
+        {/* Channel sidebar — flush top to bottom */}
+        <div className="w-[240px] flex-shrink-0 pr-6 border-r border-border -mt-6 -mb-0 pt-6">
           <div className="sticky top-4 space-y-2">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 mb-3">Channels</p>
             {CHANNEL_NAV.map((ch) => {
@@ -248,7 +250,8 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </div>
 
         {/* Main content */}
-        <div className="flex-1 min-w-0 pl-6">
+        <div className="flex-1 min-w-0 pl-6 pt-8">
+          <div key={activeChannel} className="animate-fade-in">
           {/* Letter */}
           {activeChannel === 'letter' && agent && (
             <LetterPreviewWizard
@@ -275,7 +278,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
           {/* Email / Text / Call Script */}
           {(activeChannel === 'email' || activeChannel === 'text' || activeChannel === 'call_script') && (
-            <div className="max-w-[740px]">
+            <div className="max-w-[740px] mx-auto">
               <ChannelContent
                 campaignId={id}
                 channel={activeChannel as ChannelType}
@@ -291,6 +294,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
               <p className="text-sm text-muted-foreground mt-1">Coming soon</p>
             </div>
           )}
+          </div>{/* end keyed animation wrapper */}
         </div>
       </div>
     </div>
