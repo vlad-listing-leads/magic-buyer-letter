@@ -40,30 +40,61 @@ export function LetterPreview({
   const body = editedContent?.body ?? letterContent?.body ?? personalized?.body ?? ''
   const ps = editedContent?.ps ?? letterContent?.ps ?? personalized?.ps ?? ''
 
-  // Auto-scale content to fit page
+  // Dynamic font sizing — adjust to fill US letter between logo and signature
   const cardRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const card = cardRef.current
     const content = contentRef.current
-    if (!card || !content) return
+    const bodyEl = bodyRef.current
+    if (!card || !content || !bodyEl) return
 
-    const measure = () => {
+    const fit = () => {
+      // Reset to max size first
+      bodyEl.style.fontSize = '16px'
+      bodyEl.style.lineHeight = '1.5'
       content.style.transform = 'none'
       content.style.width = '100%'
+
       const cardH = card.clientHeight
-      const contentH = content.scrollHeight
+      let contentH = content.scrollHeight
+
+      // Step down font size until it fits (16px → 11px range)
+      const sizes = [
+        { font: 16, line: 1.5, margin: 14 },
+        { font: 15, line: 1.45, margin: 13 },
+        { font: 14, line: 1.4, margin: 12 },
+        { font: 13, line: 1.35, margin: 11 },
+        { font: 12.5, line: 1.3, margin: 10 },
+        { font: 12, line: 1.3, margin: 9 },
+        { font: 11.5, line: 1.25, margin: 8 },
+        { font: 11, line: 1.25, margin: 7 },
+      ]
+
+      for (const s of sizes) {
+        bodyEl.style.fontSize = `${s.font}px`
+        bodyEl.style.lineHeight = `${s.line}`
+        // Update paragraph margins
+        bodyEl.querySelectorAll('p').forEach((p) => {
+          (p as HTMLElement).style.marginBottom = `${s.margin}px`
+        })
+        contentH = content.scrollHeight
+        if (contentH <= cardH) return // fits
+      }
+
+      // If still too large at min font, use scale as last resort
       if (contentH > cardH) {
-        const newScale = Math.max(0.7, cardH / contentH)
-        content.style.transform = `scale(${newScale})`
+        const scale = Math.max(0.75, cardH / contentH)
+        content.style.transform = `scale(${scale})`
         content.style.transformOrigin = 'top left'
-        content.style.width = `${100 / newScale}%`
+        content.style.width = `${100 / scale}%`
       }
     }
 
-    requestAnimationFrame(measure)
-    const observer = new MutationObserver(() => requestAnimationFrame(measure))
+    requestAnimationFrame(fit)
+    const observer = new MutationObserver(() => requestAnimationFrame(fit))
     observer.observe(content, { childList: true, subtree: true, characterData: true })
     return () => observer.disconnect()
   }, [body, ps])
@@ -109,7 +140,7 @@ export function LetterPreview({
             </div>
 
             {/* Letter body */}
-            <div style={{ fontSize: '14px', lineHeight: '1.25', color: '#333', letterSpacing: '0.01em' }}>
+            <div ref={bodyRef} style={{ fontSize: '14px', lineHeight: '1.4', color: '#333', letterSpacing: '0.01em' }}>
               {paragraphs.map((para, i) => {
                 const isBullet = /^[•\-\*]\s/.test(para.trim())
                 if (isBullet) {
@@ -186,12 +217,12 @@ export function LetterPreview({
               </div>
             )}
 
-          </div>{/* end inset border */}
+            {/* Broker disclaimer — microprint */}
+            <p className="select-none" style={{ fontSize: '8px', lineHeight: '1.4', color: '#aaa', textAlign: 'center', marginTop: '20px' }}>
+              If your property is listed with a Real Estate Broker, please disregard. It is not our intention to solicit the offerings or clients of other Real Estate Brokers.
+            </p>
 
-          {/* Broker disclaimer — microprint */}
-          <p className="select-none" style={{ fontSize: '6px', lineHeight: '1.4', color: '#aaa', textAlign: 'center', marginTop: '20px' }}>
-            If your property is listed with a Real Estate Broker, please disregard. It is not our intention to solicit the offerings or clients of other Real Estate Brokers.
-          </p>
+          </div>{/* end inset border */}
         </CardContent>
       </Card>
     </div>

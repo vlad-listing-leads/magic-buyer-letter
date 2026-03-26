@@ -138,27 +138,54 @@ export function LetterPreviewWithMap({
 
   const cardRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const card = cardRef.current
     const content = contentRef.current
-    if (!card || !content) return
+    const bodyEl = bodyRef.current
+    if (!card || !content || !bodyEl) return
 
-    const measure = () => {
+    const fit = () => {
+      bodyEl.style.fontSize = '15px'
+      bodyEl.style.lineHeight = '1.45'
       content.style.transform = 'none'
       content.style.width = '100%'
+
       const cardH = card.clientHeight
-      const contentH = content.scrollHeight
+      let contentH = content.scrollHeight
+
+      const sizes = [
+        { font: 15, line: 1.45, margin: 12 },
+        { font: 14, line: 1.4, margin: 11 },
+        { font: 13, line: 1.35, margin: 10 },
+        { font: 12.5, line: 1.3, margin: 9 },
+        { font: 12, line: 1.25, margin: 8 },
+        { font: 11.5, line: 1.25, margin: 7 },
+        { font: 11, line: 1.2, margin: 6 },
+        { font: 10.5, line: 1.2, margin: 5 },
+      ]
+
+      for (const s of sizes) {
+        bodyEl.style.fontSize = `${s.font}px`
+        bodyEl.style.lineHeight = `${s.line}`
+        bodyEl.querySelectorAll('p').forEach((p) => {
+          (p as HTMLElement).style.marginBottom = `${s.margin}px`
+        })
+        contentH = content.scrollHeight
+        if (contentH <= cardH) return
+      }
+
       if (contentH > cardH) {
-        const newScale = Math.max(0.65, cardH / contentH)
-        content.style.transform = `scale(${newScale})`
+        const scale = Math.max(0.7, cardH / contentH)
+        content.style.transform = `scale(${scale})`
         content.style.transformOrigin = 'top left'
-        content.style.width = `${100 / newScale}%`
+        content.style.width = `${100 / scale}%`
       }
     }
 
-    requestAnimationFrame(measure)
-    const observer = new MutationObserver(() => requestAnimationFrame(measure))
+    requestAnimationFrame(fit)
+    const observer = new MutationObserver(() => requestAnimationFrame(fit))
     observer.observe(content, { childList: true, subtree: true, characterData: true })
     return () => observer.disconnect()
   }, [body, ps])
@@ -254,7 +281,7 @@ export function LetterPreviewWithMap({
 
           {/* Letter content — below header */}
           <div style={{ padding: '16px 52px 24px 52px' }}>
-            <div style={{ fontSize: '13px', lineHeight: '1.35', color: '#333', letterSpacing: '0.01em' }}>
+            <div ref={bodyRef} style={{ fontSize: '13px', lineHeight: '1.35', color: '#333', letterSpacing: '0.01em' }}>
               {paragraphs.map((para, i) => {
                 const isBullet = /^[•\-\*]\s/.test(para.trim())
                 if (isBullet) {
@@ -321,7 +348,7 @@ export function LetterPreviewWithMap({
           </div>
 
           {/* Broker disclaimer — microprint */}
-          <p className="select-none" style={{ fontSize: '6px', lineHeight: '1.4', color: '#aaa', textAlign: 'center', marginTop: '20px', padding: '0 24px 16px' }}>
+          <p className="select-none" style={{ fontSize: '8px', lineHeight: '1.4', color: '#aaa', textAlign: 'center', marginTop: '20px', padding: '0 24px 16px' }}>
             If your property is listed with a Real Estate Broker, please disregard. It is not our intention to solicit the offerings or clients of other Real Estate Brokers.
           </p>
         </CardContent>
