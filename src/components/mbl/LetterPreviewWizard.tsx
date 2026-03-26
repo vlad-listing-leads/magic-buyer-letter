@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { Button } from '@/components/ui/button'
 import { Download, Mail, MapPin, FileText, Pencil, Loader2 } from 'lucide-react'
@@ -45,6 +45,7 @@ export function LetterPreviewWizard({
   letterTemplates,
 }: LetterPreviewWizardProps) {
   const apiFetch = useApiFetch()
+  const queryClient = useQueryClient()
   const [letterDesign, setLetterDesign] = useState<'classic' | 'map'>('classic')
   const [editOpen, setEditOpen] = useState(false)
   const [editBody, setEditBody] = useState('')
@@ -113,11 +114,14 @@ export function LetterPreviewWizard({
     if (campaignId) {
       try {
         const updatedTemplates = { _active: newContent }
-        await apiFetch(`/api/mbl/campaigns/${campaignId}`, {
+        const res = await apiFetch(`/api/mbl/campaigns/${campaignId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ letter_templates: updatedTemplates }),
         })
+        if (!res.ok) throw new Error('Save failed')
+        // Invalidate cache so refresh shows saved content
+        queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] })
         sileo.success({ title: 'Letter saved' })
       } catch {
         sileo.error({ title: 'Failed to save letter' })
