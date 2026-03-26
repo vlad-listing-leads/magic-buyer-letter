@@ -230,8 +230,8 @@ export function LetterPreviewWithMap({
                   {agent.brokerage || agent.name}
                 </div>
               )}
-              <div style={{ fontSize: '9px', fontFamily: "'Helvetica Neue', Arial, sans-serif", color: '#888', lineHeight: '1.6' }}>
-                {agent.name && <div style={{ fontWeight: 600, color: '#555', fontSize: '10px' }}>{agent.name}</div>}
+              <div style={{ fontSize: '11px', fontFamily: "'Helvetica Neue', Arial, sans-serif", color: '#888', lineHeight: '1.6' }}>
+                {agent.name && <div style={{ fontWeight: 600, color: '#555', fontSize: '12px' }}>{agent.name}</div>}
                 {agent.phone && <div>{agent.phone}</div>}
                 {agent.email && <div>{agent.email}</div>}
               </div>
