@@ -16,12 +16,12 @@ import {
   TooltipProvider,
 } from '@/components/ui/tooltip'
 import {
-  Mail, Send, DollarSign, Plus, ChevronRight,
+  Mail, FileText, MessageSquare, Phone, Plus, ChevronRight,
   Sparkles, Home,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import type { MblCampaign, CampaignStatus } from '@/types'
+import type { MblCampaign, MblCampaignChannel, CampaignStatus } from '@/types'
 
 function relativeTime(dateStr: string): string {
   const now = Date.now()
@@ -147,8 +147,21 @@ export default function DashboardPage() {
     },
   })
 
+  const { data: allChannels = [] } = useQuery<MblCampaignChannel[]>({
+    queryKey: ['all-channels'],
+    queryFn: async () => {
+      const res = await apiFetch('/api/mbl/channels')
+      const json = await res.json()
+      return json.data ?? []
+    },
+  })
+
   const totalCampaigns = campaigns?.length ?? 0
   const totalFound = campaigns?.reduce((sum, c) => sum + c.total_properties, 0) ?? 0
+  const lettersCreated = campaigns?.filter(c => c.letter_templates && Object.keys(c.letter_templates).length > 0).length ?? 0
+  const emailsCreated = allChannels.filter(c => c.channel === 'email').length
+  const textsCreated = allChannels.filter(c => c.channel === 'text').length
+  const callScriptsCreated = allChannels.filter(c => c.channel === 'call_script').length
 
   const tabCounts = useMemo(() => {
     if (!campaigns) return { all: 0, delivered: 0, sent: 0, in_progress: 0 }
@@ -178,25 +191,49 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Stats — same style as campaign detail */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Buyers</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalCampaigns}</div>
-          </CardContent>
+      {/* Stats */}
+      <div className="grid gap-3 grid-cols-3 md:grid-cols-6">
+        <Card className="py-3 px-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Buyers</span>
+            <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div className="text-xl font-bold mt-1">{totalCampaigns}</div>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Homes Found</CardTitle>
-            <Home className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalFound}</div>
-          </CardContent>
+        <Card className="py-3 px-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Homes Found</span>
+            <Home className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div className="text-xl font-bold mt-1">{totalFound}</div>
+        </Card>
+        <Card className="py-3 px-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Letters</span>
+            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div className="text-xl font-bold mt-1">{lettersCreated}</div>
+        </Card>
+        <Card className="py-3 px-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Emails</span>
+            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div className="text-xl font-bold mt-1">{emailsCreated}</div>
+        </Card>
+        <Card className="py-3 px-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Texts</span>
+            <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div className="text-xl font-bold mt-1">{textsCreated}</div>
+        </Card>
+        <Card className="py-3 px-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Call Scripts</span>
+            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div className="text-xl font-bold mt-1">{callScriptsCreated}</div>
         </Card>
       </div>
 
