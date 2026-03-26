@@ -69,10 +69,13 @@ export const PATCH = withErrorHandler(async (request: NextRequest, context) => {
   if (!campaign) return apiError('Campaign not found', 404)
 
   const body = await request.json()
-  const { status } = body
+  const updateData: Record<string, unknown> = {}
 
-  if (status) {
-    await admin.from('mbl_campaigns').update({ status }).eq('id', id)
+  if (body.status) updateData.status = body.status
+  if (body.letter_templates) updateData.letter_templates = body.letter_templates
+
+  if (Object.keys(updateData).length > 0) {
+    await admin.from('mbl_campaigns').update(updateData).eq('id', id)
   }
 
   return apiSuccess({ updated: true })

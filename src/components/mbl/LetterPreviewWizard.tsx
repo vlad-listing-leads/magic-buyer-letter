@@ -11,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { sileo } from 'sileo'
 import { LetterPreview } from './LetterPreview'
 import { LetterPreviewWithMap } from './LetterPreviewWithMap'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
@@ -97,26 +98,32 @@ export function LetterPreviewWizard({
     ?? (sampleProperty?.personalized_content as { body: string; ps: string } | null)
     ?? { body: '', ps: '' }
 
-  // Debug — remove after fixing
-  console.log('[LetterWizard]', {
-    hasLetterTemplates: !!letterTemplates,
-    templateKeys: letterTemplates ? Object.keys(letterTemplates) : [],
-    selectedSkillId,
-    skillContent: skillContent ? 'found' : 'none',
-    firstTemplate: firstTemplate ? firstTemplate.body?.slice(0, 50) : 'none',
-    propertyContent: sampleProperty?.personalized_content ? 'found' : 'none',
-    finalBody: currentContent?.body?.slice(0, 50) || 'EMPTY',
-  })
-
   const handleOpenEdit = () => {
     setEditBody(currentContent?.body ?? '')
     setEditPs(currentContent?.ps ?? '')
     setEditOpen(true)
   }
 
-  const handleSaveEdit = () => {
-    setCustomContent({ body: editBody, ps: editPs })
+  const handleSaveEdit = async () => {
+    const newContent = { body: editBody, ps: editPs }
+    setCustomContent(newContent)
     setEditOpen(false)
+
+    // Persist to DB — update letter_templates on the campaign
+    if (campaignId) {
+      try {
+        const skillId = selectedSkillId ?? (letterTemplates ? Object.keys(letterTemplates)[0] : 'default')
+        const updatedTemplates = { ...letterTemplates, [skillId]: newContent }
+        await apiFetch(`/api/mbl/campaigns/${campaignId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ letter_templates: updatedTemplates }),
+        })
+        sileo.success({ title: 'Letter saved' })
+      } catch {
+        sileo.error({ title: 'Failed to save letter' })
+      }
+    }
   }
 
   const handleDownloadPDF = async () => {
