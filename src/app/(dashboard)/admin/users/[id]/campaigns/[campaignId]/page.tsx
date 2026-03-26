@@ -148,26 +148,6 @@ export default function AdminCampaignDetailPage({
           {activeChannel === 'letter' && (
             letterContent?.body && agent ? (
               <div className="space-y-6">
-                {/* Letter body text */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Letter Content</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3 text-[15px] leading-relaxed text-foreground/90">
-                      {letterContent.body.split('\n').map((line, i) => {
-                        if (!line.trim()) return <div key={i} className="h-3" />
-                        return <p key={i}>{line}</p>
-                      })}
-                      {letterContent.ps && (
-                        <p className="text-sm text-muted-foreground italic border-l-2 border-muted pl-3 mt-4">
-                          P.S. {letterContent.ps}
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
                 {/* Letter previews */}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   <div>
