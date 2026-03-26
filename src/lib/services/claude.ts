@@ -14,14 +14,19 @@ interface CampaignContext {
   bullet_1: string
   bullet_2: string
   bullet_3: string
+  agent_name?: string
+  agent_phone?: string
+  agent_brokerage?: string
 }
 
 function buildSystemPrompt(skillInstructions: string): string {
   return `${skillInstructions}
 
-Write the letter with the actual buyer name and details provided — do NOT use placeholders.
-This is a single letter that goes to all recipients (no per-address personalization).
-Do not include homeowner names or property addresses — keep it general to the area.
+CRITICAL OVERRIDE — PLACEHOLDERS:
+Replace ALL placeholders ({{buyer_name}}, {{agent_name}}, {{agent_phone}}, {{agent_brokerage}}, {{neighborhood}}, etc.) with the ACTUAL values provided in the user message.
+Do NOT output {{anything}} in the final text. If a value is missing, use the fallback rules from the skill.
+This is a single letter sent to all recipients — do not include homeowner names or property-specific addresses.
+Address recipients as "Dear [Area] Homeowner" using the actual area name.
 
 JSON only: {"body": "content with \\n for breaks", "ps": "or empty string"}`
 }
@@ -68,7 +73,13 @@ export async function generateLetterForSkill(
   logger.info({ skill: skillInstructions.slice(0, 80) }, 'Generating letter')
   const systemPrompt = buildSystemPrompt(skillInstructions)
   // User prompt: just the data, no instructions
-  const userPrompt = `Buyer: ${context.buyer_name}\nArea: ${context.area}\nKey points:\n- ${context.bullet_1}\n- ${context.bullet_2}\n- ${context.bullet_3}`
+  const agentLines = [
+    context.agent_name ? `Agent name: ${context.agent_name}` : '',
+    context.agent_phone ? `Agent phone: ${context.agent_phone}` : '',
+    context.agent_brokerage ? `Agent brokerage: ${context.agent_brokerage}` : '',
+  ].filter(Boolean).join('\n')
+
+  const userPrompt = `Buyer: ${context.buyer_name}\nArea: ${context.area}\nKey points:\n- ${context.bullet_1}\n- ${context.bullet_2}\n- ${context.bullet_3}${agentLines ? `\n${agentLines}` : ''}`
   return callClaude(systemPrompt, userPrompt)
 }
 

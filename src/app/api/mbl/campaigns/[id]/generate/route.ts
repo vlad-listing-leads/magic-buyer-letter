@@ -72,12 +72,22 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           })
         }
 
+        // Fetch agent info for the letter
+        const { data: agentData } = await admin
+          .from('mbl_agents')
+          .select('name, phone, brokerage')
+          .eq('id', campaign.agent_id)
+          .single()
+
         const campaignContext = {
           buyer_name: campaign.buyer_name,
           area,
           bullet_1: campaign.bullet_1,
           bullet_2: campaign.bullet_2,
           bullet_3: campaign.bullet_3,
+          agent_name: agentData?.name ?? '',
+          agent_phone: agentData?.phone ?? '',
+          agent_brokerage: agentData?.brokerage ?? '',
         }
 
         // Generate one template per skill (small number of Claude calls)
