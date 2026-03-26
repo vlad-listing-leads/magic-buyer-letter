@@ -86,14 +86,18 @@ export function LetterPreviewWizard({
     return bySkill?.[skillId] ?? undefined
   }
 
-  // Get the active template (user-edited) or first available
+  // User-edited content always wins when it exists
+  const activeTemplate = letterTemplates?.['_active'] ?? null
+
+  // Get first available template (generated, not user-edited)
   const firstTemplate = letterTemplates
-    ? (letterTemplates['_active'] ?? Object.values(letterTemplates)[0] ?? null)
+    ? (Object.entries(letterTemplates).find(([k]) => k !== '_active')?.[1] ?? null)
     : null
 
-  // Resolve current content: custom edit > skill content > campaign template > property content
+  // Resolve: custom edit > _active (saved edit) > skill content > first template > property content
   const skillContent = selectedSkillId ? getSkillContent(selectedSkillId) : undefined
   const currentContent = customContent
+    ?? (activeTemplate ? { body: activeTemplate.body, ps: activeTemplate.ps ?? '' } : undefined)
     ?? skillContent
     ?? (firstTemplate ? { body: firstTemplate.body, ps: firstTemplate.ps ?? '' } : undefined)
     ?? (sampleProperty?.personalized_content as { body: string; ps: string } | null)
