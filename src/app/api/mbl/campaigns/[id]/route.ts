@@ -72,7 +72,16 @@ export const PATCH = withErrorHandler(async (request: NextRequest, context) => {
   const updateData: Record<string, unknown> = {}
 
   if (body.status) updateData.status = body.status
-  if (body.letter_templates) updateData.letter_templates = body.letter_templates
+  if (body.letter_templates) {
+    // Merge with existing templates so edits don't destroy skill templates
+    const { data: existing } = await admin
+      .from('mbl_campaigns')
+      .select('letter_templates')
+      .eq('id', id)
+      .single()
+    const merged = { ...(existing?.letter_templates as Record<string, unknown> ?? {}), ...body.letter_templates }
+    updateData.letter_templates = merged
+  }
 
   if (Object.keys(updateData).length > 0) {
     await admin.from('mbl_campaigns').update(updateData).eq('id', id)
