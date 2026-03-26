@@ -89,11 +89,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           letterTemplates[skill.id] = template
         }
 
-        // Save templates on campaign — preserve _active if user already edited
+        // Save templates + set _active to the first generated template
+        // If user already has _active (edited), preserve it. Otherwise set it now.
         const existingTemplates = (campaign.letter_templates as Record<string, unknown>) ?? {}
-        const merged = { ...letterTemplates }
-        if (existingTemplates['_active']) {
-          merged['_active'] = existingTemplates['_active'] as { body: string; ps?: string }
+        const firstGenerated = Object.values(letterTemplates)[0]
+        const merged = {
+          ...letterTemplates,
+          _active: existingTemplates['_active'] ?? firstGenerated,
         }
 
         await admin

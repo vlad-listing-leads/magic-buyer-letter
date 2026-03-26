@@ -72,41 +72,34 @@ export function LetterPreviewWizard({
     }
   }, [activeSkills, selectedSkillId, onSkillChange])
 
-  const sampleProperty =
-    properties.find((p) => p.personalized_content) ?? properties[0] ?? null
+  // === SINGLE SOURCE OF TRUTH: _active ===
+  // 1. _active exists → use it (user saved or auto-saved)
+  // 2. No _active → find first available content, auto-save as _active
+  // That's it. No skill switching, no property fallback, no ambiguity.
 
-  const getSkillContent = (skillId: string) => {
-    // First check campaign-level templates (new flow)
-    if (letterTemplates?.[skillId]) {
-      const t = letterTemplates[skillId]
-      return { body: t.body, ps: t.ps ?? '' }
-    }
-    // Fall back to per-property content (old flow)
-    const bySkill = (sampleProperty as unknown as Record<string, unknown>)?.personalized_content_by_skill as Record<string, { body: string; ps: string }> | null
-    return bySkill?.[skillId] ?? undefined
-  }
-
-  // User-edited content always wins when it exists
   const activeTemplate = letterTemplates?.['_active'] ?? null
 
-  // Get first available template (generated, not user-edited)
-  const firstTemplate = letterTemplates
-    ? (Object.entries(letterTemplates).find(([k]) => k !== '_active')?.[1] ?? null)
-    : null
+  const resolvedContent: { body: string; ps: string } = (() => {
+    // User's in-session edit (not yet saved to DB)
+    if (customContent) return customContent
+    // Saved _active — the single source of truth
+    if (activeTemplate?.body) return { body: activeTemplate.body, ps: activeTemplate.ps ?? '' }
+    // Fallback: find ANY content to bootstrap from (first skill template or property content)
+    if (letterTemplates) {
+      const firstSkill = Object.entries(letterTemplates).find(([k]) => k !== '_active')?.[1]
+      if (firstSkill?.body) return { body: firstSkill.body, ps: firstSkill.ps ?? '' }
+    }
+    const propContent = properties.find(p => p.personalized_content)?.personalized_content as { body?: string; ps?: string } | null
+    if (propContent?.body) return { body: propContent.body, ps: propContent.ps ?? '' }
+    return { body: '', ps: '' }
+  })()
 
-  // Resolve: custom edit > _active (saved edit) > skill content > first template > property content
-  const skillContent = selectedSkillId ? getSkillContent(selectedSkillId) : undefined
-  const currentContent = customContent
-    ?? (activeTemplate ? { body: activeTemplate.body, ps: activeTemplate.ps ?? '' } : undefined)
-    ?? skillContent
-    ?? (firstTemplate ? { body: firstTemplate.body, ps: firstTemplate.ps ?? '' } : undefined)
-    ?? (sampleProperty?.personalized_content as { body: string; ps: string } | null)
-    ?? { body: '', ps: '' }
+  const currentContent = resolvedContent
 
-  // Auto-save _active if it doesn't exist yet (so admin sees the same content)
+  // Auto-save _active if it doesn't exist yet but we found content from another source
   const hasSavedActive = React.useRef(false)
   React.useEffect(() => {
-    if (hasSavedActive.current || !campaignId || !currentContent?.body || activeTemplate) return
+    if (hasSavedActive.current || !campaignId || !currentContent.body || activeTemplate?.body) return
     hasSavedActive.current = true
     apiFetch(`/api/mbl/campaigns/${campaignId}`, {
       method: 'PATCH',
