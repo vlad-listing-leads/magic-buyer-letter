@@ -1,13 +1,11 @@
 'use client'
 
-import { use, useState, useCallback } from 'react'
+import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,35 +17,34 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { LetterPreview } from '@/components/mbl/LetterPreview'
-import { LetterPreviewWithMap } from '@/components/mbl/LetterPreviewWithMap'
-import { PropertyList } from '@/components/mbl/PropertyList'
-
+import { LetterPreviewWizard } from '@/components/mbl/LetterPreviewWizard'
+import { ChannelContent } from '@/components/mbl/ChannelContent'
 import {
-  Send, CheckCircle, DollarSign,
-  ArrowLeft, Download, Trash2, Loader2, CreditCard,
-  Search, MapPin, Mail, FileText, MessageSquare, Phone, Camera, Plus, X,
+  ArrowLeft, CheckCircle, Trash2, Loader2,
+  Mail, FileText, MessageSquare, Phone, Camera,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { sileo } from 'sileo'
 import Link from 'next/link'
-import { ChannelTabs } from '@/components/mbl/ChannelTabs'
-import { ChannelContent } from '@/components/mbl/ChannelContent'
-import { ChannelSidebar } from '@/components/mbl/ChannelSidebar'
-import type { ChannelTab } from '@/components/mbl/ChannelTabs'
 import type { MblCampaign, MblProperty, MblAgent, MblCampaignChannel, ChannelType } from '@/types'
 
-const PRE_SEND_STATUSES = ['searching', 'skip_tracing', 'verifying', 'generating', 'ready']
+type ChannelTab = 'letter' | 'email' | 'text' | 'call_script' | 'social_post'
+
+const CHANNEL_NAV = [
+  { id: 'letter' as const, label: 'Letter', desc: 'Direct mail', icon: Mail },
+  { id: 'email' as const, label: 'Email', desc: 'Cold outreach', icon: FileText },
+  { id: 'text' as const, label: 'Text', desc: 'SMS message', icon: MessageSquare },
+  { id: 'call_script' as const, label: 'Call script', desc: 'Phone talk track', icon: Phone },
+  { id: 'social_post' as const, label: 'Social post', desc: 'Coming soon', icon: Camera, comingSoon: true },
+] as const
 
 export default function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
   const apiFetch = useApiFetch()
   const [isDeleting, setIsDeleting] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<string> | null>(null)
   const [activeChannel, setActiveChannel] = useState<ChannelTab>('letter')
-  const [letterSubTab, setLetterSubTab] = useState<'properties' | 'letter'>('properties')
-  const [propertyView, setPropertyView] = useState<'mail_list' | 'other'>('mail_list')
+  const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null)
 
   const { data, isLoading, error } = useQuery<{ campaign: MblCampaign; properties: MblProperty[] }>({
     queryKey: ['campaign', id],
@@ -77,59 +74,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     },
   })
 
-  // Initialize selection from properties
-  if (data?.properties && selectedIds === null) {
-    setSelectedIds(new Set(data.properties.filter(p => p.selected).map(p => p.id)))
-  }
-
-  const toggleSelect = useCallback((propertyId: string) => {
-    setSelectedIds(prev => {
-      if (!prev) return prev
-      const next = new Set(prev)
-      if (next.has(propertyId)) next.delete(propertyId)
-      else next.add(propertyId)
-      return next
-    })
-  }, [])
-
-  const persistSelection = useCallback(async (propertyId: string, selected: boolean) => {
-    await apiFetch(`/api/mbl/campaigns/${id}/properties/select`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ propertyId, selected }),
-    })
-  }, [apiFetch, id])
-
-  const addToMailList = useCallback((propertyId: string) => {
-    setSelectedIds(prev => {
-      if (!prev) return prev
-      const next = new Set(prev)
-      next.add(propertyId)
-      return next
-    })
-    persistSelection(propertyId, true)
-  }, [persistSelection])
-
-  const removeFromMailList = useCallback((propertyId: string) => {
-    setSelectedIds(prev => {
-      if (!prev) return prev
-      const next = new Set(prev)
-      next.delete(propertyId)
-      return next
-    })
-    persistSelection(propertyId, false)
-  }, [persistSelection])
-
-  const selectAll = useCallback(() => {
-    if (data?.properties) {
-      setSelectedIds(new Set(data.properties.map(p => p.id)))
-    }
-  }, [data?.properties])
-
-  const deselectAll = useCallback(() => {
-    setSelectedIds(new Set())
-  }, [])
-
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
@@ -142,14 +86,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       sileo.error({ title: err instanceof Error ? err.message : 'Failed to delete' })
       setIsDeleting(false)
     }
-  }
-
-  const handleExport = () => {
-    window.open(`/api/mbl/campaigns/${id}/export`, '_blank')
-  }
-
-  const handleLetterDownload = (variant: 'map' | 'no-map') => {
-    window.open(`/api/mbl/campaigns/${id}/export?include=letter&variant=${variant}`, '_blank')
   }
 
   if (isLoading) {
@@ -172,30 +108,12 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   }
 
   const { campaign, properties } = data
-  const isPreSend = PRE_SEND_STATUSES.includes(campaign.status)
   const area = `${campaign.criteria_city}${campaign.criteria_state ? `, ${campaign.criteria_state}` : ''}`
   const priceRange =
     campaign.criteria_price_min || campaign.criteria_price_max
       ? `${campaign.criteria_price_min ? `$${campaign.criteria_price_min.toLocaleString()}` : '?'} – ${campaign.criteria_price_max ? `$${campaign.criteria_price_max.toLocaleString()}` : '?'}`
       : ''
   const canDelete = campaign.status !== 'sent' && campaign.status !== 'sending' && campaign.status !== 'delivered'
-
-  // Get letter content — prefer property personalized_content (filled), fall back to campaign templates
-  const contentProperty = properties.find(p => p.personalized_content) ?? null
-  const propertyContent = contentProperty?.personalized_content as { body?: string; ps?: string } | null
-  const campaignTemplate = campaign.letter_templates
-    ? Object.values(campaign.letter_templates)[0] ?? null
-    : null
-  // Use property content if it has a body (old campaigns with filled templates),
-  // otherwise use campaign-level template (new campaigns without personalization)
-  const letterContent = propertyContent?.body
-    ? { body: propertyContent.body, ps: propertyContent.ps }
-    : campaignTemplate
-
-
-  // Pre-send metrics
-  const generatedCount = properties.filter(p => p.status === 'generated' || p.status === 'verified').length
-  const currentSelectedCount = selectedIds?.size ?? 0
 
   return (
     <div className="space-y-6">
@@ -281,465 +199,100 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
-      {/* === PRE-SEND VIEW === */}
-      {isPreSend ? (
-        <div className="flex gap-6">
-          {/* Sidebar Nav */}
-          <nav className="w-48 shrink-0 space-y-1">
-            {([
-              { id: 'letter' as const, label: 'Letter', icon: Mail },
-              { id: 'email' as const, label: 'Email', icon: FileText },
-              { id: 'text' as const, label: 'Text', icon: MessageSquare },
-              { id: 'call_script' as const, label: 'Call Script', icon: Phone },
-              { id: 'social_post' as const, label: 'Social Post', icon: Camera, comingSoon: true },
-            ]).map((item) => {
-              const Icon = item.icon
-              const isActive = activeChannel === item.id
+      {/* Sidebar + Content — same layout as /new preview step */}
+      <div className="flex">
+        {/* Channel sidebar */}
+        <div className="w-[240px] flex-shrink-0 pr-6 border-r border-border min-h-full">
+          <div className="sticky top-4 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1 mb-3">Channels</p>
+            {CHANNEL_NAV.map((ch) => {
+              const isActive = activeChannel === ch.id
+              const isGenerated = ch.id === 'letter'
+                ? true
+                : channels.some((c) => c.channel === ch.id)
+              const isComingSoon = 'comingSoon' in ch && ch.comingSoon
+              const Icon = ch.icon
               return (
                 <button
-                  key={item.id}
-                  onClick={() => !item.comingSoon && setActiveChannel(item.id)}
-                  disabled={item.comingSoon}
-                  className={cn(
-                    'flex items-center gap-2.5 w-full rounded-md px-3 py-2 text-sm font-medium transition-colors text-left',
+                  key={ch.id}
+                  onClick={() => !isComingSoon && setActiveChannel(ch.id)}
+                  disabled={isComingSoon}
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-all border ${
                     isActive
-                      ? 'bg-accent text-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
-                    item.comingSoon && 'opacity-40 cursor-not-allowed'
-                  )}
+                      ? 'border-[#006AFF]/30 bg-[#006AFF]/5 shadow-sm'
+                      : 'border-transparent hover:border-border hover:bg-accent/50'
+                  } ${isComingSoon ? 'opacity-40 cursor-not-allowed' : ''}`}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {item.label}
-                  {item.comingSoon && (
-                    <Badge variant="outline" className="ml-auto text-[9px] px-1.5 py-0">Soon</Badge>
-                  )}
+                  <div className={`flex items-center justify-center h-9 w-9 rounded-lg flex-shrink-0 ${
+                    isActive ? 'bg-[#006AFF]/10 text-[#006AFF]' : 'bg-muted text-muted-foreground'
+                  }`}>
+                    <Icon className="h-4.5 w-4.5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm ${isActive ? 'font-semibold text-foreground' : 'font-medium text-foreground/80'}`}>
+                        {ch.label}
+                      </span>
+                      {!isComingSoon && (
+                        <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${
+                          isGenerated ? 'bg-green-500' : 'bg-zinc-300 dark:bg-zinc-600'
+                        }`} />
+                      )}
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">{ch.desc}</span>
+                  </div>
                 </button>
               )
             })}
-          </nav>
-
-          {/* Content Area */}
-          <div className="flex-1 min-w-0">
-            {/* Letter — stat cards + properties + letter preview */}
-            {activeChannel === 'letter' && (
-              <div className="space-y-6">
-                {/* Sub-tabs: Properties | Letter */}
-                <div className="inline-flex items-center gap-1 rounded-lg bg-muted p-1">
-                  <button
-                    onClick={() => setLetterSubTab('properties')}
-                    className={cn(
-                      'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                      letterSubTab === 'properties'
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    Properties ({properties.length})
-                  </button>
-                  <button
-                    onClick={() => setLetterSubTab('letter')}
-                    className={cn(
-                      'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                      letterSubTab === 'letter'
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    Letter
-                  </button>
-                </div>
-
-                {/* Properties tab — single card: tabs header + table body */}
-                {letterSubTab === 'properties' && (
-                  <Card>
-                    {/* Card header: tabs + inline stats */}
-                    <div className="flex items-center gap-5 border-b border-border px-4">
-                      <button
-                        onClick={() => setPropertyView('mail_list')}
-                        className={cn(
-                          'px-2 py-3 text-sm font-medium transition-colors border-b-2 -mb-px',
-                          propertyView === 'mail_list'
-                            ? 'border-foreground text-foreground'
-                            : 'border-transparent text-muted-foreground hover:text-foreground'
-                        )}
-                      >
-                        Mail List ({currentSelectedCount})
-                      </button>
-                      <button
-                        onClick={() => setPropertyView('other')}
-                        className={cn(
-                          'px-2 py-3 text-sm font-medium transition-colors border-b-2 -mb-px',
-                          propertyView === 'other'
-                            ? 'border-foreground text-foreground'
-                            : 'border-transparent text-muted-foreground hover:text-foreground'
-                        )}
-                      >
-                        Verified Properties ({properties.length - currentSelectedCount})
-                      </button>
-
-                      <div className="ml-auto flex items-center gap-4 text-xs">
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Search className="h-3 w-3" />
-                          <span>Found <span className="font-semibold text-foreground">{properties.length}</span></span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <MapPin className="h-3 w-3 text-emerald-500" />
-                          <span>Verified <span className="font-semibold text-foreground">{generatedCount}</span></span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <CheckCircle className="h-3 w-3 text-[#006AFF]" />
-                          <span>Selected <span className="font-semibold text-foreground">{currentSelectedCount}</span></span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card body: table content */}
-                    <CardContent className="p-0">
-                      {/* Mail List */}
-                      {propertyView === 'mail_list' && (
-                        selectedIds && currentSelectedCount > 0 ? (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b border-border">
-                                  <th className="p-3 text-left font-medium text-muted-foreground">Owner</th>
-                                  <th className="p-3 text-left font-medium text-muted-foreground">Address</th>
-                                  <th className="p-3 text-left font-medium text-muted-foreground">Details</th>
-                                  <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
-                                  <th className="p-3 w-10"></th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {properties.filter(p => selectedIds.has(p.id)).map((prop) => (
-                                  <tr key={prop.id} className="border-b border-border/50 last:border-b-0 hover:bg-accent/50 transition-colors">
-                                    <td className="p-3 font-medium">
-                                      {prop.owner_first_name} {prop.owner_last_name}
-                                    </td>
-                                    <td className="p-3">
-                                      <div>{prop.address_line1}</div>
-                                      <div className="text-xs text-muted-foreground">{prop.city}, {prop.state} {prop.zip}</div>
-                                    </td>
-                                    <td className="p-3 text-xs text-muted-foreground">
-                                      {prop.estimated_value ? `$${prop.estimated_value.toLocaleString()}` : '—'}
-                                      {' · '}
-                                      {prop.bedrooms ?? '?'}bd/{prop.bathrooms ?? '?'}ba
-                                      {prop.sqft ? ` · ${prop.sqft.toLocaleString()} sqft` : ''}
-                                    </td>
-                                    <td className="p-3">
-                                      <Badge variant="secondary" className="text-xs capitalize">
-                                        {prop.owner_type}
-                                      </Badge>
-                                    </td>
-                                    <td className="p-3">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                        onClick={() => removeFromMailList(prop.id)}
-                                      >
-                                        <X className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : (
-                          <div className="py-12 text-center text-muted-foreground">
-                            No properties in mail list. Add from the &quot;Verified Properties&quot; tab.
-                          </div>
-                        )
-                      )}
-
-                      {/* Verified Properties */}
-                      {propertyView === 'other' && (
-                        (() => {
-                          const otherProps = selectedIds ? properties.filter(p => !selectedIds.has(p.id)) : properties
-                          return otherProps.length > 0 ? (
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="border-b border-border">
-                                    <th className="p-3 text-left font-medium text-muted-foreground">Owner</th>
-                                    <th className="p-3 text-left font-medium text-muted-foreground">Address</th>
-                                    <th className="p-3 text-left font-medium text-muted-foreground">Details</th>
-                                    <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
-                                    <th className="p-3 w-28"></th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {otherProps.map((prop) => (
-                                    <tr key={prop.id} className="border-b border-border/50 last:border-b-0 hover:bg-accent/50 transition-colors">
-                                      <td className="p-3 font-medium">
-                                        {prop.owner_first_name} {prop.owner_last_name}
-                                      </td>
-                                      <td className="p-3">
-                                        <div>{prop.address_line1}</div>
-                                        <div className="text-xs text-muted-foreground">{prop.city}, {prop.state} {prop.zip}</div>
-                                      </td>
-                                      <td className="p-3 text-xs text-muted-foreground">
-                                        {prop.estimated_value ? `$${prop.estimated_value.toLocaleString()}` : '—'}
-                                        {' · '}
-                                        {prop.bedrooms ?? '?'}bd/{prop.bathrooms ?? '?'}ba
-                                        {prop.sqft ? ` · ${prop.sqft.toLocaleString()} sqft` : ''}
-                                      </td>
-                                      <td className="p-3">
-                                        <Badge variant="secondary" className="text-xs capitalize">
-                                          {prop.owner_type}
-                                        </Badge>
-                                      </td>
-                                      <td className="p-3">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="text-xs h-7"
-                                          onClick={() => addToMailList(prop.id)}
-                                        >
-                                          <Plus className="mr-1 h-3 w-3" />
-                                          Add
-                                        </Button>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          ) : (
-                            <div className="py-12 text-center text-muted-foreground">
-                              All properties are in the mail list.
-                            </div>
-                          )
-                        })()
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Letter — both designs side by side */}
-                {letterSubTab === 'letter' && (
-                  !letterContent?.body ? (
-                    <Card>
-                      <CardContent className="py-12 text-center">
-                        <p className="text-muted-foreground mb-4">No letter generated yet. Generate one now.</p>
-                        <Button
-                          onClick={async () => {
-                            const selectedPropertyIds = selectedIds ? Array.from(selectedIds) : properties.map(p => p.id)
-                            const res = await apiFetch(`/api/mbl/campaigns/${id}/generate`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ property_ids: selectedPropertyIds }),
-                            })
-                            // SSE stream — wait for completion
-                            if (res.body) {
-                              const reader = res.body.getReader()
-                              const decoder = new TextDecoder()
-                              while (true) {
-                                const { done, value } = await reader.read()
-                                if (done) break
-                                const text = decoder.decode(value)
-                                if (text.includes('"step":"ready"') || text.includes('"step":"error"')) break
-                              }
-                            }
-                            window.location.reload()
-                          }}
-                        >
-                          Generate Letter
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ) : agent ? (
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">With Map</p>
-                          <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => handleLetterDownload('map')}>
-                            <Download className="mr-1 h-3 w-3" />
-                            Download
-                          </Button>
-                        </div>
-                        <LetterPreviewWithMap
-                          agent={agent}
-                          letterContent={letterContent}
-                          allProperties={properties}
-                          buyerName={campaign.buyer_name}
-                          bullets={{ b1: campaign.bullet_1, b2: campaign.bullet_2, b3: campaign.bullet_3 }}
-                          templateStyle={campaign.template_style}
-                        />
-                      </div>
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Without Map</p>
-                          <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => handleLetterDownload('no-map')}>
-                            <Download className="mr-1 h-3 w-3" />
-                            Download
-                          </Button>
-                        </div>
-                        <LetterPreview
-                          agent={agent}
-                          letterContent={letterContent}
-                          buyerName={campaign.buyer_name}
-                          bullets={{ b1: campaign.bullet_1, b2: campaign.bullet_2, b3: campaign.bullet_3 }}
-                          templateStyle={campaign.template_style}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <Card>
-                      <CardContent className="py-12 text-center text-muted-foreground">
-                        Loading agent profile...
-                      </CardContent>
-                    </Card>
-                  )
-                )}
-              </div>
-            )}
-
-            {/* Email */}
-            {activeChannel === 'email' && (
-              <ChannelContent
-                campaignId={id}
-                channel="email"
-                channelData={channels.find((c) => c.channel === 'email')}
-              />
-            )}
-
-            {/* Text */}
-            {activeChannel === 'text' && (
-              <ChannelContent
-                campaignId={id}
-                channel="text"
-                channelData={channels.find((c) => c.channel === 'text')}
-              />
-            )}
-
-            {/* Call Script */}
-            {activeChannel === 'call_script' && (
-              <ChannelContent
-                campaignId={id}
-                channel="call_script"
-                channelData={channels.find((c) => c.channel === 'call_script')}
-              />
-            )}
-
-            {/* Social Post */}
-            {activeChannel === 'social_post' && (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <p className="text-lg font-semibold">Social Post</p>
-                <p className="text-sm text-muted-foreground mt-1">Coming soon</p>
-              </div>
-            )}
           </div>
         </div>
-      ) : (
-        /* === POST-SEND VIEW: Magic 5 === */
-        <>
-          {/* Magic 5 Header */}
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold">Your Magic 5 for {campaign.buyer_name}</h2>
-            <p className="text-sm text-muted-foreground">5 touchpoints, one buyer story. Copy any channel and go.</p>
-          </div>
 
-          {/* Channel Tabs */}
-          <ChannelTabs
-            activeTab={activeChannel}
-            onTabChange={setActiveChannel}
-            letterSent={campaign.status === 'sent' || campaign.status === 'delivered'}
-            channels={channels}
-          />
+        {/* Main content */}
+        <div className="flex-1 min-w-0 pl-6">
+          {/* Letter */}
+          {activeChannel === 'letter' && agent && (
+            <LetterPreviewWizard
+              agent={agent}
+              properties={properties}
+              buyerName={campaign.buyer_name}
+              bullets={{ b1: campaign.bullet_1, b2: campaign.bullet_2, b3: campaign.bullet_3 }}
+              templateStyle={campaign.template_style}
+              onTemplateChange={() => {}}
+              selectedSkillId={selectedSkillId}
+              onSkillChange={setSelectedSkillId}
+              onBack={() => {}}
+              onContinue={() => {}}
+              campaignId={id}
+              letterTemplates={campaign.letter_templates}
+            />
+          )}
 
-          {/* Content + Sidebar */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-            {/* Main Content */}
-            <div>
-              {/* Letter tab — existing recipients view */}
-              {activeChannel === 'letter' && (
-                <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Recipients ({properties.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-border">
-                              <th className="p-3 text-left font-medium text-muted-foreground">Owner</th>
-                              <th className="p-3 text-left font-medium text-muted-foreground">Address</th>
-                              <th className="p-3 text-left font-medium text-muted-foreground">Details</th>
-                              <th className="p-3 text-left font-medium text-muted-foreground">Type</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {properties.map((prop) => (
-                              <tr key={prop.id} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
-                                <td className="p-3 font-medium">
-                                  {prop.owner_first_name} {prop.owner_last_name}
-                                </td>
-                                <td className="p-3">
-                                  <div>{prop.address_line1}</div>
-                                  <div className="text-xs text-muted-foreground">{prop.city}, {prop.state} {prop.zip}</div>
-                                </td>
-                                <td className="p-3 text-xs text-muted-foreground">
-                                  {prop.estimated_value ? `$${prop.estimated_value.toLocaleString()}` : '—'}
-                                  {' · '}
-                                  {prop.bedrooms ?? '?'}bd/{prop.bathrooms ?? '?'}ba
-                                  {' · '}
-                                  {prop.sqft?.toLocaleString() ?? '?'} sqft
-                                  {prop.equity_percent ? ` · ${prop.equity_percent}% equity` : ''}
-                                  {prop.years_owned ? ` · ${prop.years_owned}yr` : ''}
-                                </td>
-                                <td className="p-3">
-                                  <Badge variant="secondary" className="text-xs capitalize">
-                                    {prop.owner_type}
-                                  </Badge>
-                                </td>
-                              </tr>
-                            ))}
-                            {properties.length === 0 && (
-                              <tr>
-                                <td colSpan={4} className="p-8 text-center text-muted-foreground">
-                                  No recipients
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
-
-              {/* Email / Text / Call Script tabs */}
-              {(activeChannel === 'email' || activeChannel === 'text' || activeChannel === 'call_script') && (
-                <ChannelContent
-                  campaignId={id}
-                  channel={activeChannel as ChannelType}
-                  channelData={channels.find((c) => c.channel === activeChannel)}
-                />
-              )}
-
-              {/* Social post — coming soon */}
-              {activeChannel === 'social_post' && (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <p className="text-lg font-semibold">Social Post</p>
-                  <p className="text-sm text-muted-foreground mt-1">Coming soon</p>
-                </div>
-              )}
+          {activeChannel === 'letter' && !agent && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
+          )}
 
-            {/* Sidebar */}
-            <div className="hidden lg:block">
-              <ChannelSidebar
-                campaign={campaign}
-                channels={channels}
-                letterSent={campaign.status === 'sent' || campaign.status === 'delivered'}
+          {/* Email / Text / Call Script */}
+          {(activeChannel === 'email' || activeChannel === 'text' || activeChannel === 'call_script') && (
+            <div className="max-w-[740px]">
+              <ChannelContent
+                campaignId={id}
+                channel={activeChannel as ChannelType}
+                channelData={channels.find((c) => c.channel === activeChannel)}
               />
             </div>
-          </div>
-        </>
-      )}
+          )}
+
+          {/* Social post */}
+          {activeChannel === 'social_post' && (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <p className="text-lg font-semibold">Social Post</p>
+              <p className="text-sm text-muted-foreground mt-1">Coming soon</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
