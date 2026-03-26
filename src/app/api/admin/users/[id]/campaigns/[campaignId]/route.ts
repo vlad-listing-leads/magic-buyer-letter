@@ -15,11 +15,22 @@ export const GET = withAdminGuard(async (_request: NextRequest, context) => {
 
   if (error || !campaign) return apiError('Campaign not found', 404)
 
-  const { data: properties } = await admin
-    .from('mbl_properties')
-    .select('*')
-    .eq('campaign_id', campaignId)
-    .order('created_at', { ascending: true })
+  const [propertiesResult, channelsResult] = await Promise.all([
+    admin
+      .from('mbl_properties')
+      .select('*')
+      .eq('campaign_id', campaignId)
+      .order('created_at', { ascending: true }),
+    admin
+      .from('mbl_campaign_channels')
+      .select('*')
+      .eq('campaign_id', campaignId)
+      .order('created_at'),
+  ])
 
-  return apiSuccess({ campaign, properties: properties ?? [] })
+  return apiSuccess({
+    campaign,
+    properties: propertiesResult.data ?? [],
+    channels: channelsResult.data ?? [],
+  })
 })
