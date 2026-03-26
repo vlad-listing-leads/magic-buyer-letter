@@ -119,7 +119,7 @@ export function LetterPreview({
         ref={cardRef}>
         <CardContent className="px-0 pb-0 pt-0 h-full" ref={contentRef}>
           {/* Inset stationery border */}
-          <div style={{ position: 'absolute', inset: '18px', border: '0.5px solid #e2ded8', padding: '0 36px 32px 36px', overflow: 'hidden' }}>
+          <div className="h-full" style={{ margin: '18px', border: '0.5px solid #e2ded8', padding: '0 36px 32px 36px' }}>
 
             {/* Letterhead — centered logo */}
             <div className="flex items-center justify-center pt-7 pb-2">
