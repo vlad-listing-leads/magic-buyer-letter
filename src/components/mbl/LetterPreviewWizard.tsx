@@ -85,9 +85,9 @@ export function LetterPreviewWizard({
     return bySkill?.[skillId] ?? undefined
   }
 
-  // Get first available template from campaign
+  // Get the active template (user-edited) or first available
   const firstTemplate = letterTemplates
-    ? Object.values(letterTemplates)[0] ?? null
+    ? (letterTemplates['_active'] ?? Object.values(letterTemplates)[0] ?? null)
     : null
 
   // Resolve current content: custom edit > skill content > campaign template > property content
@@ -112,8 +112,7 @@ export function LetterPreviewWizard({
     // Persist to DB — update letter_templates on the campaign
     if (campaignId) {
       try {
-        const skillId = selectedSkillId ?? (letterTemplates ? Object.keys(letterTemplates)[0] : 'default')
-        const updatedTemplates = { ...letterTemplates, [skillId]: newContent }
+        const updatedTemplates = { _active: newContent }
         await apiFetch(`/api/mbl/campaigns/${campaignId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },

@@ -63,7 +63,7 @@ export default function AdminCampaignDetailPage({
 
   // Resolve letter content — prefer campaign templates (has user edits), fall back to property content
   const campaignTemplate = campaign.letter_templates
-    ? Object.values(campaign.letter_templates)[0] ?? null
+    ? (campaign.letter_templates['_active'] ?? Object.values(campaign.letter_templates)[0] ?? null)
     : null
   const propertyContent = properties.find(p => p.personalized_content)?.personalized_content as { body?: string; ps?: string } | null
   const letterContent = campaignTemplate?.body
