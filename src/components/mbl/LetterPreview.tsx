@@ -118,8 +118,7 @@ export function LetterPreview({
         style={{ fontFamily: "Georgia, 'Times New Roman', serif", background: 'linear-gradient(168deg, #fdfcfa 0%, #f8f6f2 100%)' }}
         ref={cardRef}>
         <CardContent className="px-0 pb-0 pt-0 h-full" ref={contentRef}>
-          {/* Inset stationery border */}
-          <div className="h-full" style={{ margin: '18px', border: '0.5px solid #e2ded8', padding: '0 36px 32px 36px' }}>
+          <div style={{ padding: '18px 54px 32px 54px' }}>
 
             {/* Letterhead — centered logo */}
             <div className="flex items-center justify-center pt-7 pb-2">
