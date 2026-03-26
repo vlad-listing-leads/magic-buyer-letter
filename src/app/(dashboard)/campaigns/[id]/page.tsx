@@ -20,7 +20,7 @@ import {
 import { LetterPreviewWizard } from '@/components/mbl/LetterPreviewWizard'
 import { ChannelContent } from '@/components/mbl/ChannelContent'
 import {
-  ArrowLeft, CheckCircle, Trash2, Loader2,
+  ArrowLeft, CheckCircle, Trash2, Loader2, Sparkles,
   Mail, FileText, MessageSquare, Phone, Camera,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
@@ -114,6 +114,8 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       ? `${campaign.criteria_price_min ? `$${campaign.criteria_price_min.toLocaleString()}` : '?'} – ${campaign.criteria_price_max ? `$${campaign.criteria_price_max.toLocaleString()}` : '?'}`
       : ''
   const canDelete = campaign.status !== 'sent' && campaign.status !== 'sending' && campaign.status !== 'delivered'
+  const hasLetterContent = campaign.letter_templates && Object.keys(campaign.letter_templates).length > 0
+  const hasPropertyContent = properties.some(p => p.personalized_content)
 
   return (
     <div className="space-y-6">
@@ -121,7 +123,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Link href="/" className="text-muted-foreground hover:text-foreground">
+            <Link href="/" className="inline-flex items-center justify-center rounded-md border border-input bg-background h-8 w-8 hover:bg-accent transition-colors text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <h1 className="text-2xl font-bold tracking-tight">
@@ -253,7 +255,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         <div className="flex-1 min-w-0 pl-6 pt-8">
           <div key={activeChannel} className="animate-fade-in">
           {/* Letter */}
-          {activeChannel === 'letter' && agent && (
+          {activeChannel === 'letter' && agent && (hasLetterContent || hasPropertyContent) && (
             <LetterPreviewWizard
               agent={agent}
               properties={properties}
@@ -268,6 +270,32 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
               campaignId={id}
               letterTemplates={campaign.letter_templates}
             />
+          )}
+
+          {activeChannel === 'letter' && agent && !hasLetterContent && !hasPropertyContent && (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="rounded-full bg-muted p-4 mb-4">
+                <Sparkles className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold">No letter generated</h3>
+              <p className="text-sm text-muted-foreground mt-1 mb-5 max-w-sm">
+                Generate a letter for this campaign. The AI call may have failed during initial creation.
+              </p>
+              <Button
+                onClick={async () => {
+                  const propertyIds = properties.map(p => p.id)
+                  await apiFetch(`/api/mbl/campaigns/${id}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ property_ids: propertyIds }),
+                  })
+                  window.location.reload()
+                }}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate Letter
+              </Button>
+            </div>
           )}
 
           {activeChannel === 'letter' && !agent && (
