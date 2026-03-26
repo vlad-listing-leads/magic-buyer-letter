@@ -56,11 +56,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         const { generateLetterForSkill } = await import('@/lib/services/claude')
         const area = `${campaign.criteria_city}${campaign.criteria_state ? `, ${campaign.criteria_state}` : ''}`
 
-        // Fetch active skills
+        // Fetch active LETTER skills only
         const { data: skills } = await admin
           .from('mbl_skills')
           .select('id, name, prompt_instructions')
           .eq('is_active', true)
+          .eq('channel', 'letter')
           .order('sort_order', { ascending: true })
 
         const activeSkills = skills ?? []
