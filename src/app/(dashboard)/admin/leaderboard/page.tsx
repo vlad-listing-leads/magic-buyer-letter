@@ -9,9 +9,10 @@ interface LeaderboardEntry {
   id: string
   name: string
   email: string
-  total_sent: number
+  points: number
   campaign_count: number
-  total_spend: number
+  letters_generated: number
+  channels_generated: number
 }
 
 function RankIcon({ rank }: { rank: number }) {
@@ -19,10 +20,6 @@ function RankIcon({ rank }: { rank: number }) {
   if (rank === 2) return <Medal className="h-4 w-4 text-gray-400" />
   if (rank === 3) return <Medal className="h-4 w-4 text-amber-600" />
   return <span className="text-muted-foreground">{rank}</span>
-}
-
-function formatDollars(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
 }
 
 export default function LeaderboardPage() {
@@ -42,7 +39,7 @@ export default function LeaderboardPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Leaderboard</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Top agents by letters sent
+          Top agents by content generated (10 pts per content type)
         </p>
       </div>
 
@@ -60,31 +57,33 @@ export default function LeaderboardPage() {
                     <th className="p-3 text-left font-medium text-muted-foreground w-12">#</th>
                     <th className="p-3 text-left font-medium text-muted-foreground">Name</th>
                     <th className="p-3 text-left font-medium text-muted-foreground">Email</th>
-                    <th className="p-3 text-right font-medium text-muted-foreground">Letters Sent</th>
+                    <th className="p-3 text-right font-medium text-muted-foreground">Points</th>
                     <th className="p-3 text-right font-medium text-muted-foreground">Campaigns</th>
-                    <th className="p-3 text-right font-medium text-muted-foreground">Total Spend</th>
+                    <th className="p-3 text-right font-medium text-muted-foreground">Letters</th>
+                    <th className="p-3 text-right font-medium text-muted-foreground">Channels</th>
                   </tr>
                 </thead>
                 <tbody>
                   {entries?.map((entry, index) => {
                     const rank = index + 1
                     return (
-                      <tr key={entry.id} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
+                      <tr key={entry.id} className="border-b border-border/50 last:border-b-0 hover:bg-accent/50 transition-colors">
                         <td className="p-3 text-center">
                           <RankIcon rank={rank} />
                         </td>
                         <td className="p-3 font-medium">{entry.name || '\u2014'}</td>
                         <td className="p-3 text-muted-foreground">{entry.email}</td>
-                        <td className="p-3 text-right font-mono">{entry.total_sent.toLocaleString()}</td>
+                        <td className="p-3 text-right font-mono font-semibold">{entry.points}</td>
                         <td className="p-3 text-right font-mono">{entry.campaign_count}</td>
-                        <td className="p-3 text-right font-mono">{formatDollars(entry.total_spend)}</td>
+                        <td className="p-3 text-right font-mono">{entry.letters_generated}</td>
+                        <td className="p-3 text-right font-mono">{entry.channels_generated}</td>
                       </tr>
                     )
                   })}
                   {entries?.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                        No letters sent yet
+                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                        No content generated yet
                       </td>
                     </tr>
                   )}
