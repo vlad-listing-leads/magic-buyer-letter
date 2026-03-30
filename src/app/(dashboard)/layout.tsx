@@ -54,11 +54,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     enabled: !!user && !isAdmin,
   })
 
-  const hasAllowedPlan = isAdmin || (
-    allowedPlanIds !== undefined &&
-    (allowedPlanIds.length === 0 || // No plans configured = no gate
-      user?.activePlanIds?.some((id) => allowedPlanIds.includes(id)) === true)
-  )
+  const planCheckLoading = allowedPlanIds === undefined
+  const hasAllowedPlan = isAdmin ||
+    planCheckLoading || // Still loading — don't gate yet
+    allowedPlanIds.length === 0 || // No plans configured = open access
+    user?.activePlanIds?.some((id) => allowedPlanIds.includes(id)) === true
 
   return (
     <div className="flex flex-col h-screen">
