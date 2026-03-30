@@ -13,10 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ExternalLink, LogOut, Moon, Sun, Settings, Lock } from 'lucide-react'
+import { ExternalLink, LogOut, Settings, Lock } from 'lucide-react'
 import { Toaster as SileoToaster } from 'sileo'
 import 'sileo/styles.css'
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import Image from 'next/image'
@@ -24,12 +24,7 @@ import Image from 'next/image'
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { user } = useCurrentUser()
-  const { resolvedTheme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const { setTheme } = useTheme()
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -37,31 +32,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push('/auth/login')
   }
 
-  const handleThemeToggle = () => {
-    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
-  }
-
   const apiFetch = useApiFetch()
   const isAdmin = user?.isAdmin ?? false
 
-  // Fetch LL profile for headshot + name
+  // Fetch LL profile for headshot + name + theme
   const { data: llProfile } = useQuery<{
     headshot: string | null
     firstName: string | null
+    themePreference: string | null
   }>({
     queryKey: ['ll-profile-header'],
     queryFn: async () => {
       const res = await apiFetch('/api/user/ll-profile')
-      if (!res.ok) return { headshot: null, firstName: null }
+      if (!res.ok) return { headshot: null, firstName: null, themePreference: null }
       const json = await res.json()
       return {
         headshot: json.data?.fields?.headshot ?? null,
         firstName: json.data?.firstName ?? null,
+        themePreference: json.data?.themePreference ?? null,
       }
     },
     staleTime: 5 * 60_000,
     enabled: !!user,
   })
+
+  // Sync theme from LL profile
+  useEffect(() => {
+    if (llProfile?.themePreference) {
+      setTheme(llProfile.themePreference)
+    }
+  }, [llProfile?.themePreference, setTheme])
 
   const displayName =
     llProfile?.firstName ??
@@ -100,21 +100,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <NavTabs />
           <div className="flex-1" />
 
-          {/* Theme Toggle */}
-          <button
-            onClick={handleThemeToggle}
-            className="p-2 rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
-            title={
-              mounted && resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
-            }
-          >
-            {mounted && resolvedTheme === 'dark' ? (
-              <Sun className="w-5 h-5" />
-            ) : (
-              <Moon className="w-5 h-5" />
-            )}
-          </button>
-
           {/* Plan Badge */}
           {user?.planName && (
             <span className="hidden sm:inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
@@ -152,7 +137,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="cursor-pointer"
-                  onClick={() => window.open('https://www.listingleads.com/settings', '_blank')}
+                  onClick={() => window.open('https://www.listingleads.com/profile', '_blank')}
                 >
                   <Settings className="mr-2 h-4 w-4" />
                   Account Settings
