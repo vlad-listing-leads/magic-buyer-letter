@@ -57,6 +57,8 @@ export async function GET(
           sqft_min: campaign.criteria_sqft_min ?? undefined,
           sqft_max: campaign.criteria_sqft_max ?? undefined,
           years_owned_min: campaign.criteria_years_owned_min ?? undefined,
+          lot_sqft_min: campaign.criteria_lot_sqft_min ?? undefined,
+          lot_sqft_max: campaign.criteria_lot_sqft_max ?? undefined,
           property_type: campaign.criteria_property_type ?? undefined,
         })
 

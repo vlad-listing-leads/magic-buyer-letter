@@ -115,6 +115,8 @@ function buildReapiParams(criteria: PropertySearchCriteria): Record<string, unkn
     params.years_owned = criteria.years_owned_min
     params.years_owned_operator = 'gte'
   }
+  if (criteria.lot_sqft_min) params.lot_size_min = criteria.lot_sqft_min
+  if (criteria.lot_sqft_max) params.lot_size_max = criteria.lot_sqft_max
   if (criteria.property_type) params.property_type = criteria.property_type
   return params
 }

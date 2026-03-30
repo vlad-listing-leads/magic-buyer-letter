@@ -235,6 +235,8 @@ export interface PropertySearchCriteria {
   sqft_min?: number
   sqft_max?: number
   years_owned_min?: number
+  lot_sqft_min?: number
+  lot_sqft_max?: number
   property_type?: string
   area?: string
   city?: string

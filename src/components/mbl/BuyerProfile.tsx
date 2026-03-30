@@ -209,6 +209,27 @@ export function BuyerProfile({
           )}
         </div>
 
+        {/* Lot Size row */}
+        <div>
+          <label className="text-sm font-medium mb-2 block text-muted-foreground">Lot Size (sqft)</label>
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              type="number"
+              value={criteria.lot_sqft_min ?? ''}
+              onChange={(e) => onCriteriaChange({ ...criteria, lot_sqft_min: e.target.value ? Number(e.target.value) : undefined })}
+              placeholder="Lot min"
+              className="h-8 text-sm"
+            />
+            <Input
+              type="number"
+              value={criteria.lot_sqft_max ?? ''}
+              onChange={(e) => onCriteriaChange({ ...criteria, lot_sqft_max: e.target.value ? Number(e.target.value) : undefined })}
+              placeholder="Lot max"
+              className="h-8 text-sm"
+            />
+          </div>
+        </div>
+
         {/* Property Type */}
         <ChipSelector
           label="Property type"

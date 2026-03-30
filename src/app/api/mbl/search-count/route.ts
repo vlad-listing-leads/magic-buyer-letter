@@ -16,6 +16,8 @@ const searchCountSchema = z.object({
   sqft_min: z.number().optional(),
   sqft_max: z.number().optional(),
   years_owned_min: z.number().optional(),
+  lot_sqft_min: z.number().optional(),
+  lot_sqft_max: z.number().optional(),
   property_type: z.string().optional(),
 })
 
