@@ -16,6 +16,7 @@ const searchCountSchema = z.object({
   sqft_min: z.number().optional(),
   sqft_max: z.number().optional(),
   years_owned_min: z.number().optional(),
+  property_type: z.string().optional(),
 })
 
 /** POST /api/mbl/search-count — count matching properties without consuming credits */

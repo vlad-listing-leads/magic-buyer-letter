@@ -209,6 +209,21 @@ export function BuyerProfile({
           )}
         </div>
 
+        {/* Property Type */}
+        <ChipSelector
+          label="Property type"
+          options={[
+            { value: 'SFR', label: 'Single Family' },
+            { value: 'Condo', label: 'Condo' },
+            { value: 'Townhouse', label: 'Townhouse' },
+            { value: 'Multi-Family', label: 'Multi-Family' },
+            { value: 'Mobile Home', label: 'Mobile Home' },
+            { value: 'Land', label: 'Land' },
+          ]}
+          value={criteria.property_type ?? ''}
+          onChange={(v) => onCriteriaChange({ ...criteria, property_type: v || undefined })}
+        />
+
         {/* Years / Beds / Baths — all on one row */}
         <div className="grid grid-cols-3 gap-3">
           <ChipSelector
