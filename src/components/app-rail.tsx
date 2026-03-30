@@ -30,7 +30,7 @@ const apps: AppEntry[] = [
     id: 'cannonball',
     label: 'Cannon Ball',
     icon: Flame,
-    href: '#',
+    href: 'https://cannonball.listingleads.com',
   },
 ]
 
