@@ -46,7 +46,7 @@ Extract these fields:
 - years_owned_min: number or null (minimum years the owner has owned the property. "any" = 0, "3+" = 3, "5+" = 5, "10+" = 10, "20+" = 20)
 - lot_sqft_min: number or null (minimum lot size in square feet. Convert acres: 1 acre = 43560 sqft. "half acre" = 21780, "quarter acre" = 10890)
 - lot_sqft_max: number or null (maximum lot size in square feet)
-- property_type: string or null (one of: "SFR", "Condo", "Townhouse", "Multi-Family", "Mobile Home", "Land". Map: "single family" = "SFR", "house" = "SFR", "condo" = "Condo", "townhome"/"townhouse" = "Townhouse", "duplex"/"triplex"/"multi-family" = "Multi-Family", "mobile home"/"manufactured" = "Mobile Home", "lot"/"land"/"vacant" = "Land")
+- property_type: string or null (one of: "SFR", "MFR", "CONDO", "MOBILE", "LAND", "OTHER". Map: "single family"/"house"/"townhouse"/"townhome" = "SFR", "condo"/"condominium" = "CONDO", "duplex"/"triplex"/"multi-family"/"multifamily" = "MFR", "mobile home"/"manufactured" = "MOBILE", "lot"/"land"/"vacant" = "LAND")
 - financing: string or null (one of: "pre-approved", "cash", "fha", "va", "conventional")
 - closing_flexibility: string or null (one of: "flexible", "quick-close", "30-days", "no-rush", "rent-back")
 - condition_tolerance: string or null (one of: "minor-updates", "as-is", "move-in-ready", "major-reno")

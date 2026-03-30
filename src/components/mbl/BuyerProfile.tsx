@@ -235,11 +235,11 @@ export function BuyerProfile({
           label="Property type"
           options={[
             { value: 'SFR', label: 'Single Family' },
-            { value: 'Condo', label: 'Condo' },
-            { value: 'Townhouse', label: 'Townhouse' },
-            { value: 'Multi-Family', label: 'Multi-Family' },
-            { value: 'Mobile Home', label: 'Mobile Home' },
-            { value: 'Land', label: 'Land' },
+            { value: 'MFR', label: 'Multi-Family' },
+            { value: 'CONDO', label: 'Condo' },
+            { value: 'MOBILE', label: 'Mobile Home' },
+            { value: 'LAND', label: 'Land' },
+            { value: 'OTHER', label: 'Other' },
           ]}
           value={criteria.property_type ?? ''}
           onChange={(v) => onCriteriaChange({ ...criteria, property_type: v || undefined })}
