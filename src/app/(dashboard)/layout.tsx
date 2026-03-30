@@ -19,6 +19,8 @@ import { Toaster as SileoToaster } from 'sileo'
 import 'sileo/styles.css'
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useApiFetch } from '@/hooks/useApiFetch'
+import Image from 'next/image'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -40,8 +42,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
   }
 
+  const apiFetch = useApiFetch()
   const displayName = user?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'User'
   const isAdmin = user?.isAdmin ?? false
+
+  const { data: llProfile } = useQuery<{ fields: Record<string, string> }>({
+    queryKey: ['ll-profile'],
+    queryFn: async () => {
+      const res = await apiFetch('/api/user/ll-profile')
+      if (!res.ok) return null
+      const json = await res.json()
+      return json.data
+    },
+    staleTime: 10 * 60_000,
+    enabled: !!user,
+  })
+  const headshot = llProfile?.fields?.headshot ?? null
 
   const { data: allowedPlanIds } = useQuery<string[]>({
     queryKey: ['allowed-plans'],
@@ -97,9 +113,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <DropdownMenu>
                 <DropdownMenuTrigger>
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-foreground hover:bg-accent cursor-pointer">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                      {displayName.charAt(0).toUpperCase()}
-                    </div>
+                    {headshot ? (
+                      <Image
+                        src={headshot}
+                        alt={displayName}
+                        width={32}
+                        height={32}
+                        className="rounded-full object-cover"
+                        style={{ width: 32, height: 32 }}
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
+                        {displayName.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <span className="hidden sm:block text-sm font-medium">{displayName}</span>
                   </div>
                 </DropdownMenuTrigger>
