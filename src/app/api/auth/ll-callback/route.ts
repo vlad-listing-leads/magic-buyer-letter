@@ -136,6 +136,7 @@ export async function GET(request: NextRequest) {
     const f = llProfile.fields
     const fullName = [llProfile.firstName, llProfile.lastName].filter(Boolean).join(' ')
     if (fullName) agentData.name = fullName
+    if (f.email) agentData.email = f.email
     if (f.phone) agentData.phone = f.phone
     if (f.brokerage) agentData.brokerage = f.brokerage
     if (f.license_number) agentData.license_number = f.license_number
