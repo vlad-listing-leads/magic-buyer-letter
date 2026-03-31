@@ -21,6 +21,7 @@ export const GET = withErrorHandler(async (_request: NextRequest, context) => {
     .from('mbl_properties')
     .select('*')
     .eq('campaign_id', id)
+    .eq('selected', true)
     .order('created_at', { ascending: true })
 
   if (!properties || properties.length === 0) {
