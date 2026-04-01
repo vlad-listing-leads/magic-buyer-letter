@@ -51,8 +51,8 @@ const s = StyleSheet.create({
     paddingBottom: 6,
   },
   logo: {
-    height: 32,
-    maxWidth: 140,
+    maxHeight: 50,
+    maxWidth: 180,
     objectFit: 'contain' as const,
   },
   logoText: {

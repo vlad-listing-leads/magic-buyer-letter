@@ -8,6 +8,7 @@ import {
 } from 'novel'
 import StarterKit from '@tiptap/starter-kit'
 import { Card, CardContent } from '@/components/ui/card'
+import { AdaptiveLogo } from './AdaptiveLogo'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
 
 export interface LetterEditorContent {
@@ -121,7 +122,7 @@ export function LetterEditor({
       {/* Letterhead */}
       <div className="flex justify-center pt-10 pb-4">
         {agent.logo_url ? (
-          <img src={agent.logo_url} alt={agent.name} className="h-14 max-w-[220px] object-contain" />
+          <AdaptiveLogo src={agent.logo_url} alt={agent.name} />
         ) : (
           <div className="h-14 flex items-center text-xl font-bold text-[#2d2d2d] tracking-tight" style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
             {agent.brokerage || agent.name}

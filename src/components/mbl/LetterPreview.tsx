@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { AdaptiveLogo } from './AdaptiveLogo'
 import type { MblAgent, MblProperty, TemplateStyle } from '@/types'
 
 /** Content from Claude — just body + ps */
@@ -123,7 +124,7 @@ export function LetterPreview({
             {/* Letterhead — centered logo */}
             <div className="flex items-center justify-center pt-7 pb-2">
               {agent.logo_url ? (
-                <img src={agent.logo_url} alt={agent.name} className="h-10 max-w-[160px] object-contain" />
+                <AdaptiveLogo src={agent.logo_url} alt={agent.name} />
               ) : (
                 <div className="text-[12px] tracking-[0.2em] uppercase text-center"
                   style={{ fontFamily: "'Helvetica Neue', Arial, sans-serif", fontWeight: 400, color: '#555' }}>
