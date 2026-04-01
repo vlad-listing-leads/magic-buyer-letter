@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/components/ThemeProvider'
 import { QueryProvider } from '@/components/QueryProvider'
 import { TooltipProvider } from '@/components/ui/tooltip'
 // Sileo notifications added in dashboard layout
+import { VersionChecker } from '@/components/VersionChecker'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -33,6 +34,7 @@ export default function RootLayout({
           <QueryProvider>
             <TooltipProvider>
               {children}
+              <VersionChecker />
             </TooltipProvider>
           </QueryProvider>
         </ThemeProvider>
