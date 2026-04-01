@@ -53,6 +53,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     },
     staleTime: 5 * 60_000,
+    refetchOnWindowFocus: 'always',
     enabled: !!user,
   })
 
