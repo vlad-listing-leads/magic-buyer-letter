@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ExternalLink, LogOut, Settings, Lock } from 'lucide-react'
+import { ExternalLink, LogOut, Settings, Lock, ChevronDown } from 'lucide-react'
 import { Toaster as SileoToaster } from 'sileo'
 import 'sileo/styles.css'
 import { useEffect } from 'react'
@@ -127,6 +127,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                   )}
                   <span className="hidden sm:block text-sm font-medium">{displayName}</span>
+                  <ChevronDown className="hidden sm:block h-3.5 w-3.5 text-muted-foreground" />
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
