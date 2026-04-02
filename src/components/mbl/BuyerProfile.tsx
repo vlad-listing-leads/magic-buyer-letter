@@ -84,6 +84,7 @@ export function BuyerProfile({
 
   const [propertyCount, setPropertyCount] = useState<number | null>(null)
   const [countLoading, setCountLoading] = useState(false)
+  const [availableNeighborhoods, setAvailableNeighborhoods] = useState<string[]>([])
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const hasLocation = !!(criteria.city && criteria.state) || !!criteria.zip
@@ -98,14 +99,17 @@ export function BuyerProfile({
   const fetchCount = useCallback(async (c: PropertySearchCriteria) => {
     setCountLoading(true)
     try {
+      // Strip neighborhoods from the count request so count reflects the full area
+      const { neighborhoods: _excluded, ...countCriteria } = c
       const res = await fetch('/api/mbl/search-count', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(c),
+        body: JSON.stringify(countCriteria),
       })
       const json = await res.json()
       if (json.success) {
         setPropertyCount(json.data.count)
+        setAvailableNeighborhoods(json.data.neighborhoods ?? [])
       }
     } catch {
       setPropertyCount(null)
@@ -172,6 +176,42 @@ export function BuyerProfile({
             />
           </div>
         </div>
+
+        {/* Neighborhoods — shown when area has subdivisions */}
+        {availableNeighborhoods.length > 1 && (
+          <div>
+            <label className="text-sm font-medium mb-2 block text-muted-foreground">Neighborhoods</label>
+            <div className="flex flex-wrap gap-1.5">
+              {availableNeighborhoods.map((n) => {
+                const selected = criteria.neighborhoods?.includes(n) ?? false
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => {
+                      const current = criteria.neighborhoods ?? []
+                      const next = selected
+                        ? current.filter((v) => v !== n)
+                        : [...current, n]
+                      onCriteriaChange({ ...criteria, neighborhoods: next.length > 0 ? next : undefined })
+                    }}
+                    className={cn(
+                      'px-2.5 py-1 rounded-md text-xs border transition-colors',
+                      selected
+                        ? 'border-[#006AFF] bg-[#006AFF]/10 text-[#006AFF]'
+                        : 'border-border text-muted-foreground hover:bg-accent'
+                    )}
+                  >
+                    {n}
+                  </button>
+                )
+              })}
+            </div>
+            {!criteria.neighborhoods?.length && (
+              <p className="text-[11px] text-muted-foreground mt-1">All neighborhoods included. Select to narrow down.</p>
+            )}
+          </div>
+        )}
 
         {/* Value + sqft row */}
         <div>

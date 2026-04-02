@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
+import { getTemplate } from '@/lib/templates'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -74,7 +75,7 @@ function CampaignCard({ campaign }: { campaign: MblCampaign }) {
               <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
                 <span>{area}</span>
                 <span className="text-border">·</span>
-                <span className="capitalize">{campaign.template_style}</span>
+                <span>{getTemplate(campaign.template_style).name}</span>
                 <span className="text-border">·</span>
                 <span>{relativeTime(campaign.created_at)}</span>
               </div>

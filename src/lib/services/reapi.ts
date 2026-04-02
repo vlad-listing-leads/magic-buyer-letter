@@ -164,6 +164,35 @@ export async function countProperties(
 }
 
 /**
+ * Count properties AND extract unique neighborhood names from a sample.
+ * Fetches one page (250) to discover neighborhoods in the area.
+ */
+export async function countPropertiesWithNeighborhoods(
+  criteria: PropertySearchCriteria
+): Promise<{ count: number; neighborhoods: string[] }> {
+  const params = { ...buildReapiParams(criteria), size: 250 }
+  logger.info({ params }, 'REAPI count+neighborhoods search')
+
+  const result = await reapiFetch<{
+    resultCount?: number
+    totalResults?: number
+    data?: ReapiPropertyResult[]
+  }>('/v2/PropertySearch', params)
+
+  const count = result.resultCount ?? result.totalResults ?? result.data?.length ?? 0
+  const neighborhoods = Array.from(
+    new Set(
+      (result.data ?? [])
+        .map((p) => p.neighborhood?.name)
+        .filter((n): n is string => !!n && n.trim() !== '')
+    )
+  ).sort()
+
+  logger.info({ count, neighborhoodCount: neighborhoods.length }, 'REAPI count+neighborhoods result')
+  return { count, neighborhoods }
+}
+
+/**
  * Search properties using correct REAPI v2 parameter names and pagination.
  *
  * Strategy:
@@ -207,6 +236,10 @@ function applyFilters(properties: ReapiPropertyResult[], criteria: PropertySearc
   }
   if (criteria.years_owned_min) {
     filtered = filtered.filter(p => (p.yearsOwned ?? 0) >= criteria.years_owned_min!)
+  }
+  if (criteria.neighborhoods && criteria.neighborhoods.length > 0) {
+    const allowed = new Set(criteria.neighborhoods)
+    filtered = filtered.filter(p => p.neighborhood?.name && allowed.has(p.neighborhood.name))
   }
   logger.info({ before: properties.length, after: filtered.length }, 'REAPI filtered')
   return filtered

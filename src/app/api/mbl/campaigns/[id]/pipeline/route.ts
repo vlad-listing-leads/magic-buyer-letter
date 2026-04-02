@@ -60,6 +60,7 @@ export async function GET(
           lot_sqft_min: campaign.criteria_lot_sqft_min ?? undefined,
           lot_sqft_max: campaign.criteria_lot_sqft_max ?? undefined,
           property_type: campaign.criteria_property_type ?? undefined,
+          neighborhoods: campaign.criteria_neighborhoods?.length ? campaign.criteria_neighborhoods : undefined,
         })
 
         if (properties.length === 0) {

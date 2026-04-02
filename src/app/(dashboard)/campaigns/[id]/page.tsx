@@ -24,6 +24,7 @@ import {
   Mail, FileText, MessageSquare, Phone, Camera,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { getTemplate } from '@/lib/templates'
 import { sileo } from 'sileo'
 import Link from 'next/link'
 import type { MblCampaign, MblProperty, MblAgent, MblCampaignChannel, ChannelType } from '@/types'
@@ -135,7 +136,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           </div>
           <p className="text-muted-foreground text-sm">
             {priceRange && `${priceRange} · `}
-            {campaign.template_style} · {formatDate(campaign.created_at)}
+            {getTemplate(campaign.template_style).name} · {formatDate(campaign.created_at)}
           </p>
         </div>
 

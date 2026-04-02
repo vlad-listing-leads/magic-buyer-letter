@@ -118,6 +118,7 @@ export interface MblCampaign {
   criteria_city: string
   criteria_state: string
   criteria_zip: string
+  criteria_neighborhoods: string[] | null
   template_style: TemplateStyle
   bullet_1: string
   bullet_2: string
@@ -242,6 +243,7 @@ export interface PropertySearchCriteria {
   city?: string
   state?: string
   zip?: string
+  neighborhoods?: string[]
 }
 
 /** Lob address verification result */

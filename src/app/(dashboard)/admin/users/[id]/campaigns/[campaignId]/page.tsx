@@ -3,6 +3,7 @@
 import { use, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
+import { getTemplate } from '@/lib/templates'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LetterPreview } from '@/components/mbl/LetterPreview'
@@ -77,7 +78,7 @@ export default function AdminCampaignDetailPage({
           <Badge variant="outline" className="text-xs">Admin view</Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          {campaign.template_style && `${campaign.template_style} · `}{formatDate(campaign.created_at)}
+          {campaign.template_style && `${getTemplate(campaign.template_style).name} · `}{formatDate(campaign.created_at)}
           {' · '}{properties.length} properties · {campaign.properties_sent} sent
         </p>
       </div>

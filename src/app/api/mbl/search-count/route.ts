@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { withErrorHandler } from '@/lib/api/middleware'
 import { apiSuccess, apiError } from '@/lib/api/response'
 import { requireAuth } from '@/lib/supabase/server'
-import { countProperties } from '@/lib/services/reapi'
+import { countPropertiesWithNeighborhoods } from '@/lib/services/reapi'
 import { z } from 'zod'
 
 const searchCountSchema = z.object({
@@ -21,7 +21,7 @@ const searchCountSchema = z.object({
   property_type: z.string().optional(),
 })
 
-/** POST /api/mbl/search-count — count matching properties without consuming credits */
+/** POST /api/mbl/search-count — count matching properties and return available neighborhoods */
 export const POST = withErrorHandler(async (request: NextRequest) => {
   await requireAuth()
 
@@ -36,7 +36,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     return apiError('Location (city or zip) is required', 400)
   }
 
-  const count = await countProperties(criteria)
+  const { count, neighborhoods } = await countPropertiesWithNeighborhoods(criteria)
 
-  return apiSuccess({ count })
+  return apiSuccess({ count, neighborhoods })
 })
