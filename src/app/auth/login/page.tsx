@@ -13,8 +13,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const ssoReturn = `${llUrl}/auth/sso-redirect?returnTo=${encodeURIComponent(`${appUrl}/api/auth/ll-callback`)}`
-  const loginUrl = `${llUrl}/login?returnTo=${encodeURIComponent(ssoReturn)}`
+  const loginUrl = `${llUrl}/login`
 
   if (isDev) {
     return (
