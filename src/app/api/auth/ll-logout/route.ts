@@ -39,9 +39,24 @@ export async function POST(request: NextRequest) {
     return Response.json({ success: true })
   }
 
-  // Revoke all sessions for this user
-  await admin.auth.admin.signOut(user.id, 'global')
-  log.info({ memberstackId, userId: user.id }, 'll-logout: session revoked')
+  // Revoke all sessions by updating the user's ban status temporarily,
+  // then unbanning — this invalidates all existing refresh tokens.
+  // There's no admin.signOut(userId) in supabase-js.
+  const { error: banError } = await admin.auth.admin.updateUserById(user.id, {
+    ban_duration: '1s', // ban for 1 second — immediately invalidates all sessions
+  })
+
+  if (banError) {
+    log.error({ memberstackId, userId: user.id, error: banError.message }, 'll-logout: ban failed')
+    return Response.json({ success: false, error: 'Failed to revoke session' }, { status: 500 })
+  }
+
+  // Unban immediately so they can log in again via SSO
+  await admin.auth.admin.updateUserById(user.id, {
+    ban_duration: 'none',
+  })
+
+  log.info({ memberstackId, userId: user.id }, 'll-logout: session revoked via ban cycle')
 
   return Response.json({ success: true })
 }
