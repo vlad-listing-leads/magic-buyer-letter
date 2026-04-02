@@ -108,10 +108,9 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     }
   }
 
-  const handlePipelineComplete = async () => {
-    setIsReSearching(false)
-    await queryClient.invalidateQueries({ queryKey: ['campaign', id] })
-    sileo.success({ title: 'Properties updated!' })
+  const handlePipelineComplete = () => {
+    // Send to wizard at audience step so user can select properties + generate content
+    router.push(`/new?campaign_id=${id}&step=audience`)
   }
 
   // Re-search takes priority over loading/error states
