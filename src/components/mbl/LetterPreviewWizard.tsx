@@ -196,11 +196,33 @@ export function LetterPreviewWizard({
         }
       }
 
+      // Regenerate non-letter channels too (email, text, call_script)
+      try {
+        const campaignRes = await apiFetch(`/api/mbl/campaigns/${campaignId}`)
+        const campaignJson = await campaignRes.json()
+        const selectedChannels: string[] = campaignJson.data?.campaign?.selected_channels ?? []
+        const nonLetterChannels = selectedChannels.filter(
+          (ch: string) => ch !== 'letter' && ch !== 'social_post'
+        )
+        await Promise.all(
+          nonLetterChannels.map((channel: string) =>
+            apiFetch(`/api/mbl/campaigns/${campaignId}/generate-channel`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ channel }),
+            }).catch(() => {})
+          )
+        )
+      } catch {
+        // Non-fatal — letter was regenerated even if channels fail
+      }
+
       // Clear local edits and refresh from server
       setCustomContent(null)
       hasSavedActive.current = false
       await queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] })
-      sileo.success({ title: 'Letter regenerated' })
+      await queryClient.invalidateQueries({ queryKey: ['campaign-channels', campaignId] })
+      sileo.success({ title: 'All content regenerated' })
     } catch (err) {
       sileo.error({ title: err instanceof Error ? err.message : 'Failed to regenerate' })
     } finally {

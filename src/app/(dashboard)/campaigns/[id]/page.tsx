@@ -105,8 +105,6 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
     if (reSearch) {
       setIsReSearching(true)
-      // Refetch to get updated criteria
-      await queryClient.invalidateQueries({ queryKey: ['campaign', id] })
     }
   }
 
@@ -114,6 +112,32 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     setIsReSearching(false)
     await queryClient.invalidateQueries({ queryKey: ['campaign', id] })
     sileo.success({ title: 'Properties updated!' })
+  }
+
+  // Re-search takes priority over loading/error states
+  if (isReSearching) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Link href="/" className="inline-flex items-center justify-center rounded-md border border-input bg-background h-8 w-8 hover:bg-accent transition-colors text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Updating search...
+          </h1>
+        </div>
+        <PipelineLoading
+          campaignId={id}
+          buyerName={data?.campaign.buyer_name ?? ''}
+          onComplete={() => handlePipelineComplete()}
+          onError={(error) => {
+            setIsReSearching(false)
+            sileo.error({ title: error })
+          }}
+          onBack={() => setIsReSearching(false)}
+        />
+      </div>
+    )
   }
 
   if (isLoading) {
@@ -240,22 +264,8 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
       <hr className="border-border -mx-4 sm:-mx-6 md:-mx-8" />
 
-      {/* Re-search pipeline loading */}
-      {isReSearching && (
-        <PipelineLoading
-          campaignId={id}
-          buyerName={campaign.buyer_name}
-          onComplete={() => handlePipelineComplete()}
-          onError={(error) => {
-            setIsReSearching(false)
-            sileo.error({ title: error })
-          }}
-          onBack={() => setIsReSearching(false)}
-        />
-      )}
-
       {/* Sidebar + Content — same layout as /new preview step */}
-      {!isReSearching && <div className="flex -mb-4 sm:-mb-6 md:-mb-8">
+      <div className="flex -mb-4 sm:-mb-6 md:-mb-8">
         {/* Channel sidebar — flush top to bottom */}
         <div className="w-[240px] flex-shrink-0 pr-6 border-r border-border -mt-6 -mb-0 pt-6">
           <div className="sticky top-4 space-y-2">
@@ -375,7 +385,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           )}
           </div>{/* end keyed animation wrapper */}
         </div>
-      </div>}
+      </div>
 
       {/* Edit Criteria Sheet */}
       <EditCriteriaSheet
