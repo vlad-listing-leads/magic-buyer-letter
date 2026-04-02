@@ -172,6 +172,13 @@ export function LetterPreviewWizard({
     if (!campaignId || properties.length === 0) return
     setIsRegenerating(true)
     try {
+      // Clear _active so generate endpoint writes fresh content
+      await apiFetch(`/api/mbl/campaigns/${campaignId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ letter_templates: { _active: null } }),
+      })
+
       const res = await apiFetch(`/api/mbl/campaigns/${campaignId}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
