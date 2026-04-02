@@ -228,6 +228,13 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Clear any ll_logged_out_at flag from cross-app logout
+  if (userId) {
+    await admin.auth.admin.updateUserById(userId, {
+      app_metadata: { ll_logged_out_at: null },
+    })
+  }
+
   // 3. Generate magic link OTP
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: 'magiclink',

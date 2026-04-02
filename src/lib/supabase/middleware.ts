@@ -32,5 +32,12 @@ export async function updateSession(request: NextRequest) {
   // Refresh the session — IMPORTANT: don't remove this
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Check if LL flagged this user as logged out
+  if (user?.app_metadata?.ll_logged_out_at) {
+    // Clear the session by signing out and removing cookies
+    await supabase.auth.signOut()
+    return { supabaseResponse, user: null }
+  }
+
   return { supabaseResponse, user }
 }
