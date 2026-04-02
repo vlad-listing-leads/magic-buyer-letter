@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { SmartInput } from '@/components/mbl/SmartInput'
 import { BuyerProfile } from '@/components/mbl/BuyerProfile'
@@ -52,6 +52,7 @@ function NewBuyerWizard() {
   const searchParams = useSearchParams()
   const apiFetch = useApiFetch()
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   // Check for Stripe return
   const urlStep = searchParams.get('step')
@@ -374,6 +375,7 @@ function NewBuyerWizard() {
           selected={selectedChannels}
           onChange={setSelectedChannels}
           agent={agent}
+          onAgentSync={() => queryClient.invalidateQueries({ queryKey: ['mbl-agent'] })}
         />
       )}
 

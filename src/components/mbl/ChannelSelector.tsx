@@ -1,8 +1,10 @@
 'use client'
 
-import { Mail, FileText, MessageSquare, Phone, Camera, AlertTriangle, ExternalLink } from 'lucide-react'
+import { useState } from 'react'
+import { Mail, FileText, MessageSquare, Phone, Camera, AlertTriangle, ExternalLink, RefreshCw, Loader2 } from 'lucide-react'
 import { cn, getAgentProfileGaps } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { useApiFetch } from '@/hooks/useApiFetch'
 import type { MblAgent } from '@/types'
 
 const CHANNELS = [
@@ -43,9 +45,12 @@ interface ChannelSelectorProps {
   selected: Set<string>
   onChange: (selected: Set<string>) => void
   agent: MblAgent | null | undefined
+  onAgentSync?: (agent: MblAgent) => void
 }
 
-export function ChannelSelector({ selected, onChange, agent }: ChannelSelectorProps) {
+export function ChannelSelector({ selected, onChange, agent, onAgentSync }: ChannelSelectorProps) {
+  const apiFetch = useApiFetch()
+  const [isSyncing, setIsSyncing] = useState(false)
   const profileGaps = getAgentProfileGaps(agent as Record<string, unknown> | null)
   const toggle = (id: string) => {
     const next = new Set(selected)
@@ -75,13 +80,35 @@ export function ChannelSelector({ selected, onChange, agent }: ChannelSelectorPr
               Your generated letters, emails, and texts include your contact info.
               Missing: <span className="font-medium text-foreground">{profileGaps.map((g) => g.label).join(', ')}</span>
             </p>
-            <button
-              onClick={() => window.open('https://www.listingleads.com/profile', '_blank')}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#006AFF] hover:underline mt-2"
-            >
-              Update on Listing Leads
-              <ExternalLink className="h-3 w-3" />
-            </button>
+            <div className="flex items-center gap-3 mt-2">
+              <button
+                onClick={() => window.open('https://www.listingleads.com/profile', '_blank')}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-[#006AFF] hover:underline"
+              >
+                Update on Listing Leads
+                <ExternalLink className="h-3 w-3" />
+              </button>
+              <span className="text-border">·</span>
+              <button
+                onClick={async () => {
+                  setIsSyncing(true)
+                  try {
+                    const res = await apiFetch('/api/mbl/agent/sync', { method: 'POST' })
+                    const json = await res.json()
+                    if (json.success && json.data) {
+                      onAgentSync?.(json.data)
+                    }
+                  } catch {} finally {
+                    setIsSyncing(false)
+                  }
+                }}
+                disabled={isSyncing}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-[#006AFF] hover:underline disabled:opacity-50"
+              >
+                {isSyncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                I&apos;ve updated my profile
+              </button>
+            </div>
           </div>
         </div>
       )}
