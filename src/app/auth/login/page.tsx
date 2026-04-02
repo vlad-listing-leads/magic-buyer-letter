@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { useState } from 'react'
 
 /**
  * Login page — redirects to Listing Leads SSO.
@@ -14,11 +13,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (isDev) return
-    const ssoUrl = `${llUrl}/auth/sso-redirect?returnTo=${encodeURIComponent(`${appUrl}/api/auth/ll-callback`)}`
-    window.location.href = ssoUrl
-  }, [isDev, llUrl, appUrl])
+  const ssoUrl = `${llUrl}/auth/sso-redirect?returnTo=${encodeURIComponent(`${appUrl}/api/auth/ll-callback`)}`
 
   if (isDev) {
     return (
@@ -60,9 +55,21 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-3">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Redirecting to Listing Leads...</p>
+      <div className="flex flex-col items-center gap-4 w-full max-w-xs text-center">
+        <h1 className="text-xl font-semibold">Magic Buyer Letter</h1>
+        <p className="text-sm text-muted-foreground">
+          Log in through Listing Leads to continue
+        </p>
+        <button
+          onClick={() => {
+            setLoading(true)
+            window.location.href = ssoUrl
+          }}
+          disabled={loading}
+          className="w-full rounded-md bg-[#006AFF] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#0058D4] disabled:opacity-50 transition-colors"
+        >
+          {loading ? 'Redirecting...' : 'Log in with Listing Leads'}
+        </button>
       </div>
     </div>
   )
