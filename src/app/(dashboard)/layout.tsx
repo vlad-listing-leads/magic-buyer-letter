@@ -74,17 +74,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         const res = await fetch(`${llUrl}/api/auth/satellite/who`, {
           credentials: 'include',
         })
-        if (!res.ok) return
+        if (!res.ok) {
+          console.warn('[LL session check] Non-OK response:', res.status)
+          return
+        }
         const data = await res.json()
+        console.info('[LL session check]', { ll: data.memberstack_id, mbl: user.memberstackId })
 
         if (!data.memberstack_id || data.memberstack_id !== user.memberstackId) {
-          // LL user changed or logged out — sign out of MBL
           const supabase = createClient()
           await supabase.auth.signOut()
           router.push('/auth/login')
         }
-      } catch {
-        // LL unreachable — don't sign out, just skip
+      } catch (err) {
+        console.warn('[LL session check] Failed:', err)
       }
     }
 
