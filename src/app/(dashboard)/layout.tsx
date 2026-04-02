@@ -67,7 +67,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Check LL session on window focus — sign out if user changed or logged out
   useEffect(() => {
     if (!user) return
-    const llUrl = process.env.NEXT_PUBLIC_LL_URL || 'https://www.listingleads.com'
+    const llUrl = 'https://www.listingleads.com'
 
     const checkLLSession = async () => {
       try {
