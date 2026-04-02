@@ -39,8 +39,7 @@ function relativeTime(dateStr: string): string {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  delivered: { label: 'Completed', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' },
-  ready: { label: 'Ready', className: 'bg-violet-500/15 text-violet-400 border-violet-500/20' },
+  delivered: { label: 'Done', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' },
   generating: { label: 'Generating', className: 'bg-amber-500/15 text-amber-400 border-amber-500/20' },
   searching: { label: 'Searching', className: 'bg-amber-500/15 text-amber-400 border-amber-500/20' },
   skip_tracing: { label: 'Processing', className: 'bg-amber-500/15 text-amber-400 border-amber-500/20' },
@@ -248,8 +247,8 @@ export default function DashboardPage() {
         <Tabs defaultValue="all">
           <TabsList>
             <TabsTrigger value="all">All ({tabCounts.all})</TabsTrigger>
-            <TabsTrigger value="in_progress">In Progress ({tabCounts.in_progress})</TabsTrigger>
-            <TabsTrigger value="completed">Completed ({tabCounts.delivered})</TabsTrigger>
+            <TabsTrigger value="in_progress">Active ({tabCounts.in_progress})</TabsTrigger>
+            <TabsTrigger value="completed">Done ({tabCounts.delivered})</TabsTrigger>
           </TabsList>
 
           {['all', 'in_progress', 'completed'].map((tab) => (

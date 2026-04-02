@@ -78,6 +78,18 @@ export async function POST(request: NextRequest) {
       return apiError('Please set up your agent profile first', 400)
     }
 
+    // Validate agent profile completeness before allowing campaign creation
+    const missingFields: string[] = []
+    if (!agent.name?.trim()) missingFields.push('name')
+    if (!agent.phone?.trim()) missingFields.push('phone')
+    if (!agent.brokerage?.trim()) missingFields.push('brokerage')
+    if (missingFields.length > 0) {
+      return apiError(
+        `Complete your agent profile before creating a campaign. Missing: ${missingFields.join(', ')}`,
+        400
+      )
+    }
+
     // Create campaign record
     const { data: campaign, error: createError } = await admin
       .from('mbl_campaigns')

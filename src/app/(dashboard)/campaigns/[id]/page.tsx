@@ -144,13 +144,13 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
             <AlertDialog>
               <AlertDialogTrigger className="inline-flex items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 h-8 text-sm font-medium hover:bg-accent transition-colors">
                 <CheckCircle className="h-4 w-4" />
-                Complete
+                Mark as Done
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Complete this buyer campaign?</AlertDialogTitle>
+                  <AlertDialogTitle>Done with this campaign?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Did you find a seller for {campaign.buyer_name}? Completing this campaign will mark it as done.
+                    This will move the {campaign.buyer_name} campaign to your Done tab.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -166,7 +166,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                     }}
                     className="bg-[#006AFF] hover:bg-[#0058D4] text-white"
                   >
-                    Yes, found a seller!
+                    Mark as Done
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

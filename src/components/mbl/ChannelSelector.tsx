@@ -1,8 +1,9 @@
 'use client'
 
-import { Mail, FileText, MessageSquare, Phone, Camera } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Mail, FileText, MessageSquare, Phone, Camera, AlertTriangle, ExternalLink } from 'lucide-react'
+import { cn, getAgentProfileGaps } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import type { MblAgent } from '@/types'
 
 const CHANNELS = [
   {
@@ -41,9 +42,11 @@ const CHANNELS = [
 interface ChannelSelectorProps {
   selected: Set<string>
   onChange: (selected: Set<string>) => void
+  agent: MblAgent | null | undefined
 }
 
-export function ChannelSelector({ selected, onChange }: ChannelSelectorProps) {
+export function ChannelSelector({ selected, onChange, agent }: ChannelSelectorProps) {
+  const profileGaps = getAgentProfileGaps(agent as Record<string, unknown> | null)
   const toggle = (id: string) => {
     const next = new Set(selected)
     if (next.has(id)) {
@@ -62,6 +65,26 @@ export function ChannelSelector({ selected, onChange }: ChannelSelectorProps) {
           Select which touchpoints to create for this buyer
         </p>
       </div>
+
+      {profileGaps.length > 0 && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">Complete your agent profile to continue</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Your generated letters, emails, and texts include your contact info.
+              Missing: <span className="font-medium text-foreground">{profileGaps.map((g) => g.label).join(', ')}</span>
+            </p>
+            <button
+              onClick={() => window.open('https://www.listingleads.com/profile', '_blank')}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#006AFF] hover:underline mt-2"
+            >
+              Update on Listing Leads
+              <ExternalLink className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-3">
         {CHANNELS.map((channel) => {

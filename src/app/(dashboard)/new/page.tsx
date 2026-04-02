@@ -17,7 +17,7 @@ import { generateBullets } from '@/lib/bullets'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, ArrowRight, Download, Mail, FileText, MessageSquare, Phone, Camera } from 'lucide-react'
 import { sileo } from 'sileo'
-import { cn } from '@/lib/utils'
+import { cn, getAgentProfileGaps } from '@/lib/utils'
 import type {
   PropertySearchCriteria,
   TemplateStyle,
@@ -373,6 +373,7 @@ function NewBuyerWizard() {
         <ChannelSelector
           selected={selectedChannels}
           onChange={setSelectedChannels}
+          agent={agent}
         />
       )}
 
@@ -590,7 +591,7 @@ function NewBuyerWizard() {
             {step === 'channels' && (
               <Button
                 onClick={handleChannelSubmit}
-                disabled={selectedChannels.size === 0}
+                disabled={selectedChannels.size === 0 || getAgentProfileGaps(agent as Record<string, unknown> | null).length > 0}
                 className="bg-[#006AFF] hover:bg-[#0058D4] text-white px-6 gap-2 font-semibold shadow-lg shadow-[#006AFF]/20"
                 size="lg"
               >
