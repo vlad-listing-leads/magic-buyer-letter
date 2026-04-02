@@ -64,6 +64,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [llProfile?.themePreference, setTheme])
 
+  // Check LL session on window focus — sign out if user changed or logged out
+  useEffect(() => {
+    if (!user) return
+    const llUrl = process.env.NEXT_PUBLIC_LL_URL || 'https://www.listingleads.com'
+
+    const checkLLSession = async () => {
+      try {
+        const res = await fetch(`${llUrl}/api/auth/satellite/who`, {
+          credentials: 'include',
+        })
+        if (!res.ok) return
+        const data = await res.json()
+
+        if (!data.memberstack_id || data.memberstack_id !== user.memberstackId) {
+          // LL user changed or logged out — sign out of MBL
+          const supabase = createClient()
+          await supabase.auth.signOut()
+          router.push('/auth/login')
+        }
+      } catch {
+        // LL unreachable — don't sign out, just skip
+      }
+    }
+
+    // Check on focus (user coming back from another tab)
+    window.addEventListener('focus', checkLLSession)
+    // Also check once on mount
+    checkLLSession()
+
+    return () => window.removeEventListener('focus', checkLLSession)
+  }, [user, router])
+
   const displayName =
     llProfile?.firstName ??
     user?.name?.split(' ')[0] ??
