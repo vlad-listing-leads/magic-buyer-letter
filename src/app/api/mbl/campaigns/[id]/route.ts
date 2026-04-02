@@ -83,6 +83,36 @@ export const PATCH = withErrorHandler(async (request: NextRequest, context) => {
     updateData.letter_templates = merged
   }
 
+  // Criteria updates
+  if (body.criteria) {
+    const c = body.criteria
+    if (c.city !== undefined) updateData.criteria_city = c.city ?? ''
+    if (c.state !== undefined) updateData.criteria_state = c.state ?? ''
+    if (c.zip !== undefined) updateData.criteria_zip = c.zip ?? ''
+    if (c.price_min !== undefined) updateData.criteria_price_min = c.price_min ?? null
+    if (c.price_max !== undefined) updateData.criteria_price_max = c.price_max ?? null
+    if (c.beds_min !== undefined) updateData.criteria_beds_min = c.beds_min ?? null
+    if (c.baths_min !== undefined) updateData.criteria_baths_min = c.baths_min ?? null
+    if (c.sqft_min !== undefined) updateData.criteria_sqft_min = c.sqft_min ?? null
+    if (c.sqft_max !== undefined) updateData.criteria_sqft_max = c.sqft_max ?? null
+    if (c.years_owned_min !== undefined) updateData.criteria_years_owned_min = c.years_owned_min ?? null
+    if (c.lot_sqft_min !== undefined) updateData.criteria_lot_sqft_min = c.lot_sqft_min ?? null
+    if (c.lot_sqft_max !== undefined) updateData.criteria_lot_sqft_max = c.lot_sqft_max ?? null
+    if (c.property_type !== undefined) updateData.criteria_property_type = c.property_type ?? null
+    if (c.neighborhoods !== undefined) updateData.criteria_neighborhoods = c.neighborhoods ?? []
+  }
+
+  // Re-search: delete old properties, reset status, clear letter templates
+  if (body.re_search) {
+    await admin.from('mbl_properties').delete().eq('campaign_id', id)
+    updateData.status = 'searching'
+    updateData.total_properties = 0
+    updateData.properties_skip_traced = 0
+    updateData.properties_verified = 0
+    updateData.properties_generated = 0
+    updateData.letter_templates = null
+  }
+
   if (Object.keys(updateData).length > 0) {
     await admin.from('mbl_campaigns').update(updateData).eq('id', id)
   }

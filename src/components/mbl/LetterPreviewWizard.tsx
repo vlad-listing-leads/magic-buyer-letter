@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { Button } from '@/components/ui/button'
-import { Download, Mail, MapPin, FileText, Pencil, Loader2 } from 'lucide-react'
+import { Download, Mail, MapPin, FileText, Pencil, Loader2, RefreshCw } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -52,6 +52,7 @@ export function LetterPreviewWizard({
   const [editPs, setEditPs] = useState('')
   const [customContent, setCustomContent] = useState<{ body: string; ps: string } | null>(null)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [isRegenerating, setIsRegenerating] = useState(false)
 
   const { data: skills } = useQuery<{ id: string; name: string; description: string; channel: string }[]>({
     queryKey: ['active-skills'],
@@ -167,6 +168,46 @@ export function LetterPreviewWizard({
     }
   }
 
+  const handleRegenerate = async () => {
+    if (!campaignId || properties.length === 0) return
+    setIsRegenerating(true)
+    try {
+      const res = await apiFetch(`/api/mbl/campaigns/${campaignId}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ property_ids: properties.map((p) => p.id) }),
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || 'Regeneration failed')
+      }
+
+      // Consume the SSE stream
+      const reader = res.body?.getReader()
+      if (reader) {
+        const decoder = new TextDecoder()
+        let buffer = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          buffer = buffer.split('\n').pop() ?? ''
+        }
+      }
+
+      // Clear local edits and refresh from server
+      setCustomContent(null)
+      hasSavedActive.current = false
+      await queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] })
+      sileo.success({ title: 'Letter regenerated' })
+    } catch (err) {
+      sileo.error({ title: err instanceof Error ? err.message : 'Failed to regenerate' })
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
+
   if (!skills) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -231,6 +272,18 @@ export function LetterPreviewWizard({
           </button>
         </div>
         <div className="flex items-center gap-2">
+          {campaignId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRegenerate}
+              disabled={isRegenerating}
+              className="gap-1.5 text-xs"
+            >
+              {isRegenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              Regenerate
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"

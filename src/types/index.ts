@@ -114,6 +114,10 @@ export interface MblCampaign {
   criteria_baths_min: number | null
   criteria_sqft_min: number | null
   criteria_sqft_max: number | null
+  criteria_years_owned_min: number | null
+  criteria_lot_sqft_min: number | null
+  criteria_lot_sqft_max: number | null
+  criteria_property_type: string | null
   criteria_area: string
   criteria_city: string
   criteria_state: string

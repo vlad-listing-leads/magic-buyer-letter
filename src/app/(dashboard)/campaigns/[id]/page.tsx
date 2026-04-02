@@ -2,7 +2,7 @@
 
 import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useApiFetch } from '@/hooks/useApiFetch'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,8 +19,10 @@ import {
 } from '@/components/ui/alert-dialog'
 import { LetterPreviewWizard } from '@/components/mbl/LetterPreviewWizard'
 import { ChannelContent } from '@/components/mbl/ChannelContent'
+import { EditCriteriaSheet } from '@/components/mbl/EditCriteriaSheet'
+import { PipelineLoading } from '@/components/mbl/PipelineLoading'
 import {
-  ArrowLeft, CheckCircle, Trash2, Loader2, Sparkles,
+  ArrowLeft, CheckCircle, Trash2, Loader2, Sparkles, Settings2,
   Mail, FileText, MessageSquare, Phone, Camera,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
@@ -43,9 +45,12 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const { id } = use(params)
   const router = useRouter()
   const apiFetch = useApiFetch()
+  const queryClient = useQueryClient()
   const [isDeleting, setIsDeleting] = useState(false)
   const [activeChannel, setActiveChannel] = useState<ChannelTab>('letter')
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null)
+  const [editCriteriaOpen, setEditCriteriaOpen] = useState(false)
+  const [isReSearching, setIsReSearching] = useState(false)
 
   const { data, isLoading, error } = useQuery<{ campaign: MblCampaign; properties: MblProperty[] }>({
     queryKey: ['campaign', id],
@@ -87,6 +92,28 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       sileo.error({ title: err instanceof Error ? err.message : 'Failed to delete' })
       setIsDeleting(false)
     }
+  }
+
+  const handleEditCriteria = async (criteria: Record<string, unknown>, reSearch: boolean) => {
+    const res = await apiFetch(`/api/mbl/campaigns/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ criteria, re_search: reSearch }),
+    })
+    const json = await res.json()
+    if (!json.success) throw new Error(json.error)
+
+    if (reSearch) {
+      setIsReSearching(true)
+      // Refetch to get updated criteria
+      await queryClient.invalidateQueries({ queryKey: ['campaign', id] })
+    }
+  }
+
+  const handlePipelineComplete = async () => {
+    setIsReSearching(false)
+    await queryClient.invalidateQueries({ queryKey: ['campaign', id] })
+    sileo.success({ title: 'Properties updated!' })
   }
 
   if (isLoading) {
@@ -141,6 +168,15 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="flex items-center gap-2">
+          {campaign.status !== 'cancelled' && campaign.status !== 'delivered' && (
+            <button
+              onClick={() => setEditCriteriaOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 h-8 text-sm font-medium hover:bg-accent transition-colors"
+            >
+              <Settings2 className="h-4 w-4" />
+              Edit Criteria
+            </button>
+          )}
           {campaign.status !== 'cancelled' && campaign.status !== 'delivered' && (
             <AlertDialog>
               <AlertDialogTrigger className="inline-flex items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 h-8 text-sm font-medium hover:bg-accent transition-colors">
@@ -204,8 +240,22 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
       <hr className="border-border -mx-4 sm:-mx-6 md:-mx-8" />
 
+      {/* Re-search pipeline loading */}
+      {isReSearching && (
+        <PipelineLoading
+          campaignId={id}
+          buyerName={campaign.buyer_name}
+          onComplete={() => handlePipelineComplete()}
+          onError={(error) => {
+            setIsReSearching(false)
+            sileo.error({ title: error })
+          }}
+          onBack={() => setIsReSearching(false)}
+        />
+      )}
+
       {/* Sidebar + Content — same layout as /new preview step */}
-      <div className="flex -mb-4 sm:-mb-6 md:-mb-8">
+      {!isReSearching && <div className="flex -mb-4 sm:-mb-6 md:-mb-8">
         {/* Channel sidebar — flush top to bottom */}
         <div className="w-[240px] flex-shrink-0 pr-6 border-r border-border -mt-6 -mb-0 pt-6">
           <div className="sticky top-4 space-y-2">
@@ -325,7 +375,15 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           )}
           </div>{/* end keyed animation wrapper */}
         </div>
-      </div>
+      </div>}
+
+      {/* Edit Criteria Sheet */}
+      <EditCriteriaSheet
+        open={editCriteriaOpen}
+        onOpenChange={setEditCriteriaOpen}
+        campaign={campaign}
+        onSave={handleEditCriteria}
+      />
     </div>
   )
 }
