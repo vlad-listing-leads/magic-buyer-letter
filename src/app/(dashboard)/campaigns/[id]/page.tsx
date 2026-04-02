@@ -51,6 +51,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null)
   const [editCriteriaOpen, setEditCriteriaOpen] = useState(false)
   const [isReSearching, setIsReSearching] = useState(false)
+  const [isGeneratingLetter, setIsGeneratingLetter] = useState(false)
 
   const { data, isLoading, error } = useQuery<{ campaign: MblCampaign; properties: MblProperty[] }>({
     queryKey: ['campaign', id],
@@ -334,27 +335,57 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
 
           {activeChannel === 'letter' && agent && !hasLetterContent && !hasPropertyContent && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="rounded-full bg-muted p-4 mb-4">
-                <Sparkles className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold">No letter generated</h3>
-              <p className="text-sm text-muted-foreground mt-1 mb-5 max-w-sm">
-                Generate a letter for this campaign. The AI call may have failed during initial creation.
-              </p>
-              <Button
-                onClick={async () => {
-                  const propertyIds = properties.map(p => p.id)
-                  await apiFetch(`/api/mbl/campaigns/${id}/generate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ property_ids: propertyIds }),
-                  })
-                  window.location.reload()
-                }}
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Generate Letter
-              </Button>
+              {isGeneratingLetter ? (
+                <>
+                  <div className="relative mb-4">
+                    <div className="absolute inset-0 rounded-full bg-[#006AFF]/20 animate-ping" />
+                    <div className="relative w-14 h-14 rounded-full bg-[#006AFF]/10 flex items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-[#006AFF]" />
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold">Generating letter...</h3>
+                  <p className="text-sm text-muted-foreground mt-1">AI is writing your personalized letter</p>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-full bg-muted p-4 mb-4">
+                    <Sparkles className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold">No letter generated</h3>
+                  <p className="text-sm text-muted-foreground mt-1 mb-5 max-w-sm">
+                    Generate a letter for this campaign. The AI call may have failed during initial creation.
+                  </p>
+                  <Button
+                    onClick={async () => {
+                      setIsGeneratingLetter(true)
+                      try {
+                        const propertyIds = properties.map(p => p.id)
+                        const res = await apiFetch(`/api/mbl/campaigns/${id}/generate`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ property_ids: propertyIds }),
+                        })
+                        // Consume SSE stream
+                        const reader = res.body?.getReader()
+                        if (reader) {
+                          while (true) {
+                            const { done } = await reader.read()
+                            if (done) break
+                          }
+                        }
+                        await queryClient.invalidateQueries({ queryKey: ['campaign', id] })
+                      } catch {
+                        sileo.error({ title: 'Failed to generate letter' })
+                      } finally {
+                        setIsGeneratingLetter(false)
+                      }
+                    }}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate Letter
+                  </Button>
+                </>
+              )}
             </div>
           )}
 
