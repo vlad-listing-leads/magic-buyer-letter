@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const ssoUrl = `${llUrl}/auth/sso-redirect?returnTo=${encodeURIComponent(`${appUrl}/api/auth/ll-callback`)}`
+  const loginUrl = `${llUrl}/login`
 
   if (isDev) {
     return (
@@ -63,7 +63,7 @@ export default function LoginPage() {
         <button
           onClick={() => {
             setLoading(true)
-            window.location.href = ssoUrl
+            window.location.href = loginUrl
           }}
           disabled={loading}
           className="w-full rounded-md bg-[#006AFF] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#0058D4] disabled:opacity-50 transition-colors"
