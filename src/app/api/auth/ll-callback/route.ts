@@ -146,85 +146,99 @@ export async function GET(request: NextRequest) {
     if (f.address) agentData.address_line1 = f.address
   }
 
-  // 2. Create Supabase Auth user (if not exists)
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
-    email,
-    email_confirm: true,
-    user_metadata: { memberstack_id: memberstackId },
-  })
+  // 2. Look up existing user by memberstack_id (stable identifier, survives email changes)
+  const { data: existing } = await admin
+    .from('users')
+    .select('id, email')
+    .eq('memberstack_id', memberstackId)
+    .single()
 
   let userId: string
 
-  if (created?.user) {
-    userId = created.user.id
-    log.info({ email, memberstackId }, 'll-callback: created new auth user')
+  if (existing) {
+    // Existing user — sync profile (email may have changed on LL side)
+    userId = existing.id
+    const emailChanged = existing.email !== email
+    log.info({ memberstackId, email, emailChanged }, 'll-callback: existing user found, syncing')
 
-    // New user — create users table row
-    await admin.from('users').insert({
-      id: userId,
-      email,
-      name: agentData.name || displayName,
-      role: role || 'user',
-      memberstack_id: memberstackId,
-    })
-
-    // Auto-create agent profile with LL data
-    await admin.from('mbl_agents').insert({
-      user_id: userId,
-      name: agentData.name || displayName,
-      email,
-      ...agentData,
-    })
-  } else {
-    // Auth user exists — sync profile
-    if (createErr) {
-      log.info({ email, error: createErr.message }, 'll-callback: auth user exists, syncing')
+    // If email changed, update Supabase Auth email so magic link works with new email
+    if (emailChanged) {
+      await admin.auth.admin.updateUserById(userId, { email, email_confirm: true })
+      log.info({ oldEmail: existing.email, newEmail: email }, 'll-callback: updated auth email')
     }
 
-    const { data: existing } = await admin
+    // Sync user record
+    await admin
       .from('users')
+      .update({
+        email,
+        name: agentData.name || displayName,
+        role: role || 'user',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+
+    // Sync agent profile from LL on every login
+    const { data: existingAgent } = await admin
+      .from('mbl_agents')
       .select('id')
-      .eq('email', email)
+      .eq('user_id', existing.id)
       .single()
 
-    userId = existing?.id ?? ''
-
-    if (existing) {
-      // Sync user record
-      await admin
-        .from('users')
-        .update({
-          memberstack_id: memberstackId,
-          name: agentData.name || displayName,
-          role: role || 'user',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', existing.id)
-
-      // Sync agent profile from LL on every login
-      const { data: existingAgent } = await admin
-        .from('mbl_agents')
-        .select('id')
-        .eq('user_id', existing.id)
-        .single()
-
-      if (existingAgent) {
-        // Update with LL data (only non-empty fields)
-        if (Object.keys(agentData).length > 0) {
-          await admin
-            .from('mbl_agents')
-            .update({ ...agentData, updated_at: new Date().toISOString() })
-            .eq('id', existingAgent.id)
-        }
-      } else {
-        // Create agent profile
-        await admin.from('mbl_agents').insert({
-          user_id: existing.id,
-          name: agentData.name || displayName,
-          email,
-          ...agentData,
-        })
+    if (existingAgent) {
+      // Update with LL data (only non-empty fields)
+      const agentUpdate = { ...agentData, ...(emailChanged ? { email } : {}), updated_at: new Date().toISOString() }
+      if (Object.keys(agentData).length > 0 || emailChanged) {
+        await admin
+          .from('mbl_agents')
+          .update(agentUpdate)
+          .eq('id', existingAgent.id)
       }
+    } else {
+      // Create agent profile
+      await admin.from('mbl_agents').insert({
+        user_id: existing.id,
+        name: agentData.name || displayName,
+        email,
+        ...agentData,
+      })
+    }
+  } else {
+    // New user — create Supabase Auth user + app records
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: { memberstack_id: memberstackId },
+    })
+
+    if (created?.user) {
+      userId = created.user.id
+      log.info({ email, memberstackId }, 'll-callback: created new auth user')
+    } else {
+      // Auth user exists with this email but no memberstack_id in our users table
+      // (edge case: auth user created outside normal flow, e.g. dev-login)
+      log.warn({ email, error: createErr?.message }, 'll-callback: createUser failed, resolving existing auth user')
+      const { data: resolvedLink } = await admin.auth.admin.generateLink({ type: 'magiclink', email })
+      userId = resolvedLink?.user?.id ?? ''
+    }
+
+    if (userId) {
+      // Create users table row
+      await admin.from('users').insert({
+        id: userId,
+        email,
+        name: agentData.name || displayName,
+        role: role || 'user',
+        memberstack_id: memberstackId,
+      })
+
+      // Auto-create agent profile with LL data
+      await admin.from('mbl_agents').insert({
+        user_id: userId,
+        name: agentData.name || displayName,
+        email,
+        ...agentData,
+      })
     }
   }
 

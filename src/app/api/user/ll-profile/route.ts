@@ -12,11 +12,11 @@ export async function GET() {
     const authUser = await requireAuth()
     const admin = createAdminClient()
 
-    // Look up memberstack_id from users table
+    // Look up memberstack_id from users table (by id, not email — email is mutable)
     const { data: user } = await admin
       .from('users')
       .select('memberstack_id')
-      .eq('email', authUser.email!)
+      .eq('id', authUser.id)
       .single()
 
     if (!user?.memberstack_id) {
